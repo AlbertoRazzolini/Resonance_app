@@ -1,0 +1,14 @@
+# Build e dipendenze
+**/target/
+**/node_modules/
+**/dist/
+
+# IDE
+.idea/
+*.iml
+
+# Variabili d'ambiente e segreti locali
+.env*
+
+# Generato da Spring Initializr
+HELP.md

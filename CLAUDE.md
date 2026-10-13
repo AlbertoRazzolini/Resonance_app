@@ -37,7 +37,9 @@ decisione restano complete e comprensibili: l'utente è uno studente.
 4. A fine card: build e test completi (`./mvnw -q verify`, dettagli solo in caso di errore);
    riepilogo breve con sotto-task, file modificati raggruppati per sotto-task (documentazione
    compresa), verifiche ed esiti; proposta di messaggio Conventional Commits (titolo + elenco dei
-   sotto-task).
+   sotto-task). Il messaggio è **in italiano**, con il prefisso Conventional Commits in inglese
+   (es. `feat(auth): aggiunge la rotazione del refresh token`); vale anche per l'elenco dei
+   sotto-task. Se il piano riporta un "Commit proposto" in inglese, si traduce.
 5. **FERMARSI.** Niente commit, niente card successiva. Quando l'utente conferma il commit: card in
    "Fatto" e attesa del via per la card successiva.
 

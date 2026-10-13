@@ -1,0 +1,7 @@
+# Produzione su Render. Il database arriva da DATABASE_URL (DatabaseUrl).
+# JWT_SECRET non ha default. SUPERADMIN_*, BREVO_API_KEY, MAIL_FROM e GEOCODING_CONTACT hanno
+# default vuoto in application.yml e vanno impostati in produzione (progettazione, sezione 8.9).
+app:
+  auth:
+    refresh-cookie:
+      secure: true

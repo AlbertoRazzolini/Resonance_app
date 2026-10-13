@@ -6,7 +6,8 @@ in cui vengono prese. Riferimento principale: `docs/progettazione.md`.
 
 Origine delle voci: **brief** = vincolo o decisione già presa in `docs/brief.md`; **brainstorming** =
 scelta dello studente durante il brainstorming (13 ottobre); **design** = scelta tecnica proposta nel
-documento di design e approvata con esso (13 ottobre).
+documento di design e approvata con esso (13 ottobre); **implementazione** = scelta fatta durante lo
+sviluppo e approvata dallo studente in revisione.
 
 ---
 
@@ -631,13 +632,15 @@ Riusa il controller STOMP di NoseY; chiunque può scrivere a chiunque senza sist
 
 - **Invio del primo messaggio direttamente all'id del destinatario**: due percorsi di invio da gestire.
 
-## Decisione 36: ciclo di sviluppo con commit manuali dello studente (brief)
+## Decisione 36: ciclo di sviluppo con commit manuali dello studente (brief + richiesta dello studente)
 
 ### Scelta
 
 Una card alla volta, un commit per card; a fine card riepilogo e messaggio di commit proposto in
 stile Conventional Commits; il commit lo esegue lo studente. Lavoro su `develop`; il merge
-`develop → main` (deploy automatico su Render) lo esegue lo studente a fine fase.
+`develop → main` (deploy automatico su Render) lo esegue lo studente a fine fase. I messaggi di
+commit proposti sono in italiano, con il prefisso Conventional Commits in inglese (es.
+`feat(auth): aggiunge la rotazione del refresh token`), come richiesto dallo studente all'avvio di F0.
 
 ### Motivazione
 
@@ -678,3 +681,31 @@ La documentazione resta coerente con il codice; nessun recupero a fine progetto.
 ### Alternative scartate
 
 - **Documentazione scritta alla fine**: rischio di descrivere un sistema diverso da quello reale.
+
+## Decisione 39: nomi delle chiavi di configurazione dei limiti e della geocodifica (implementazione)
+
+### Scelta
+
+Il design fissa i valori e il prefisso `app.rate-limits.*` (sezione 8.8) ma non i nomi delle
+sottochiavi, né quelli delle chiavi di geocodifica: i nomi sono stati scelti in fase di
+implementazione (F0-01) e approvati dallo studente in revisione; le card successive li usano
+**così come sono**, senza rinominarli.
+
+- `app.rate-limits.<limite>.max` (numero intero) e `app.rate-limits.<limite>.window` (durata, es.
+  `15m`, `24h`), con `<limite>` uno fra `login-failed`, `chat-messages`, `conversations-created`,
+  `collab-applications`.
+- `app.geocoding.url`, `app.geocoding.contact` (da `GEOCODING_CONTACT`: entra nello User-Agent
+  identificativo delle richieste a Nominatim, decisione 3), `app.geocoding.connect-timeout`,
+  `app.geocoding.read-timeout`.
+
+### Motivazione
+
+Più card leggono queste chiavi (limiti di frequenza, geocodifica degli eventi): fissarne i nomi
+subito evita incoerenze fra codice, `application.yml` e documentazione. `ApplicationConfigTest`
+ne verifica la risoluzione con il profilo `test`.
+
+### Alternative scartate
+
+- **Nomi in italiano come in NoseY (`massimo`, `finestra`)**: codice, classi, tabelle e colonne
+  sono in inglese (brief, sezione 2); le chiavi di configurazione seguono la stessa convenzione.
+- **Nomi decisi card per card**: rischio di nomi diversi per lo stesso concetto.

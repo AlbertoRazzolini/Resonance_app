@@ -1,0 +1,15 @@
+# Test di integrazione: stesso container Docker dello sviluppo, database separato (progettazione, sezione 11.1).
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/resonance_test
+    username: resonance
+    password: resonance
+
+app:
+  jwt:
+    # SOLO PER I TEST: valore inventato, non protegge nessun ambiente reale.
+    # Non va usato altrove (né in dev né in prod).
+    secret: test-only-secret-not-used-anywhere-else-0123456789
+  auth:
+    refresh-cookie:
+      secure: false

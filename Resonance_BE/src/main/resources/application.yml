@@ -1,0 +1,81 @@
+spring:
+  application:
+    name: resonance
+
+  # Autenticazione solo con JWT (AccessTokenService): niente utente in memoria con password generata.
+  autoconfigure:
+    exclude: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
+
+  # Il datasource sta nei profili dev e test; su Render lo imposta DatabaseUrl da DATABASE_URL
+  # (progettazione, sezione 12.3).
+
+  jpa:
+    hibernate:
+      # Lo schema lo gestisce solo Flyway; mai "update" (progettazione, sezione 12.2).
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  mvc:
+    # I devtools lo accendono in locale: Spring scriverebbe nel log ogni eccezione gestita,
+    # e per la validazione anche il valore rifiutato (es. una password troppo corta, in chiaro).
+    log-resolved-exception: false
+
+server:
+  # Render assegna la porta in PORT.
+  port: ${PORT:8080}
+  shutdown: graceful
+
+app:
+  jwt:
+    # Nessun default: un segreto scritto qui sarebbe pubblico. Almeno 32 byte (HS256).
+    # In locale va impostato nella configurazione di avvio di IntelliJ (variabile JWT_SECRET).
+    secret: ${JWT_SECRET}
+  auth:
+    access-token-ttl: ${ACCESS_TOKEN_TTL:15m}
+    refresh-token-ttl: ${REFRESH_TOKEN_TTL:10d}
+    # Finestra di tolleranza per i refresh concorrenti (progettazione, sezione 4.8).
+    refresh-grace: 10s
+    refresh-cookie:
+      # Impostato dai profili: false in dev e test (HTTP), true in prod.
+      secure: true
+  cors:
+    # Lista separata da virgole. Vuota in prod: stessa origine (progettazione, sezione 6.12).
+    allowed-origins: ${ALLOWED_ORIGIN:}
+  # Limiti di frequenza in memoria, finestra che scorre; si azzerano a ogni riavvio
+  # (progettazione, sezione 8.8). I limiti sui codici email stanno nel database (sezione 4.6).
+  rate-limits:
+    login-failed:
+      max: 10
+      window: 15m
+    chat-messages:
+      max: 30
+      window: 1m
+    conversations-created:
+      max: 20
+      window: 24h
+    collab-applications:
+      max: 10
+      window: 24h
+  # Nominatim (progettazione, sezione 10.1): una richiesta al secondo, User-Agent identificativo.
+  geocoding:
+    url: https://nominatim.openstreetmap.org
+    contact: ${GEOCODING_CONTACT:}
+    connect-timeout: 2s
+    read-timeout: 3s
+  # Email: log in dev, Brevo via HTTP in prod (progettazione, sezione 9). MAIL_FROM deve essere un
+  # mittente confermato nell'account Brevo. Senza chiave o mittente l'email non parte e si scrive nel log.
+  mail:
+    from: ${MAIL_FROM:}
+    brevo:
+      api-key: ${BREVO_API_KEY:}
+      url: https://api.brevo.com/v3
+      timeout: 5s
+  # Primo SUPERADMIN (progettazione, sezione 4.12): senza variabili non viene creato.
+  bootstrap:
+    superadmin:
+      email: ${SUPERADMIN_EMAIL:}
+      password: ${SUPERADMIN_PASSWORD:}
