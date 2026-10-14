@@ -79,6 +79,12 @@ verifiche non eseguiti.
 - La documentazione descrive solo ciò che è implementato. Nessuna card finale "scrivere la
   documentazione".
 
+## Entità JPA
+
+- Costruttore pubblico con i campi obbligatori (NOT NULL senza default del database) e
+  `@NoArgsConstructor(access = AccessLevel.PROTECTED)` per JPA; gli altri campi restano con i setter.
+  Le entity esistenti si adeguano quando una card le usa per la prima volta (decisione 41).
+
 ## Postman e WebSocket
 
 - Collection v2.1 versionata in `postman/resonance.postman_collection.json`; cartelle Auth, Users,

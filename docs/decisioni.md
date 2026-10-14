@@ -729,3 +729,30 @@ raggiungibile da altre macchine sulla rete locale. pgAdmin e IntelliJ si collega
 - **`"5433:5432"` senza indirizzo** (come nel brief e nel design originale): Docker espone la porta
   su tutte le interfacce, quindi il database con credenziali semplici sarebbe raggiungibile dalla
   rete locale.
+
+## Decisione 41: costruzione delle entità JPA (implementazione)
+
+### Scelta
+
+Ogni entity ha un costruttore pubblico con i campi obbligatori (NOT NULL senza default del
+database) e `@NoArgsConstructor(access = AccessLevel.PROTECTED)`, che serve solo a JPA. Gli altri
+campi restano con i setter. Per le entity con chiave composta il costruttore riceve i dati della
+chiave. Le entity nuove nascono già così. `UserRole` e `UserRoleId` hanno già il costruttore vuoto
+protetto. `User` ha per ora `@NoArgsConstructor` pubblico: in F1-03, quando un service la crea per la
+prima volta, riceve il costruttore con i campi obbligatori (`email`, `passwordHash`, `displayName`) e
+quello vuoto diventa protetto.
+
+### Motivazione
+
+Un oggetto incompleto, per esempio un utente senza email, non si può creare: l'errore si vede alla
+compilazione e non come violazione di `NOT NULL` al salvataggio. Hibernate continua a creare gli
+oggetti con il costruttore vuoto, che resta protetto e quindi non usabile dal codice normale.
+
+### Alternative scartate
+
+- **Solo `@Getter`/`@Setter` con costruttore implicito** (modello di NoseY e prima versione del
+  design, sezione 2.1): permette entity incomplete, con l'errore rinviato al database.
+- **`@AllArgsConstructor`**: inutilizzabile con molti campi facoltativi e con campi valorizzati dal
+  database, come `created_at`.
+- **Builder**: più codice per ogni entity, per un vantaggio piccolo quando i campi obbligatori sono
+  pochi.
