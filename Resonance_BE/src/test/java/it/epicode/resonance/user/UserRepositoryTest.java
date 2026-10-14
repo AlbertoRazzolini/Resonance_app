@@ -6,6 +6,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Salvataggio di un utente con piu' ruoli e rilettura di utente e ruoli dal database.
+ */
 class UserRepositoryTest extends IntegrationTest {
 
     @Autowired
@@ -29,6 +32,7 @@ class UserRepositoryTest extends IntegrationTest {
         assertThat(found.getId()).isEqualTo(user.getId());
         assertThat(found.getStatus()).isEqualTo(UserStatus.ACTIVE);
         assertThat(found.isEmailVerified()).isFalse();
+        // createdAt arriva dal DEFAULT now() del database, non da Java.
         assertThat(found.getCreatedAt()).isNotNull();
         assertThat(roles.findRolesByUserId(user.getId())).containsExactlyInAnyOrder(Role.FAN, Role.MUSICIAN);
         assertThat(roles.existsByIdRole(Role.MUSICIAN)).isTrue();

@@ -8,8 +8,13 @@ import java.io.PrintStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Conversione di DATABASE_URL di Render in URL JDBC e in proprieta' del datasource
+ * (progettazione, sezione 12.3).
+ */
 class DatabaseUrlTest {
 
+    // Le system property sono globali alla JVM: si ripuliscono per non influenzare gli altri test.
     @AfterEach
     void clearSystemProperties() {
         System.clearProperty("spring.datasource.url");
@@ -44,6 +49,7 @@ class DatabaseUrlTest {
 
     @Test
     void apply_setsPropertiesAndNeverPrintsPassword() {
+        // Si cattura System.out: la password non deve comparire nei log (progettazione, sezione 8.9).
         PrintStream originalOut = System.out;
         ByteArrayOutputStream captured = new ByteArrayOutputStream();
         System.setOut(new PrintStream(captured, true));

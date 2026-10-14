@@ -18,10 +18,17 @@ public final class DatabaseUrl {
     private DatabaseUrl() {
     }
 
+    /**
+     * Legge DATABASE_URL dall'ambiente e, se c'e', imposta le proprieta' del datasource.
+     */
     public static void applyIfPresent() {
         apply(System.getenv("DATABASE_URL"));
     }
 
+    /**
+     * Traduce il valore grezzo di DATABASE_URL in URL, utente e password del datasource.
+     * Non fa niente se il valore e' nullo o vuoto; non stampa mai la password.
+     */
     static void apply(String raw) {
         if (raw == null || raw.isBlank()) {
             return;
@@ -60,6 +67,9 @@ public final class DatabaseUrl {
         return "jdbc:postgresql://%s:%d%s?sslmode=require".formatted(uri.getHost(), port, uri.getPath());
     }
 
+    /**
+     * Estrae utente e password dall'URL; l'array e' vuoto se mancano.
+     */
     private static String[] credentials(String raw) {
         String userInfo = URI.create(raw.trim()).getUserInfo();
         return userInfo == null ? new String[0] : userInfo.split(":", 2);

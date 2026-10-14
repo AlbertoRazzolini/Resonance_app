@@ -756,3 +756,28 @@ oggetti con il costruttore vuoto, che resta protetto e quindi non usabile dal co
   database, come `created_at`.
 - **Builder**: più codice per ogni entity, per un vantaggio piccolo quando i campi obbligatori sono
   pochi.
+
+## Decisione 42: commento del codice (implementazione)
+
+### Scelta
+
+Commenti in italiano. Nel codice di produzione una riga di Javadoc su ogni classe e su ogni metodo
+non banale (esclusi getter, setter e costruttori ovvi), che dice cosa fa e perché; le scelte non
+ovvie hanno un commento sul perché con il riferimento "progettazione, sezione N". I campi delle
+entity sono commentati solo se la colonna ha una regola o un'unità. Nei test: una riga per classe che
+dice cosa verifica e un commento sui casi non evidenti dal nome del test. La regola vale anche per il
+codice già scritto (applicata a F0) e per ogni file che una card crea o modifica.
+
+### Motivazione
+
+Il progetto è un lavoro di studio da presentare e da mantenere dopo la consegna: una riga per classe e
+per metodo rende il codice leggibile senza aprire il design. Il limite ai metodi non banali evita
+commenti che ripetono il codice.
+
+### Alternative scartate
+
+- **Solo classi e scelte non ovvie** (livello che c'era prima): i metodi restano senza spiegazione.
+- **Tutto, anche campi e costruttori**: più rumore e più tempo su ogni card, con la scadenza del 25
+  ottobre.
+- **Test commentati come il codice di produzione**: quasi ogni test avrebbe un commento, quando il
+  nome descrittivo basta.

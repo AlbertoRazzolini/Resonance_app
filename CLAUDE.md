@@ -79,6 +79,16 @@ verifiche non eseguiti.
 - La documentazione descrive solo ciò che è implementato. Nessuna card finale "scrivere la
   documentazione".
 
+## Commenti nel codice (decisione 42)
+
+- In italiano. Una riga di Javadoc su ogni classe e su ogni metodo non banale (esclusi getter,
+  setter e costruttori ovvi): dice cosa fa e perché, senza ripetere il codice.
+- Scelte non ovvie: commento sul perché con "progettazione, sezione N".
+- Campi delle entity: commentati solo se la colonna ha una regola o un'unità.
+- Test: una riga per classe di test che dice cosa verifica, più un commento sui casi non evidenti dal
+  nome; i nomi dei test restano descrittivi.
+- La regola vale anche per il codice già scritto: ogni card la applica ai file che crea o modifica.
+
 ## Entità JPA
 
 - Costruttore pubblico con i campi obbligatori (NOT NULL senza default del database) e

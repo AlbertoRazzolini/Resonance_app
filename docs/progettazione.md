@@ -211,7 +211,8 @@ Sintesi:
 ### 2.5 Commenti nel codice
 
 Le scelte non ovvie hanno un commento breve che rimanda alla sezione di questo documento
-("progettazione, sezione 4.6"), senza copiarne i paragrafi.
+("progettazione, sezione 4.6"), senza copiarne i paragrafi. In più ogni classe e ogni metodo non
+banale ha una riga di Javadoc in italiano; i test hanno una riga per classe (decisione 42).
 
 ---
 

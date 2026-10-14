@@ -15,6 +15,9 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 public class SecurityConfig {
 
+    /**
+     * Catena di filtri temporanea: senza sessioni, solo GET /api/health e' pubblico, il resto e' negato.
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) {
         http

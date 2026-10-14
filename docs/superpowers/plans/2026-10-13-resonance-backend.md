@@ -23,7 +23,8 @@ quel documento. Il piano è la fonte di verità; Trello (board `Sviluppo_Resonan
 ## Vincoli globali
 
 - Package base `it.epicode.resonance`; codice, classi, tabelle e colonne in inglese; commenti e
-  documentazione in italiano; commenti sulle scelte non ovvie con "progettazione, sezione N".
+  documentazione in italiano; commenti sulle scelte non ovvie con "progettazione, sezione N"; una riga
+  di Javadoc su ogni classe e metodo non banale, e una riga per classe di test (decisione 42).
 - Chiavi primarie ed esterne `uuid`, `GenerationType.UUID`; `ddl-auto: validate`, mai `update`.
 - Migrazioni Flyway `V1`…`V8` come §3.6; mai modificare una migrazione già applicata.
 - Ruoli e stato sempre dal database, mai dai claim del JWT (§5.2).

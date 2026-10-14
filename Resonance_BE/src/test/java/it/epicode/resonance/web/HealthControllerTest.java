@@ -10,6 +10,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * Health check: UP con il database acceso, 503 con il database guasto, altri endpoint non pubblici
+ * (progettazione, sezione 6.11).
+ */
 class HealthControllerTest extends IntegrationTest {
 
     @Test
@@ -22,6 +26,7 @@ class HealthControllerTest extends IntegrationTest {
 
     @Test
     void health_returns503WhenDatabaseFails() throws Exception {
+        // Un JdbcTemplate che lancia eccezione simula il database spento, senza fermare Docker.
         JdbcTemplate failingJdbc = new JdbcTemplate() {
             @Override
             public <T> T queryForObject(String sql, Class<T> requiredType) {

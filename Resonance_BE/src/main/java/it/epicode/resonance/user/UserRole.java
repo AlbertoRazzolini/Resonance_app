@@ -30,6 +30,9 @@ public class UserRole {
     @Column(name = "granted_at", nullable = false, insertable = false, updatable = false)
     private Instant grantedAt;
 
+    /**
+     * Assegna il ruolo a un utente; la data di assegnazione la imposta il database.
+     */
     public UserRole(UUID userId, Role role) {
         this.id = new UserRoleId(userId, role);
     }

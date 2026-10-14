@@ -33,15 +33,18 @@ public class User {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    // Sempre minuscola e senza spazi: la normalizza l'applicazione, il database non la controlla.
     @Column(nullable = false, length = 255)
     private String email;
 
+    // Hash BCrypt, mai la password in chiaro.
     @Column(name = "password_hash", nullable = false, length = 100)
     private String passwordHash;
 
     @Column(name = "display_name", nullable = false, length = 50)
     private String displayName;
 
+    // Solo URL http/https, validato dall'applicazione: nell'MVP non ci sono upload (decisione 2).
     @Column(name = "avatar_url", length = 2048)
     private String avatarUrl;
 
@@ -59,6 +62,8 @@ public class User {
     @Column(length = 100)
     private String city;
 
+    // Gradi. Latitudine e longitudine sono entrambe nulle finche' l'utente non condivide la posizione
+    // (progettazione, sezione 1.2); il vincolo ck_users_coordinates controlla anche i range.
     private Double latitude;
 
     private Double longitude;
@@ -68,6 +73,8 @@ public class User {
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private Instant createdAt;
 
+    // Campi di sospensione: valorizzati solo se status = SUSPENDED (ck_users_suspension, sezione 5.5).
+    // suspendedUntil nullo = sospensione a tempo indeterminato.
     @Column(name = "suspended_at")
     private Instant suspendedAt;
 

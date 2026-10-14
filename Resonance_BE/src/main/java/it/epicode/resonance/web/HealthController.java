@@ -22,6 +22,9 @@ public class HealthController {
         this.jdbc = jdbc;
     }
 
+    /**
+     * Risponde UP se una SELECT 1 riesce, altrimenti 503 con DOWN.
+     */
     @GetMapping("/api/health")
     public ResponseEntity<Map<String, String>> health() {
         try {
