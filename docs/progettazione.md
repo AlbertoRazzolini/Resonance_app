@@ -1338,8 +1338,8 @@ facoltativa.
 ### 12.1 PostgreSQL locale
 
 `docker-compose.yml` nella radice: immagine `postgres:17` (stessa versione maggiore del database
-Render da verificare alla creazione), porta `"5433:5432"` (il PostgreSQL di Windows occupa la
-5432), database `resonance`, utente e password di sviluppo non sensibili, volume persistente
+Render da verificare alla creazione), porta `"127.0.0.1:5433:5432"` (solo sul computer locale; il
+PostgreSQL di Windows occupa la 5432), database `resonance`, utente e password di sviluppo non sensibili, volume persistente
 `resonance-db-data`, script di init `docker/postgres/init/01-create-test-db.sql` che crea
 `resonance_test`. Connessione da pgAdmin su `localhost:5433`.
 

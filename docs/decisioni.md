@@ -709,3 +709,23 @@ ne verifica la risoluzione con il profilo `test`.
 - **Nomi in italiano come in NoseY (`massimo`, `finestra`)**: codice, classi, tabelle e colonne
   sono in inglese (brief, sezione 2); le chiavi di configurazione seguono la stessa convenzione.
 - **Nomi decisi card per card**: rischio di nomi diversi per lo stesso concetto.
+
+## Decisione 40: database di sviluppo esposto solo su localhost (implementazione)
+
+### Scelta
+
+Nel `docker-compose.yml` la porta di PostgreSQL è legata a `127.0.0.1`: `"127.0.0.1:5433:5432"`. Il
+design (sezione 12.1) e il piano sono stati aggiornati di conseguenza. `docs/brief.md` non è
+modificato e riporta ancora `"5433:5432"`.
+
+### Motivazione
+
+Il database di sviluppo ha credenziali semplici (`resonance`/`resonance`) e non deve essere
+raggiungibile da altre macchine sulla rete locale. pgAdmin e IntelliJ si collegano comunque a
+`localhost:5433`.
+
+### Alternative scartate
+
+- **`"5433:5432"` senza indirizzo** (come nel brief e nel design originale): Docker espone la porta
+  su tutte le interfacce, quindi il database con credenziali semplici sarebbe raggiungibile dalla
+  rete locale.

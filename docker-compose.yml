@@ -1,0 +1,21 @@
+# PostgreSQL per lo sviluppo locale (progettazione, sezione 12.1).
+# Avvio dalla radice del repository: docker compose up -d
+services:
+  resonance-db:
+    image: postgres:17
+    ports:
+      # Sul PC di sviluppo la 5432 e' occupata dal PostgreSQL di Windows: il container usa la 5433.
+      # Solo su 127.0.0.1: il database di sviluppo non deve essere raggiungibile dalla rete locale.
+      - "127.0.0.1:5433:5432"
+    environment:
+      # Credenziali di sviluppo non sensibili, le stesse di application-dev.yml.
+      POSTGRES_DB: resonance
+      POSTGRES_USER: resonance
+      POSTGRES_PASSWORD: resonance
+    volumes:
+      - resonance-db-data:/var/lib/postgresql/data
+      # Gli script in questa cartella girano solo alla prima creazione del volume.
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+
+volumes:
+  resonance-db-data:

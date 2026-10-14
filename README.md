@@ -26,20 +26,36 @@ Il backend espone le API REST e il canale WebSocket (STOMP) di Resonance. Le sue
 Stack: Java 25, Spring Boot 4.1.1, PostgreSQL con Flyway. Il design di riferimento è in
 `docs/progettazione.md`.
 
-> Stato: setup iniziale (fase F0). Struttura del progetto e profili di configurazione sono pronti;
-> il database, le API e il resto arrivano con le card successive.
+> Stato: setup iniziale (fase F0). Sono pronti progetto, profili, PostgreSQL locale, la migrazione V1
+> (utenti e ruoli) e l'health check `GET /api/health`; le altre API arrivano con le card successive.
 
 ## Prerequisiti
 
 - JDK 25
-- Docker (per PostgreSQL in locale, dalla card F0-02)
+- Docker (PostgreSQL in locale)
 
 ## Avvio in locale
 
 > **Attenzione:** in dev l'app non parte senza `JWT_SECRET` nella configurazione di avvio di IntelliJ.
 
-_Sezione completata con la card F0-02 (PostgreSQL in Docker sulla porta 5433, profilo `dev`, avvio dal
-terminale e da IntelliJ)._
+1. **Database.** Dalla radice del repository: `docker compose up -d`. Il container espone PostgreSQL
+   sulla **porta 5433**, solo su localhost (`127.0.0.1:5433`; la 5432 è quella del PostgreSQL di Windows). Crea i database `resonance`
+   (sviluppo) e `resonance_test` (test); lo script di init gira solo alla prima creazione del volume:
+   per rifarlo, `docker compose down -v` cancella anche i dati.
+2. **Connessione con pgAdmin.** Host `localhost`, porta `5433`, database `resonance`, utente
+   `resonance`; la password di sviluppo (non sensibile) è in `docker-compose.yml`.
+3. **Avvio da IntelliJ.** Nella configurazione di avvio dell'applicazione imposta le variabili
+   d'ambiente `SPRING_PROFILES_ACTIVE=dev` e `JWT_SECRET=<una stringa casuale di almeno 32 caratteri>`
+   (in IntelliJ si separano con `;`). Non scrivere il segreto in nessun file del repository.
+4. **Avvio dal terminale** (dalla cartella `Resonance_BE`), con le stesse due variabili d'ambiente
+   impostate: `./mvnw spring-boot:run` (in PowerShell `.\mvnw.cmd spring-boot:run`).
+5. **Verifica.** `GET http://localhost:8080/api/health` risponde `{"status":"UP","database":"UP"}`.
+   All'avvio Flyway applica le migrazioni da solo.
+
+Build e test, sempre dalla cartella `Resonance_BE`: `./mvnw -q verify` (in PowerShell
+`.\mvnw.cmd -q verify`). **I test di integrazione richiedono il database acceso:** prima di lanciarli
+esegui `docker compose up -d` dalla radice del repository. Usano il database `resonance_test`,
+che viene svuotato prima di ogni test.
 
 ## Variabili d'ambiente
 
