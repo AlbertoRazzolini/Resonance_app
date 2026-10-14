@@ -1,0 +1,115 @@
+{
+  "info": {
+    "_postman_id": "6f1c2b7e-3a5d-4c8e-9b14-2d7a8e5f0c31",
+    "name": "Resonance",
+    "description": "Richieste REST del backend di Resonance. Si usa con l'environment `local` o `render`: la variabile baseUrl decide su quale server girano. STOMP (chat e notifiche) non e' qui: si verifica con i test di integrazione.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "description": "Controlli tecnici, senza autenticazione.",
+      "item": [
+        {
+          "name": "Health check (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con applicazione e database UP', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('UP');",
+                  "    pm.expect(body.database).to.eql('UP');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            },
+            "description": "Pubblico. 200 con {status: UP, database: UP} se applicazione e database rispondono, 503 con DOWN altrimenti. E' l'health check di Render."
+          },
+          "response": []
+        },
+        {
+          "name": "Percorso non pubblico (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403: fuori da /api/health tutto e' negato', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/inesistente",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inesistente"]
+            },
+            "description": "Errore significativo. Con la SecurityConfig temporanea di F0-02 solo GET /api/health e' pubblico, quindi qualsiasi altro percorso risponde 403 anche se non esiste. Da F1-01 la risposta diventa 401 UNAUTHENTICATED in JSON: aggiornare allora questa richiesta."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "description": "Registrazione, verifica email, login, refresh e logout (card F1).",
+      "item": []
+    },
+    {
+      "name": "Users",
+      "description": "Profilo e ruoli self-service (card F2-01).",
+      "item": []
+    },
+    {
+      "name": "Admin",
+      "description": "Sospensione, nomina degli ADMIN e moderazione (card F2-02 e F4-03).",
+      "item": []
+    },
+    {
+      "name": "Events",
+      "description": "Concerti ufficiali e indie event (card F3).",
+      "item": []
+    },
+    {
+      "name": "Collab",
+      "description": "Annunci di collaborazione (card F4-01).",
+      "item": []
+    },
+    {
+      "name": "Feed",
+      "description": "Post e like (card F4-02).",
+      "item": []
+    },
+    {
+      "name": "Chat",
+      "description": "Conversazioni e storico dei messaggi, solo la parte REST (card F5).",
+      "item": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    }
+  ]
+}

@@ -110,7 +110,7 @@ dominio X").
 | `AppException` | `AppException(ErrorCode code, String message)`, `(code, message, Map<String,String> fields)`, `withDetails(Map<String,Object>)` | F0-03 |
 | `ErrorCode` | enum con `HttpStatus httpStatus()` (null per i codici solo WebSocket) | F0-03 |
 | `PageResponse<T>` | `record(List<T> content, int page, int size, long totalElements, int totalPages)`, `static from(Page<T>)` | F0-03 |
-| `PageParams` | `record(@Min(0) int page, @Min(1) @Max(100) int size)` con default 0/20, `Pageable toPageable(Sort)` | F0-03 |
+| `PageParams` | `record(@Min(0) Integer page, @Min(1) @Max(100) Integer size)`, `null` → default 0/20 (decisione 44), `Pageable toPageable(Sort)` | F0-03 |
 | `RateLimitService` | `consume(RateLimit, String key)`, `check(...)`, `record(...)`, `reset(...)` | F0-03 |
 | `Role` / `UserStatus` | enum `FAN, MUSICIAN, HOST, ADMIN, SUPERADMIN` / `ACTIVE, SUSPENDED` | F0-02 |
 | `AccessTokenService` | `IssuedAccessToken issue(UUID userId)`; `Optional<AccessTokenClaims> parse(String token)`; record `IssuedAccessToken(String token, Instant expiresAt)`, `AccessTokenClaims(UUID userId, Instant expiresAt)` | F1-01 |

@@ -27,7 +27,9 @@ Stack: Java 25, Spring Boot 4.1.1, PostgreSQL con Flyway. Il design di riferimen
 `docs/progettazione.md`.
 
 > Stato: setup iniziale (fase F0). Sono pronti progetto, profili, PostgreSQL locale, la migrazione V1
-> (utenti e ruoli) e l'health check `GET /api/health`; le altre API arrivano con le card successive.
+> (utenti e ruoli), l'health check `GET /api/health`, la gestione comune degli errori, il Dockerfile
+> e il Blueprint di Render (`render.yaml`, non ancora applicato); le altre API arrivano con le card
+> successive.
 
 ## Prerequisiti
 
@@ -57,6 +59,9 @@ Build e test, sempre dalla cartella `Resonance_BE`: `./mvnw -q verify` (in Power
 esegui `docker compose up -d` dalla radice del repository. Usano il database `resonance_test`,
 che viene svuotato prima di ogni test.
 
+**Immagine Docker** (quella che userà Render), dalla **radice** del repository, non da `Resonance_BE`:
+`docker build -f Resonance_BE/Dockerfile -t resonance .`
+
 ## Variabili d'ambiente
 
 Nessun segreto è scritto nei file del repository: i valori arrivano dall'ambiente (in locale dalla
@@ -76,6 +81,22 @@ configurazione di avvio di IntelliJ, su Render dal Blueprint o dalla dashboard).
 | `BREVO_API_KEY`, `MAIL_FROM` | prod | Invio delle email tramite Brevo; mittente confermato in Brevo. |
 | `GEOCODING_CONTACT` | sì | Contatto inserito nello User-Agent delle richieste a Nominatim. |
 
+## Postman
+
+La collection e gli environment stanno in `postman/`:
+
+- `resonance.postman_collection.json` (formato v2.1): cartelle Health, Auth, Users, Admin, Events,
+  Collab, Feed e Chat. Per ora contiene solo la cartella Health; le altre si riempiono con le card
+  che creano gli endpoint.
+- `resonance-local.postman_environment.json` (`baseUrl` = `http://localhost:8080`) e
+  `resonance-render.postman_environment.json` (`baseUrl` vuoto finché non c'è il deploy).
+
+Come usarli: in Postman, **Import** e scegli i tre file; poi seleziona l'environment `local` in alto a
+destra, avvia il backend con il profilo `dev` (vedi "Avvio in locale") e lancia le richieste della
+cartella Health. Nei file versionati non c'è nessun segreto: token e credenziali stanno solo nelle
+variabili locali di Postman. La parte STOMP (chat e notifiche) non è nella collection.
+
 ## Deploy
 
-Non ancora disponibile. Il link verrà aggiunto dopo il primo deploy su Render.
+Non ancora disponibile. Il Blueprint di Render (database e un solo servizio web) è pronto in
+`render.yaml` ma non è stato applicato; il link verrà aggiunto dopo il primo deploy.

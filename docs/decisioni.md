@@ -641,6 +641,7 @@ stile Conventional Commits; il commit lo esegue lo studente. Lavoro su `develop`
 `develop → main` (deploy automatico su Render) lo esegue lo studente a fine fase. I messaggi di
 commit proposti sono in italiano, con il prefisso Conventional Commits in inglese (es.
 `feat(auth): aggiunge la rotazione del refresh token`), come richiesto dallo studente all'avvio di F0.
+Le card passano in "Fatto" su Trello per mano dello studente, dopo il commit.
 
 ### Motivazione
 
@@ -803,3 +804,23 @@ colonne: l'avvio e i test passano anche con lunghezze diverse da quelle del data
 - **Ridurre le lunghezze di `users` (per esempio email 100, `password_hash` 60, `avatar_url` 255)**:
   valutata e non adottata per scelta dello studente; avrebbe richiesto di riscrivere V1 o di
   aggiungere una migrazione e di aggiornare il design.
+
+## Decisione 44: PageParams con componenti Integer (implementazione)
+
+### Scelta
+
+`PageParams` è un record con componenti `Integer page` e `Integer size`, non `int` come nella tabella
+delle interfacce del piano. Il costruttore compatto applica i default (page 0, size 20) quando il
+parametro manca.
+
+### Motivazione
+
+Con `int` un parametro assente e uno a 0 sono indistinguibili: `size=0` deve dare 400
+(progettazione, sezione 6.1) e `size` assente deve valere 20. Con `Integer` l'assenza è `null`. Il
+comportamento è verificato su una vera richiesta in `PageParamsBindingTest`.
+
+### Alternative scartate
+
+- **`int` con il default nel controller (`@RequestParam(defaultValue = ...)`)**: il default andrebbe
+  ripetuto in ogni endpoint e si perderebbe la validazione comune.
+- **`int` con "0 = default"**: accetterebbe `size=0` invece di rifiutarlo.

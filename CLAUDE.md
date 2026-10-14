@@ -5,15 +5,20 @@ Backend Spring Boot in `Resonance_BE/` (capstone Epicode). Frontend in `Resonanc
 
 ## Inizio di ogni sessione
 
-Leggere, in quest'ordine:
+Ogni card si fa in una sessione nuova: lo studente scrive `/clear` e poi `/prossima-card` (comando
+locale in `.claude/commands/`, non versionato). Per non rileggere ogni volta tutto il progetto, si
+legge solo ciò che serve alla card corrente:
 
-1. `CLAUDE.md` (questo file)
-2. `docs/brief.md` — requisiti e vincoli. **La D1 del brief è sostituita** (servizio Render unico
-   per API e frontend, nessun dominio personalizzato): vedi `docs/decisioni.md`, decisione 1.
-3. `docs/progettazione.md` — design approvato, riferimento principale.
-4. `docs/riuso-nosey.md` — mappa del riuso; da NoseY leggere solo i file della card corrente
+1. `CLAUDE.md` (questo file), sempre.
+2. Il piano in `docs/superpowers/plans/` (fonte di verità; Trello ne è lo specchio): "Vincoli
+   globali", "Interfacce condivise" e la sezione della card.
+3. Di `docs/progettazione.md` (design approvato, riferimento principale) solo le sezioni indicate dai
+   "Riferimenti" della card; di `docs/decisioni.md` solo le decisioni citate.
+4. `docs/riuso-nosey.md` (mappa del riuso) e, da NoseY, solo i file della card corrente
    (`C:\Users\VGit\OneDrive\Desktop\Appunti e coding\UPLOADxGIT\Back-end\BW5\NoseY`, mai modificarlo).
-5. Il piano di implementazione in `docs/superpowers/plans/` (fonte di verità; Trello ne è lo specchio).
+5. `docs/brief.md` solo se un requisito o un vincolo non è chiaro dal design. **La D1 del brief è
+   sostituita** (servizio Render unico per API e frontend, nessun dominio personalizzato): vedi
+   `docs/decisioni.md`, decisione 1.
 
 Se è attivo uno stile di risposta sintetico, le spiegazioni delle scelte tecniche e le richieste di
 decisione restano complete e comprensibili: l'utente è uno studente.
@@ -40,8 +45,9 @@ decisione restano complete e comprensibili: l'utente è uno studente.
    sotto-task). Il messaggio è **in italiano**, con il prefisso Conventional Commits in inglese
    (es. `feat(auth): aggiunge la rotazione del refresh token`); vale anche per l'elenco dei
    sotto-task. Se il piano riporta un "Commit proposto" in inglese, si traduce.
-5. **FERMARSI.** Niente commit, niente card successiva. Quando l'utente conferma il commit: card in
-   "Fatto" e attesa del via per la card successiva.
+5. **FERMARSI.** Niente commit, niente card successiva. La card la sposta in "Fatto" lo studente, a
+   mano, dopo il commit: non spostarla. Attendere il via per la card successiva (di norma `/clear`
+   e `/prossima-card`).
 
 Fermarsi e chiedere solo se: serve una decisione dell'utente; un errore non si risolve in tempi
 ragionevoli; si dovrebbe uscire dal piano approvato o dalla card corrente. Mai dichiarare test o

@@ -10,5 +10,8 @@
 # Variabili d'ambiente e segreti locali
 .env*
 
+# Impostazioni e comandi locali dello strumento di lavoro (contengono percorsi del PC)
+.claude/
+
 # Generato da Spring Initializr
 HELP.md
