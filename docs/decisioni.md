@@ -844,3 +844,51 @@ la risposta d'errore stessa è JSON e non si potrebbe scrivere.
 - **`VALIDATION_ERROR` 400**: lo stato HTTP corretto per questo caso è 415, e un client che decide in
   base a `code` confonderebbe un tipo di contenuto sbagliato con dei campi non validi.
 - **Lasciare il 500**: segnala un guasto che non c'è e riempie il log.
+
+## Decisione 46: percorsi /api inesistenti riconosciuti dai soli mapping dei controller (implementazione)
+
+### Scelta
+
+Un percorso `/api/...` per cui nessun controller ha un handler risponde sempre 404 `NOT_FOUND` in JSON,
+anche senza token e anche sotto `/api/admin/**` (design, sezione 6.3). Lo ottiene la **prima** regola di
+`SecurityConfig`, un `RequestMatcher` (`UnmappedApiRequestMatcher`) che interroga **solo** i
+`RequestMappingHandlerMapping` (i controller) e lascia passare la richiesta se nessuno ha un handler. Se
+un mapping solleva un'eccezione (metodo o tipo di contenuto non accettati) il percorso esiste e segue le
+regole normali: 401 o 403 prima del 405. La ricerca gira su una copia della richiesta che tiene per sé gli
+attributi, così la ricerca vera del `DispatcherServlet` parte pulita.
+
+### Motivazione
+
+Il piano suggeriva di basare il matcher su `HandlerMappingIntrospector.getMatchableHandlerMapping`. In
+Spring Boot però il mapping delle risorse statiche (`/**`) risponde a qualunque percorso, quindi
+l'introspector troverebbe sempre un handler e ogni `/api/...` inesistente diventerebbe un 401. Limitare la
+ricerca ai controller dà la risposta giusta; il fallback SPA di F6-03 non la cambia, perché riguarda solo i
+percorsi fuori da `/api/**`.
+
+### Conseguenza accettata
+
+Senza token, 404 e 401 distinguono le rotte inesistenti da quelle esistenti ma protette: chi non è
+autenticato può quindi capire se un percorso `/api/...` esiste. È la forma che il design richiede
+(sezione 6.3) e non espone dati: i percorsi dell'API non sono segreti (compaiono in Swagger, F6-02) e i
+dati restano dietro l'autenticazione. Vale anche per il metodo: un percorso esistente chiamato con il
+metodo sbagliato risponde 401 o 403 prima del 405, non 404.
+
+### Allineamento del design
+
+Nella stessa card il design è stato corretto in due punti:
+
+- `UserAccessService.loadActive` (sezioni 5.2, 7.2 e 8.2) è diventato `UserAccessService.resolve`, il nome
+  del piano e del codice. `resolve` restituisce anche gli stati `SUSPENDED`, `NOT_VERIFIED` e
+  `NOT_FOUND`, che i chiamanti (filtro, login, refresh) distinguono.
+- Nella tabella della sezione 6.2 la riga `ACCESS_DENIED` non cita più l'"origine non ammessa": il rifiuto
+  CORS è un 403 senza corpo JSON, scritto da Spring prima di arrivare ai nostri handler, quindi non ha il
+  codice `ACCESS_DENIED`. Il frontend non può leggerlo come un `ErrorResponse`.
+
+### Alternative scartate
+
+- **`HandlerMappingIntrospector.getMatchableHandlerMapping` così com'è**: vede anche il mapping delle
+  risorse statiche, quindi non distingue i percorsi inesistenti.
+- **Disattivare il mapping delle risorse statiche**: romperebbe il servizio dei file del frontend (D1).
+- **Rispondere 401 a tutto ciò che non è pubblico**: contraddice il design (404 anche sotto
+  `/api/admin/**`) e il frontend scambierebbe un percorso sbagliato per un token scaduto, facendo
+  partire un refresh inutile.

@@ -41,15 +41,17 @@
           "response": []
         },
         {
-          "name": "Percorso non pubblico (403)",
+          "name": "Percorso inesistente (404)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('403: fuori da /api/health tutto e' negato', function () {",
-                  "    pm.response.to.have.status(403);",
+                  "pm.test('404 NOT_FOUND in JSON anche senza token', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('NOT_FOUND');",
                   "});"
                 ]
               }
@@ -63,7 +65,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "inesistente"]
             },
-            "description": "Errore significativo. Con la SecurityConfig temporanea di F0-02 solo GET /api/health e' pubblico, quindi qualsiasi altro percorso risponde 403 anche se non esiste. Da F1-01 la risposta diventa 401 UNAUTHENTICATED in JSON: aggiornare allora questa richiesta."
+            "description": "Errore significativo. Un percorso /api/... senza handler risponde sempre 404 NOT_FOUND in JSON, anche senza token e anche sotto /api/admin/** (progettazione, sezione 6.3): mai 401 ne' 403. Un percorso che esiste e richiede il login risponde invece 401 UNAUTHENTICATED senza token."
           },
           "response": []
         }

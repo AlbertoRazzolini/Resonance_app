@@ -11,8 +11,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Health check: UP con il database acceso, 503 con il database guasto, altri endpoint non pubblici
- * (progettazione, sezione 6.11).
+ * Health check: UP con il database acceso, 503 con il database guasto, pubblico anche senza token
+ * (progettazione, sezioni 6.3 e 6.11).
  */
 class HealthControllerTest extends IntegrationTest {
 
@@ -42,9 +42,10 @@ class HealthControllerTest extends IntegrationTest {
     }
 
     @Test
-    void otherEndpoints_areNotPublic() throws Exception {
-        // SecurityConfig temporaneo di F0-02: solo /api/health e' permesso (sostituito in F1-01).
-        mockMvc.perform(get("/api/qualcosa"))
-                .andExpect(status().isForbidden());
+    void health_isPublicWithoutToken() throws Exception {
+        // Nessun Authorization: l'endpoint e' pubblico (progettazione, sezione 6.3). I percorsi
+        // inesistenti e quelli protetti sono coperti da JwtFilterIntegrationTest.
+        mockMvc.perform(get("/api/health"))
+                .andExpect(status().isOk());
     }
 }

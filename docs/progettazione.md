@@ -689,7 +689,7 @@ Le credenziali non compaiono mai in migrazioni, file versionati o log.
 
 ### 5.2 Caricamento a ogni richiesta
 
-`UserAccessService.loadActive(userId)` legge con una sola query utente, stato, `email_verified`,
+`UserAccessService.resolve(userId)` legge con una sola query utente, stato, `email_verified`,
 `suspended_until` e ruoli. Lo usano `JwtFilter` (ogni richiesta REST con Bearer),
 `JwtChannelInterceptor` (CONNECT), il controllo a ogni SEND STOMP, login e refresh. Promozioni,
 revoche e sospensioni hanno quindi effetto **dalla richiesta successiva**, senza attendere la
@@ -798,7 +798,7 @@ nascosto → 404. Nessuna cancellazione fisica.
 |---|---|---|
 | `VALIDATION_ERROR` | 400 | Bean Validation, body illeggibile, parametri non validi |
 | `UNAUTHENTICATED` | 401 | Bearer assente/non valido su endpoint protetto (EntryPoint) |
-| `ACCESS_DENIED` | 403 | Ruolo insufficiente, origine non ammessa |
+| `ACCESS_DENIED` | 403 | Ruolo insufficiente |
 | `NOT_FOUND` | 404 | Risorsa inesistente o nascosta |
 | `METHOD_NOT_ALLOWED` | 405 | Metodo non supportato |
 | `UNSUPPORTED_MEDIA_TYPE` | 415 | Content-Type del body non supportato (l'API accetta solo JSON) |
@@ -1024,7 +1024,7 @@ notifiche, appeal delle sospensioni (sezione 15).
 Header nativo `Authorization: Bearer <accessToken>`. `JwtChannelInterceptor`:
 
 1. Verifica firma e scadenza del JWT.
-2. `UserAccessService.loadActive` dal database: utente esistente, verificato e ACTIVE (con
+2. `UserAccessService.resolve` dal database: utente esistente, verificato e ACTIVE (con
    riattivazione pigra); ruoli caricati dal DB, mai dai claim.
 3. Successo: `accessor.setUser(AuthenticatedUser{id, roles, accessTokenExpiresAt})`.
 4. Errore: `AppException` (`TOKEN_INVALID` o `ACCOUNT_SUSPENDED`) → `StompErrorHandler` invia un
@@ -1126,7 +1126,7 @@ di 8.5.
 - Nessun Bearer o token non valido/scaduto → **prosegue senza autenticare**. Il 401
   `UNAUTHENTICATED` lo produce l'`AuthenticationEntryPoint` solo sugli endpoint protetti, così un
   token vecchio non blocca le pagine pubbliche.
-- Token valido → `UserAccessService.loadActive`: utente inesistente, non verificato o sospeso →
+- Token valido → `UserAccessService.resolve`: utente inesistente, non verificato o sospeso →
   nessuna autenticazione (il frontend scopre la sospensione al refresh, che risponde
   `ACCOUNT_SUSPENDED` con i dettagli).
 - Altrimenti `SecurityContext` con `AuthenticatedUser` e una authority `ROLE_*` per ruolo.
