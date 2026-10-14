@@ -99,6 +99,22 @@ class RateLimitServiceTest {
         assertThatCode(() -> service.consume(RateLimit.CONVERSATIONS_CREATED, KEY)).doesNotThrowAnyException();
     }
 
+    // Percorso del login (check + record): i fallimenti di un'email non devono bloccarne un'altra.
+    @Test
+    void recordAndCheck_failuresOfOneEmailDoNotBlockAnotherEmail() {
+        String other = "altro@example.com";
+        for (int i = 0; i < 3; i++) {
+            service.check(RateLimit.LOGIN_FAILED, KEY);
+            service.record(RateLimit.LOGIN_FAILED, KEY);
+        }
+        assertTooManyRequests(() -> service.check(RateLimit.LOGIN_FAILED, KEY));
+
+        assertThatCode(() -> service.check(RateLimit.LOGIN_FAILED, other)).doesNotThrowAnyException();
+        // Anche dopo che la seconda email ha registrato un fallimento: il suo conteggio e' suo.
+        service.record(RateLimit.LOGIN_FAILED, other);
+        assertThatCode(() -> service.check(RateLimit.LOGIN_FAILED, other)).doesNotThrowAnyException();
+    }
+
     @Test
     void check_doesNotRecordAnything() {
         for (int i = 0; i < 10; i++) {

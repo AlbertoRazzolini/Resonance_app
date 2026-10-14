@@ -1092,3 +1092,32 @@ chiedere un nuovo codice.
   l'utente sospeso non capirebbe perché il reset non funziona.
 - **Rendere il `429` di forgot identico per tutte le email** (limite in memoria per email invece di una riga
   per account): elimina la distinzione, ma richiede un secondo meccanismo di limite e non è nel design.
+
+## Decisione 52: DatabaseUrl non forza sslmode (implementazione)
+
+### Scelta
+
+`DatabaseUrl` converte `DATABASE_URL` (`postgresql://utente:password@host:porta/db`) in un URL JDBC con le
+credenziali separate e **mantiene i parametri già presenti nell'URL**, senza aggiungerne. Non c'è più
+`sslmode=require` forzato. L'URL **esterno** di Render ha già `?sslmode=require` e quindi usa TLS; l'URL
+**interno** non ha parametri e il suo server non offre TLS, quindi la connessione resta in chiaro dentro la
+rete privata di Render. Anche lo schema `postgres://` è accettato. Il log stampa l'URL JDBC senza credenziali e
+oscura un eventuale parametro `password=`.
+
+### Motivazione
+
+La scelta è stata fatta dopo un avvio di prova con il profilo `prod` e una `DATABASE_URL` in formato Render
+senza parametri verso il PostgreSQL di Docker Compose (che non offre TLS): con `sslmode=require` forzato
+l'applicazione non partiva (Flyway: "Il server non supporta SSL"). Lo stesso succederebbe sull'URL interno di
+Render, che è quello collegato dal Blueprint (`fromDatabase`, `connectionString`; da confermare al primo deploy, F2-03). Lasciare i parametri a chi fornisce l'URL è più
+semplice e corretto: chi vuole TLS lo ha già nell'URL (quello esterno), chi non lo offre non viene rotto.
+Dopo la modifica la stessa prova parte, Flyway applica le tre migrazioni e il SUPERADMIN viene creato.
+
+### Alternative scartate
+
+- **`sslmode=require` sempre** (design originale, sezione 12.3 e brief): funziona solo se il server offre TLS,
+  quindi rompe l'URL interno di Render e il database locale di Compose.
+- **`sslmode=require` solo se manca nell'URL e l'host non è interno**: richiede di indovinare dall'host se il
+  server offre TLS, fragile e non verificabile senza Render.
+- **Variabile d'ambiente dedicata (`DB_SSLMODE`)**: una configurazione in più da tenere allineata quando
+  l'URL può già contenere il parametro.

@@ -600,7 +600,9 @@ I controlli 3 e 4 avvengono solo dopo una password corretta, così non rivelano 
 
 1. Header `X-Requested-With` assente → 403 `CSRF_HEADER_MISSING`. Header `Origin` presente ma
    diverso dall'origine del servizio e non fra le origini ammesse in configurazione (in prod
-   nessuna) → 403 `ACCESS_DENIED`.
+   nessuna) → 403 **senza `ErrorResponse`**: lo rifiuta il filtro CORS di Spring con il testo
+   "Invalid CORS request", prima dei nostri handler, quindi non ha il codice `ACCESS_DENIED` (il controllo
+   nel controller resta come seconda difesa).
 2. Cookie assente → 401 `REFRESH_TOKEN_INVALID` + cancellazione del cookie.
 3. Hash del valore; `SELECT ... FOR UPDATE` per `token_hash`. Non trovato → 401
    `REFRESH_TOKEN_INVALID` + cancellazione.
@@ -811,11 +813,11 @@ nascosto → 404. Nessuna cancellazione fisica.
 | `INTERNAL_ERROR` | 500 | Errore inatteso (loggato) |
 | `EMAIL_ALREADY_REGISTERED` | 409 | Registrazione |
 | `ALREADY_VERIFIED` | 409 | Verifica |
-| `CODE_INVALID` / `CODE_EXPIRED` | 400 | Verifica, reset |
+| `CODE_INVALID` / `CODE_EXPIRED` | 400 | Verifica (entrambi). Reset: solo `CODE_INVALID`, anche per codice scaduto, esaurito o assente (decisione 51) |
 | `WRONG_PASSWORD` | 400 | Verifica con password diversa |
 | `INVALID_CREDENTIALS` | 401 | Login |
 | `EMAIL_NOT_VERIFIED` | 403 | Login |
-| `ACCOUNT_SUSPENDED` | 403 | Login, refresh, verifica; `details: {suspensionReason, suspendedUntil}` |
+| `ACCOUNT_SUSPENDED` | 403 | Login, refresh, verifica, reset (solo con il codice valido, decisione 51); `details: {suspensionReason, suspendedUntil}` |
 | `CSRF_HEADER_MISSING` | 403 | Refresh/logout senza `X-Requested-With` |
 | `REFRESH_TOKEN_INVALID` / `REFRESH_TOKEN_EXPIRED` / `REFRESH_TOKEN_REUSED` | 401 | Refresh |
 | `REFRESH_CONFLICT` | 409 | Refresh concorrente entro la finestra |
@@ -1369,8 +1371,10 @@ Profili `dev`, `prod`, `test` (sezione 2.3). Flyway applica le migrazioni all'av
 ### 12.3 DatabaseUrl
 
 `ResonanceApplication.main` chiama `DatabaseUrl.applyIfPresent()` prima di avviare Spring: converte
-`DATABASE_URL` di Render (`postgresql://utente:password@host:porta/db`) in URL JDBC con
-`sslmode=require` e credenziali separate; stampa solo l'URL JDBC, mai la password.
+`DATABASE_URL` di Render (`postgresql://utente:password@host:porta/db`) in URL JDBC con credenziali
+separate, **mantenendo i parametri già presenti** (decisione 52): l'URL esterno di Render ha già
+`?sslmode=require`, quello interno non ha parametri e il suo server non offre TLS, quindi `DatabaseUrl` non
+aggiunge `sslmode`. Stampa solo l'URL JDBC, mai la password.
 
 ### 12.4 Variabili d'ambiente
 

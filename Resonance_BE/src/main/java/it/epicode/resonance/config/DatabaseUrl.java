@@ -1,6 +1,9 @@
 package it.epicode.resonance.config;
 
 import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 /**
  * Render consegna il database in una variabile sola, DATABASE_URL, scritta cosi':
@@ -49,29 +52,57 @@ public final class DatabaseUrl {
         }
 
         // La password non si stampa mai: i log di Render sono leggibili da chiunque abbia accesso al progetto.
-        System.out.println("[database] DATABASE_URL tradotta in " + jdbc);
+        // Neppure se qualcuno l'avesse messa fra i parametri dell'URL (password=...).
+        System.out.println("[database] DATABASE_URL tradotta in " + jdbc.replaceAll("(?i)(password=)[^&]*", "$1***"));
     }
 
     /**
-     * Converte l'URL di Render in un URL JDBC senza credenziali. Un URL gia' jdbc: resta com'e'.
+     * Converte l'URL di Render in un URL JDBC senza credenziali, mantenendo i parametri gia' presenti
+     * (decisione 52): quello esterno di Render ha sslmode=require, quello interno non ha parametri e il suo
+     * server non offre TLS, quindi non si aggiunge niente. Un URL gia' jdbc: resta com'e'.
      */
     static String toJdbc(String raw) {
         String trimmed = raw.trim();
         if (trimmed.startsWith("jdbc:")) {
             return trimmed;
         }
-        URI uri = URI.create(trimmed);
+        URI uri = parse(trimmed);
         int port = uri.getPort() == -1 ? 5432 : uri.getPort();
-        // sslmode=require: la connessione interna di Render non lo chiederebbe, quella esterna si',
-        // e lo stesso indirizzo va bene in entrambi i casi.
-        return "jdbc:postgresql://%s:%d%s?sslmode=require".formatted(uri.getHost(), port, uri.getPath());
+        String query = uri.getRawQuery();
+        return "jdbc:postgresql://%s:%d%s%s".formatted(uri.getHost(), port, uri.getPath(),
+                query == null || query.isEmpty() ? "" : "?" + query);
     }
 
     /**
-     * Estrae utente e password dall'URL; l'array e' vuoto se mancano.
+     * Estrae utente e password dall'URL, gia' decodificati (%40 diventa "@"): il driver JDBC li vuole in chiaro.
+     * Si divide sul primo ":" della parte grezza, prima di decodificare, cosi' un ":" codificato (%3A) fa
+     * parte del nome o della password e non e' il separatore. L'array e' vuoto se mancano.
      */
     private static String[] credentials(String raw) {
-        String userInfo = URI.create(raw.trim()).getUserInfo();
-        return userInfo == null ? new String[0] : userInfo.split(":", 2);
+        String userInfo = parse(raw.trim()).getRawUserInfo();
+        if (userInfo == null) {
+            return new String[0];
+        }
+        return Arrays.stream(userInfo.split(":", 2)).map(DatabaseUrl::decode).toArray(String[]::new);
+    }
+
+    /**
+     * Legge l'URL. Se non e' valido (per esempio una "%" non codificata nella password) lancia un errore con
+     * messaggio fisso e senza la causa: l'eccezione di {@link URI#create} riporta l'URL intero, password
+     * compresa, che finirebbe nello stack trace dell'avvio e nei log di Render (progettazione, sezione 8.9).
+     */
+    private static URI parse(String url) {
+        try {
+            return URI.create(url);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("DATABASE_URL non valido");
+        }
+    }
+
+    /**
+     * Decodifica i %xx. Il "+" resta tale (URLDecoder lo trasformerebbe in spazio): qui non e' una query string.
+     */
+    private static String decode(String value) {
+        return URLDecoder.decode(value.replace("+", "%2B"), StandardCharsets.UTF_8);
     }
 }
