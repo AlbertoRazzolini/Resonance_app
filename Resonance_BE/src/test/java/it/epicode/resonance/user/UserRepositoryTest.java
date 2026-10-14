@@ -19,10 +19,7 @@ class UserRepositoryTest extends IntegrationTest {
 
     @Test
     void saveUserWithRoles() {
-        User user = new User();
-        user.setEmail("mario@example.com");
-        user.setPasswordHash("hash-di-prova");
-        user.setDisplayName("Mario");
+        User user = new User("mario@example.com", "hash-di-prova", "Mario");
         users.save(user);
         roles.save(new UserRole(user.getId(), Role.FAN));
         roles.save(new UserRole(user.getId(), Role.MUSICIAN));

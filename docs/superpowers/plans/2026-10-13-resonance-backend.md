@@ -219,7 +219,7 @@ dominio X").
 - [ ] **4. Test di integrazione (30 min).** Codice letto con `@RecordApplicationEvents`. Casi: registrazione → 201 e ruolo FAN; `register_normalizesEmail`; password di 30 emoji → 400 `fields.password`; email già verificata → 409; re-registrazione di email non verificata sovrascrive `displayName`; verify corretta → 200 + cookie + `emailVerified`; codice sbagliato → 400 e tentativo consumato anche dopo il rollback della risposta; password diversa → 400 `WRONG_PASSWORD`; resend su email inesistente → 204 senza evento.
 - [ ] **5. Documentazione e Postman (20 min).** `schema-db.md` (V3). Postman: Register (201; 400 email non valida), Verify (200; 400 codice sbagliato), Resend (204; 400 email mancante).
 
-**Criterio:** test verdi; con il profilo dev il codice di verifica compare nel log scritto da `LogEmailService`; `User` adeguata alla decisione 41: aggiungere il costruttore con `email`, `passwordHash` e `displayName` e rendere protetto il costruttore vuoto (`UserRole` e `UserRoleId` lo hanno già).
+**Criterio:** test verdi; con il profilo dev il codice di verifica compare nel log scritto da `LogEmailService`.
 **Commit proposto:** `feat(auth): add registration, email verification codes and event-driven email`
 
 ### Card F1-04 · Password dimenticata, reset e bootstrap SUPERADMIN — stima 2 h

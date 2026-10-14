@@ -5,10 +5,10 @@ import jakarta.persistence.Embeddable;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -19,9 +19,9 @@ import java.util.UUID;
  * Chiave composta di user_roles: (user_id, role).
  */
 @Embeddable
-@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED) // solo per JPA (decisione 41)
-@AllArgsConstructor
+@ToString
+@Getter
 @EqualsAndHashCode
 public class UserRoleId implements Serializable {
 
@@ -32,4 +32,9 @@ public class UserRoleId implements Serializable {
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "role", nullable = false)
     private Role role;
+
+    public UserRoleId(UUID userId, Role role) {
+        this.userId = userId;
+        this.role = role;
+    }
 }

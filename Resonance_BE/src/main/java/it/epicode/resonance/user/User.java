@@ -1,5 +1,6 @@
 package it.epicode.resonance.user;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -8,9 +9,11 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 import org.hibernate.annotations.Generated;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.generator.EventType;
@@ -24,28 +27,33 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "users")
+@NoArgsConstructor(access = AccessLevel.PROTECTED) // solo per JPA (decisione 41)
+@ToString
 @Getter
 @Setter
-@NoArgsConstructor
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Setter(AccessLevel.NONE)
     private UUID id;
 
     // Sempre minuscola e senza spazi: la normalizza l'applicazione, il database non la controlla.
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false, unique = true)
     private String email;
 
-    // Hash BCrypt, mai la password in chiaro.
-    @Column(name = "password_hash", nullable = false, length = 100)
+    // Hash BCrypt, mai la password in chiaro. Fuori da JSON e da toString: non deve mai finire nei log
+    // (progettazione, sezione 8.9).
+    @Column(name = "password_hash", nullable = false)
+    @JsonIgnore
+    @ToString.Exclude
     private String passwordHash;
 
-    @Column(name = "display_name", nullable = false, length = 50)
+    @Column(name = "display_name", nullable = false)
     private String displayName;
 
     // Solo URL http/https, validato dall'applicazione: nell'MVP non ci sono upload (decisione 2).
-    @Column(name = "avatar_url", length = 2048)
+    @Column(name = "avatar_url")
     private String avatarUrl;
 
     @Column(name = "email_verified", nullable = false)
@@ -56,10 +64,8 @@ public class User {
     @Column(nullable = false)
     private UserStatus status = UserStatus.ACTIVE;
 
-    @Column(length = 500)
     private String bio;
 
-    @Column(length = 100)
     private String city;
 
     // Gradi. Latitudine e longitudine sono entrambe nulle finche' l'utente non condivide la posizione
@@ -81,9 +87,20 @@ public class User {
     @Column(name = "suspended_by")
     private UUID suspendedBy;
 
-    @Column(name = "suspension_reason", length = 500)
+    @Column(name = "suspension_reason")
     private String suspensionReason;
 
     @Column(name = "suspended_until")
     private Instant suspendedUntil;
+
+    /**
+     * Crea un utente con i dati obbligatori. Gli altri campi partono dai valori iniziali:
+     * stato ACTIVE, email non verificata, nessun dato facoltativo. I ruoli si assegnano a parte
+     * con {@link UserRole}.
+     */
+    public User(String email, String passwordHash, String displayName) {
+        this.email = email;
+        this.passwordHash = passwordHash;
+        this.displayName = displayName;
+    }
 }

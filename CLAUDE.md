@@ -89,11 +89,16 @@ verifiche non eseguiti.
   nome; i nomi dei test restano descrittivi.
 - La regola vale anche per il codice già scritto: ogni card la applica ai file che crea o modifica.
 
-## Entità JPA
+## Costruttori ed entità JPA (decisioni 41 e 43)
 
-- Costruttore pubblico con i campi obbligatori (NOT NULL senza default del database) e
+- **Mai `@AllArgsConstructor`, in nessuna classe**: i costruttori si scrivono a mano, assegnando i
+  campi con `this.`.
+- Entity: costruttore pubblico con i campi obbligatori (NOT NULL senza default del database) e
   `@NoArgsConstructor(access = AccessLevel.PROTECTED)` per JPA; gli altri campi restano con i setter.
-  Le entity esistenti si adeguano quando una card le usa per la prima volta (decisione 41).
+- Ordine delle annotazioni: `@Entity`, `@Table`, `@NoArgsConstructor`, `@ToString`, `@Getter`,
+  `@Setter`. `@Id` senza setter (`@Setter(AccessLevel.NONE)`); hash della password fuori da JSON e
+  `toString`. Le entity senza campi modificabili (chiavi composte, righe di sola lettura) non hanno `@Setter`.
+- Niente `length` nelle `@Column`: le lunghezze stanno nelle migrazioni e nei DTO.
 
 ## Postman e WebSocket
 

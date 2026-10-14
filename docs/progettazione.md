@@ -141,7 +141,7 @@ contiene entity, repository, service, controller e DTO del proprio dominio. Stra
   Normalizzazione (trim, email minuscola) nel costruttore compatto del record, come in NoseY.
 - **Entity**: Lombok `@Getter`/`@Setter`, id `@GeneratedValue(strategy = GenerationType.UUID)`.
   Costruttore pubblico con i campi obbligatori e `@NoArgsConstructor(access = AccessLevel.PROTECTED)`
-  per JPA (decisione 41).
+  per JPA (decisione 41). Mai `@AllArgsConstructor`: i costruttori si scrivono a mano.
 
 Componenti trasversali: gestione centralizzata degli errori, `Clock` iniettato, limiti di frequenza
 in memoria, eventi applicativi con `@TransactionalEventListener(AFTER_COMMIT)` per email e push live.

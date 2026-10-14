@@ -737,10 +737,10 @@ raggiungibile da altre macchine sulla rete locale. pgAdmin e IntelliJ si collega
 Ogni entity ha un costruttore pubblico con i campi obbligatori (NOT NULL senza default del
 database) e `@NoArgsConstructor(access = AccessLevel.PROTECTED)`, che serve solo a JPA. Gli altri
 campi restano con i setter. Per le entity con chiave composta il costruttore riceve i dati della
-chiave. Le entity nuove nascono già così. `UserRole` e `UserRoleId` hanno già il costruttore vuoto
-protetto. `User` ha per ora `@NoArgsConstructor` pubblico: in F1-03, quando un service la crea per la
-prima volta, riceve il costruttore con i campi obbligatori (`email`, `passwordHash`, `displayName`) e
-quello vuoto diventa protetto.
+chiave. Le entity nuove nascono già così; `User`, `UserRole` e `UserRoleId` la rispettano. Ogni entity ha `@ToString`. Il campo
+`id` non ha setter (`@Setter(AccessLevel.NONE)`) e i campi sensibili, come l'hash della password,
+stanno fuori da JSON e da `toString` (`@JsonIgnore`, `@ToString.Exclude`). `@AllArgsConstructor` non
+si usa in nessuna classe: i costruttori si scrivono a mano, assegnando i campi con `this.`.
 
 ### Motivazione
 
@@ -781,3 +781,25 @@ commenti che ripetono il codice.
   ottobre.
 - **Test commentati come il codice di produzione**: quasi ogni test avrebbe un commento, quando il
   nome descrittivo basta.
+
+## Decisione 43: lunghezze delle colonne solo nelle migrazioni e nei DTO (implementazione)
+
+### Scelta
+
+Le entity non dichiarano `length` nelle `@Column`. La lunghezza delle colonne la fissano le migrazioni
+Flyway (descritte in `docs/schema-db.md`) e la validazione dei DTO. Le lunghezze di `users` restano
+quelle del design (sezione 3.2): non sono state ridotte.
+
+### Motivazione
+
+Lo schema lo decide Flyway (`ddl-auto: validate`, mai `update`): ripetere la lunghezza nell'entity è
+una seconda fonte da tenere allineata. Con `validate` Hibernate non controlla la lunghezza delle
+colonne: l'avvio e i test passano anche con lunghezze diverse da quelle del database.
+
+### Alternative scartate
+
+- **`length` ripetuta in ogni `@Column`** (com'era in `User`): doppia dichiarazione senza effetto
+  sullo schema.
+- **Ridurre le lunghezze di `users` (per esempio email 100, `password_hash` 60, `avatar_url` 255)**:
+  valutata e non adottata per scelta dello studente; avrebbe richiesto di riscrivere V1 o di
+  aggiungere una migrazione e di aggiornare il design.
