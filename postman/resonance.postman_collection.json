@@ -5,6 +5,12 @@
     "description": "Richieste REST del backend di Resonance. Si usa con l'environment `local` o `render`: la variabile baseUrl decide su quale server girano. STOMP (chat e notifiche) non e' qui: si verifica con i test di integrazione.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{accessToken}}", "type": "string" }
+    ]
+  },
   "item": [
     {
       "name": "Health",
@@ -73,8 +79,202 @@
     },
     {
       "name": "Auth",
-      "description": "Registrazione, verifica email, login, refresh e logout (card F1).",
-      "item": []
+      "description": "Registrazione, verifica email, login, refresh e logout (card F1). Per il login imposta le variabili userEmail e userPassword nell'environment (mai nei file versionati): lo script salva accessToken e le altre cartelle lo usano come Bearer. Il refresh usa il cookie jar di Postman.",
+      "item": [
+        {
+          "name": "Login (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con access token e profilo', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+                  "    pm.expect(body.user.email).to.be.a('string');",
+                  "    pm.expect(body.refreshToken).to.be.undefined;",
+                  "    pm.environment.set('accessToken', body.accessToken);",
+                  "});",
+                  "pm.test('cookie di refresh HttpOnly', function () {",
+                  "    pm.expect(pm.response.headers.get('Set-Cookie')).to.include('resonance_refresh=').and.to.include('HttpOnly');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Pubblico. 200 con { accessToken, accessTokenExpiresAt, user } e il refresh token nel cookie HttpOnly resonance_refresh (Path /api/auth/refresh). Lo script salva accessToken nell'environment."
+          },
+          "response": []
+        },
+        {
+          "name": "Login con password errata (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 INVALID_CREDENTIALS', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().code).to.eql('INVALID_CREDENTIALS');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"password-sicuramente-sbagliata\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Errore significativo. Email inesistente e password errata danno la stessa risposta 401 INVALID_CREDENTIALS. Dopo 10 fallimenti in 15 minuti per la stessa email: 429 TOO_MANY_REQUESTS. Email non verificata: 403 EMAIL_NOT_VERIFIED; account sospeso: 403 ACCOUNT_SUSPENDED con details.suspensionReason e details.suspendedUntil (solo con la password giusta)."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con nuovo access token e nuovo cookie', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+                  "    pm.environment.set('accessToken', body.accessToken);",
+                  "    pm.expect(pm.response.headers.get('Set-Cookie')).to.include('resonance_refresh=');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "X-Requested-With", "value": "XMLHttpRequest" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Cookie + header X-Requested-With (obbligatorio, aggiunto a mano perche' Postman non e' un browser). Il cookie resonance_refresh lo manda il cookie jar di Postman dopo il login. Ruota il token: il vecchio non vale piu'. Due refresh con lo stesso cookie entro 10 secondi: il secondo risponde 409 REFRESH_CONFLICT; oltre 10 secondi, 401 REFRESH_TOKEN_REUSED e revoca di tutti i token."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh senza header (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 CSRF_HEADER_MISSING', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('CSRF_HEADER_MISSING');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Errore significativo. Senza X-Requested-With il refresh e' rifiutato prima di toccare il token (difesa CSRF, progettazione sezione 8.5). Anche un header Origin di un altro sito da' 403."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 e cookie cancellato', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "    pm.expect(pm.response.headers.get('Set-Cookie')).to.include('resonance_refresh=').and.to.include('Max-Age=0');",
+                  "    pm.environment.unset('accessToken');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "DELETE",
+            "header": [{ "key": "X-Requested-With", "value": "XMLHttpRequest" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Cookie + X-Requested-With. Sempre 204 e cookie cancellato; revoca il solo token di questo dispositivo. Non richiede il Bearer, quindi funziona anche con l'access token scaduto. Un refresh fatto dopo il logout con lo stesso cookie risponde 401 REFRESH_TOKEN_REUSED."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout senza header (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 CSRF_HEADER_MISSING', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('CSRF_HEADER_MISSING');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Errore significativo. Senza X-Requested-With il logout e' rifiutato e il token non viene toccato."
+          },
+          "response": []
+        }
+      ]
     },
     {
       "name": "Users",

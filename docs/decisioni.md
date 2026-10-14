@@ -193,6 +193,15 @@ cookie non cancellato; il client ritenta con il cookie nuovo. Oltre i 10 secondi
 revocato da logout o reset, si revocano tutti i token. Le richieste sullo stesso token sono
 serializzate con un lock di riga.
 
+**Il confine è incluso**: la condizione è `adesso − revoked_at ≤ 10 s`, quindi a 10 secondi esatti la
+risposta è ancora 409 e solo oltre (a 10,001 s) è un riuso. I test verificano 9, 9,5, 10,5 e 11 secondi
+con un orologio senza frazioni di secondo; non c'è un test sul secondo esatto, perché PostgreSQL salva i
+microsecondi e arrotonda: con l'`Instant.now()` di un test reale l'esito a 10 secondi esatti dipenderebbe
+dall'arrotondamento e il test sarebbe instabile. Una finestra a 9 o a 11 secondi viene scoperta dai test
+a 9,5 e a 10,5 secondi; scambiare "incluso" con "escluso" no, e non cambia nulla di osservabile se non
+all'istante esatto del confine. Il lock di riga è coperto da un test con due richieste concorrenti vere,
+ripetuto 20 volte (`RefreshTokenServiceTest`).
+
 ### Motivazione
 
 Due schede aperte insieme fanno refresh con lo stesso cookie: con la regola rigida l'utente
@@ -892,3 +901,132 @@ Nella stessa card il design è stato corretto in due punti:
 - **Rispondere 401 a tutto ciò che non è pubblico**: contraddice il design (404 anche sotto
   `/api/admin/**`) e il frontend scambierebbe un percorso sbagliato per un token scaduto, facendo
   partire un refresh inutile.
+
+## Decisione 47: Origin del refresh e forward-headers-strategy in produzione (implementazione)
+
+### Scelta
+
+Due cose vanno insieme:
+
+1. **Profilo `prod`: `server.forward-headers-strategy: native`.** Il TLS termina nel proxy di Render, che
+   inoltra la richiesta in HTTP con `X-Forwarded-Proto: https`. Con `native` il `RemoteIpValve` di Tomcat
+   ricostruisce schema e porta veri, così Spring vede la richiesta come HTTPS.
+2. **Controllo dell'`Origin` su refresh e logout** (progettazione, sezioni 4.8 e 8.5): un `Origin` è
+   accettato se è fra le origini configurate (`ALLOWED_ORIGIN`) oppure se host e porta coincidono con quelli
+   dell'header `Host`; lo schema non si confronta. Un `Origin` assente passa (lo difendono `SameSite=Lax` e
+   `X-Requested-With`).
+
+### Motivazione
+
+Il filtro CORS di Spring gira **prima** del controller e considera cross-origin ogni richiesta il cui
+`Origin` non coincide con schema, host e porta che vede. I browser inviano `Origin` su ogni POST, anche
+same-origin. Senza il punto 1, dietro il proxy il servizio vede `http` mentre l'`Origin` è `https`: il filtro
+risponde 403 "Invalid CORS request" (testo semplice, non il nostro JSON) a **login, refresh e logout**, cioè
+a ogni POST/DELETE del frontend. Il problema è stato riprodotto in F1-02 con una richiesta simulata
+(`Host`, `X-Forwarded-Proto: https`, `Origin: https://...`) e risolto da `ForwardedHeadersRealServerTest`,
+che avvia un server vero su porta casuale con i profili `test` e `prod`: login, refresh e logout passano, un
+`Origin` esterno, `null` o con lo stesso prefisso dell'host resta bloccato, e senza `X-Forwarded-Proto` un
+`Origin` https è bloccato.
+
+Il controllo nel controller (punto 2) è quindi un secondo livello: per `Origin` esterno e `null` risponde già il
+filtro CORS. Resta utile per i casi che il filtro lascia passare e per non dipendere da una sola difesa. Il
+confronto sull'host è esatto (non "inizia con"): `host.evil.example` non passa.
+
+### Cosa si assume sul proxy di Render (da verificare al primo deploy, F2)
+
+- Render termina il TLS e inoltra in HTTP aggiungendo `X-Forwarded-Proto` (e `X-Forwarded-For`).
+- Il proxy contatta il servizio da un indirizzo di una rete privata o di loopback: `native` si fida degli
+  header solo se la richiesta arriva da un proxy interno (default di Tomcat: 10.x, 172.16-31.x, 192.168.x,
+  127.x, ::1 e simili). Se l'indirizzo di Render non rientrasse, gli header sarebbero ignorati e il login
+  darebbe 403: la correzione è `server.tomcat.remoteip.internal-proxies` con l'intervallo giusto.
+- L'header `Host` arriva invariato (il dominio `.onrender.com`, senza porta). Se Render lo cambiasse, il
+  confronto fra `Origin` e `Host` andrebbe rivisto.
+
+Nessuna di queste ipotesi è stata provata su Render: il README ricorda di verificare il deploy.
+
+### Alternative scartate
+
+- **`forward-headers-strategy: framework`** (`ForwardedHeaderFilter` di Spring): funziona anche se
+  l'indirizzo del proxy non è "interno", ma si fida di `X-Forwarded-*` da chiunque, anche da chi contatta il
+  servizio direttamente. `native` limita la fiducia ai proxy noti ed è applicato in Tomcat, prima dei filtri
+  di Spring.
+- **Confrontare l'`Origin` con una sola origine configurata (`APP_ORIGIN`)**: una variabile in più da non
+  dimenticare e da tenere uguale al dominio assegnato da Render, e non risolve il 403 del filtro CORS.
+- **Escludere refresh e login dal CORS**: il filtro è globale su `/api/**`; escluderne alcuni percorsi
+  indebolirebbe la difesa del punto 2 e della sezione 8.5.
+
+### Dettagli collegati
+
+I `details` di un errore possono avere valori `null` (`suspendedUntil` di una sospensione a tempo
+indeterminato, che il design vuole presente nel JSON): `AppException` ed `ErrorResponse` non usano più
+`Map.copyOf`, che rifiuta i `null`, ma una copia non modificabile che li ammette.
+
+## Decisione 48: limite dei login falliti per email e confronto BCrypt fittizio (implementazione)
+
+### Scelta
+
+- **Limite dei fallimenti (`LOGIN_FAILED`, progettazione 4.7 e 8.8)**: la chiave è l'**email**, 10
+  fallimenti in 15 minuti, finestra scorrevole in memoria. Il controllo viene prima delle credenziali: oltre
+  il limite il login risponde 429 anche con la password giusta. Un login riuscito azzera il contatore; i
+  controlli di email non verificata e di sospensione, fatti solo dopo la password giusta, non contano come
+  fallimenti.
+- **Confronto BCrypt fittizio**: se l'email non esiste, `AuthService` confronta comunque la password con un
+  hash calcolato una volta all'avvio con lo stesso `PasswordEncoder` (stesso costo) da una stringa casuale, e
+  scarta il risultato. Il test `AuthServiceTest` verifica che `matches` sia chiamato anche per un'email
+  sconosciuta. Sopra i 72 byte BCrypt non si chiama né per utenti veri né per il confronto fittizio.
+
+### Motivazione
+
+Senza il confronto fittizio l'email sconosciuta risponde in circa 6 ms contro circa 68 ms di una password
+errata (misurato in locale in F1-02): il tempo rivela quali email sono registrate, vanificando la risposta
+identica 401 `INVALID_CREDENTIALS`. La chiave per email protegge una password dall'attacco a tentativi
+ripetuti senza bloccare chi ne prova una sola su molti account.
+
+### Conseguenza accettata
+
+Poiché la chiave è l'email e non l'utente o l'indirizzo IP, **chiunque può bloccare il login di un altro
+utente per 15 minuti**: basta inviare 10 login falliti con la sua email. L'utente bloccato non perde nulla
+(il limite è solo in memoria, scade da solo e non tocca la sessione già aperta), ma non può accedere finché la
+finestra non scorre. Un limite per IP non risolverebbe: dietro i proxy l'indirizzo è condiviso e manipolabile,
+e un attaccante con molti indirizzi lo aggirerebbe. Nell'MVP si accetta; un CAPTCHA o un limite combinato
+sono evoluzioni successive (Post-V1).
+
+### Alternative scartate
+
+- **Chiave per indirizzo IP**: dietro il proxy di Render tutti gli utenti condividono pochi indirizzi
+  (falsi positivi) e un attaccante distribuito lo aggira.
+- **Nessun confronto fittizio (come NoseY)**: più semplice, ma la differenza di tempo rende l'enumerazione
+  delle email immediata.
+- **Ritardo casuale invece del confronto fittizio**: meno affidabile (il tempo medio resta diverso) e
+  allunga anche le risposte legittime.
+
+## Decisione 49: id nei DTO di risposta solo dove servono a un'azione (implementazione)
+
+### Scelta
+
+Un DTO di risposta contiene un id solo se il client lo usa per un'azione successiva (aprire un dettaglio,
+mettere un like, scrivere a un utente). Per questo:
+
+- la registrazione risponde solo `{email}` (progettazione 4.4 e 6.4): dopo di essa il client deve solo
+  verificare l'email e fare il login;
+- `MeResponse` **contiene l'`id`**, solo per il proprio profilo: il frontend lo confronta con
+  `AuthorSummary.id` e `senderId` per riconoscere i propri contenuti;
+- gli id dei contenuti e degli autori restano nelle liste e nei dettagli; l'interfaccia non mostra mai un id
+  all'utente (regola per le card FE).
+
+### Motivazione
+
+Mostrare meno dati riduce l'esposizione, ma non è un livello di sicurezza: la protezione reale sono i
+controlli nel service (ruoli dal database, `NOT_OWNER`, 404 sui contenuti nascosti). L'id di un utente è
+comunque già nel `sub` del JWT e nelle risposte degli altri utenti. Togliere l'id da `MeResponse` lasciava
+senza risposta la domanda "questo contenuto è mio?", che il design risolve con il confronto degli id.
+
+### Alternative scartate
+
+- **Flag `mine`/`fromMe` calcolati dal server in ogni DTO**: il client non avrebbe bisogno del proprio id,
+  ma cambia molti DTO e gli eventi WebSocket (chat, notifiche) andrebbero calcolati per ogni destinatario.
+- **Identificatore pubblico separato dall'id interno (`public_id`, slug)**: sarebbe comunque un
+  identificatore visibile, con migrazioni su ogni tabella esposta e card già fatte da rifare; non aggiunge
+  sicurezza.
+- **Id temporanei per sessione**: stato in memoria che si perde al riavvio del servizio gratuito, problemi
+  con più schede e con la chat in tempo reale.

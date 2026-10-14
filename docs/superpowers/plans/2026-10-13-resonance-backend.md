@@ -201,7 +201,7 @@ dominio X").
 
 - [ ] **1. V2 e RefreshTokenService (60 min).** V2 come §3.2 (`refresh_tokens` con `revoked_at`, `replaced_by` `ON DELETE SET NULL`, `ck_refresh_tokens_revoked`, indici). `create`: 32 byte `SecureRandom`, base64url, hash SHA-256 esadecimale salvato. `rotate` (transazione, `findWithLockByTokenHash`): esiti di §4.8 nei passi 3–7, con revoca totale salvata anche negli esiti di errore (il service restituisce `RefreshOutcome`, non lancia). `revoke`, `revokeAll` (`UPDATE` in blocco), `deleteExpired` `@Scheduled(fixedDelay = 24h)`. Test con `MutableClock`: rotazione (vecchio revocato con `replaced_by`, nuovo con 10 giorni); token ruotato da 5 s → `Conflict` senza revoche; da 11 s → `Rejected(REFRESH_TOKEN_REUSED)` e tutti revocati; scaduto → `REFRESH_TOKEN_EXPIRED`; sconosciuto → `REFRESH_TOKEN_INVALID`; utente sospeso → `ACCOUNT_SUSPENDED` + revoca totale.
 - [ ] **2. Cookie (20 min).** `RefreshCookieFactory` come §4.3. Test: attributi in dev (`Secure` assente) e in prod (`Secure`), `clear()` con `Max-Age=0` e stesso Path.
-- [ ] **3. Login (40 min).** `POST /api/auth/login` come §4.7, con `LoginResponse` + `Set-Cookie`; codici `INVALID_CREDENTIALS`, `EMAIL_NOT_VERIFIED`, `ACCOUNT_SUSPENDED` (con `details`), `TOO_MANY_REQUESTS`. Test (utenti creati direttamente nel DB, verificati): successo con cookie; password errata → 401; email inesistente → stessa risposta; `login_normalizesEmail` (`"  Mario@Example.COM "`); password di 30 emoji → 401 senza eccezione; non verificato → 403; sospeso → 403 con `suspensionReason`; sospensione scaduta → 200; 11° fallimento → 429.
+- [ ] **3. Login (40 min).** `POST /api/auth/login` come §4.7 (con confronto BCrypt fittizio per l'email sconosciuta, decisione 48), con `LoginResponse` + `Set-Cookie`; `MeResponse` include `id` (solo il proprio profilo, decisione 49); codici `INVALID_CREDENTIALS`, `EMAIL_NOT_VERIFIED`, `ACCOUNT_SUSPENDED` (con `details`), `TOO_MANY_REQUESTS`. Test (utenti creati direttamente nel DB, verificati): successo con cookie; password errata → 401; email inesistente → stessa risposta; `login_normalizesEmail` (`"  Mario@Example.COM "`); password di 30 emoji → 401 senza eccezione; non verificato → 403; sospeso → 403 con `suspensionReason`; sospensione scaduta → 200; 11° fallimento → 429.
 - [ ] **4. Refresh e logout via HTTP (40 min).** `POST /api/auth/refresh` e `DELETE /api/auth/refresh` (pubblici) con `X-Requested-With` obbligatorio (`CSRF_HEADER_MISSING`) e controllo dell'`Origin` (§4.8 passo 1). Mappatura di `RefreshOutcome` in risposta: `Rotated` → 200 + nuovo cookie; `Conflict` → 409 senza `Set-Cookie`; `Rejected` → codice + cookie cancellato se richiesto. Test MockMvc: refresh senza header → 403; con `Origin: https://evil.example` → 403; due refresh con lo stesso cookie a 1 s → secondo 409; logout → 204 e cookie cancellato; un refresh successivo con il cookie del logout (token revocato senza `replaced_by`) → 401 `REFRESH_TOKEN_REUSED` e revoca di tutti i token dell'utente (§4.8 passo 4).
 - [ ] **5. Documentazione e Postman (30 min).** `schema-db.md` (V2, ER aggiornato). Postman Auth: Login (successo, script che salva `accessToken`; 401 password errata), Refresh (successo con `X-Requested-With`; 403 senza header), Logout (204; 403 senza header). Nella collection: autorizzazione Bearer `{{accessToken}}` a livello di collection.
 
@@ -211,27 +211,30 @@ dominio X").
 ### Card F1-03 · Registrazione, verifica email e mail — stima 3 h
 
 **Riferimenti:** §4.4–4.6, §9; riuso: `AuthService.registra/verifica/reinviaCodice`, package `mail`.
+**Sicurezza: sì**
 **File:** `db/migration/V3__email_codes.sql`; `auth/EmailCode`, `EmailCodeRepository`, `EmailCodePurpose`, `EmailCodeService`, `PasswordMax72Bytes`(+Validator), `dto/RegisterRequest`, `RegisterResponse`, `VerifyRequest`, `EmailRequest`; `mail/*` + `package-info`; `templates/mail/verification-code.html`; test `EmailCodeServiceTest`, `RegistrationIntegrationTest`, `BrevoEmailServiceTest`; `schema-db.md`; Postman.
 
 - [ ] **1. V3 e EmailCodeService (60 min).** V3 come §3.2. `issue`: riga per (utente, scopo) creata o aggiornata, limiti di §4.6 (`TOO_MANY_REQUESTS`), codice `%06d` da `SecureRandom`, `attempts=0`. `verify`: codice assente/scaduto/5 tentativi → `CODE_EXPIRED`; `consumeAttempt` atomico (`UPDATE ... SET attempts = attempts + 1 WHERE id=:id AND attempts < 5`, 0 righe → `CODE_EXPIRED`) **prima** del confronto `MessageDigest.isEqual`; sbagliato → `CODE_INVALID`. Test con `MutableClock`: scadenza a 15 min + 1 s; 5 tentativi sbagliati poi anche quello giusto → `CODE_EXPIRED`; secondo invio entro 60 s → 429; sesto invio in 24 h → 429; dopo 24 h di nuovo ammesso.
 - [ ] **2. Mail (40 min).** Da NoseY: `EmailService` (3 metodi: codice di verifica, codice di reset, password cambiata), `HtmlEmailService`, `LogEmailService` (`!prod`), `BrevoEmailService` (`prod`), `EmailEventListener` (`@Async` + `AFTER_COMMIT`), eventi record. Template `verification-code.html` in italiano. Test `BrevoEmailServiceTest` con `MockRestServiceServer`: header `api-key`, mittente e destinatario; chiave mancante → nessuna richiesta e nessuna eccezione.
-- [ ] **3. Register, verify, resend (50 min).** Come §4.4–4.6 e ordine dei controlli §4.5 (`noRollbackFor = AppException.class`); utente nuovo con riga `FAN`; verify emette i token come il login (riusa il metodo comune). Codici aggiunti: `EMAIL_ALREADY_REGISTERED`, `ALREADY_VERIFIED`, `CODE_INVALID`, `CODE_EXPIRED`, `WRONG_PASSWORD`. Endpoint pubblici aggiunti a `SecurityConfig`.
+- [ ] **3. Register, verify, resend (50 min).** Come §4.4–4.6 e ordine dei controlli §4.5 (`noRollbackFor = AppException.class`); utente nuovo con riga `FAN`; verify emette i token come il login (riusa il metodo comune). `RegisterResponse` contiene solo `{email}`: nessun id utente nelle risposte dove non serve a un'azione successiva. Codici aggiunti: `EMAIL_ALREADY_REGISTERED`, `ALREADY_VERIFIED`, `CODE_INVALID`, `CODE_EXPIRED`, `WRONG_PASSWORD`. Endpoint pubblici aggiunti a `SecurityConfig`.
 - [ ] **4. Test di integrazione (30 min).** Codice letto con `@RecordApplicationEvents`. Casi: registrazione → 201 e ruolo FAN; `register_normalizesEmail`; password di 30 emoji → 400 `fields.password`; email già verificata → 409; re-registrazione di email non verificata sovrascrive `displayName`; verify corretta → 200 + cookie + `emailVerified`; codice sbagliato → 400 e tentativo consumato anche dopo il rollback della risposta; password diversa → 400 `WRONG_PASSWORD`; resend su email inesistente → 204 senza evento.
 - [ ] **5. Documentazione e Postman (20 min).** `schema-db.md` (V3). Postman: Register (201; 400 email non valida), Verify (200; 400 codice sbagliato), Resend (204; 400 email mancante).
 
-**Criterio:** test verdi; con il profilo dev il codice di verifica compare nel log scritto da `LogEmailService`.
+**Criterio:** test verdi; con il profilo dev il codice di verifica compare nel log scritto da `LogEmailService`; la password ha un massimo di 72 byte (UTF-8), coerente con il login (`PasswordMax72Bytes`). L'email si normalizza con `strip()` e `toLowerCase(Locale.ROOT)`, allo stesso modo del login (`LoginRequest`).
 **Commit proposto:** `feat(auth): add registration, email verification codes and event-driven email`
 
 ### Card F1-04 · Password dimenticata, reset e bootstrap SUPERADMIN — stima 2 h
 
 **Riferimenti:** §4.10, §4.12; riuso: `AuthService.passwordDimenticata/reimpostaPassword`.
+**Sicurezza: sì**
 **File:** `AuthService` (forgot, reset), `dto/ResetPasswordRequest`; `auth/SuperadminBootstrap`; template `password-reset-code.html`, `password-changed.html`; test `PasswordResetIntegrationTest`, `SuperadminBootstrapTest`; README; Postman.
 
 - [ ] **1. Forgot e reset (45 min).** Come §4.10: forgot sempre 204, codice solo a utenti verificati e ACTIVE; reset con controlli come la verifica, nuovo hash, `invalidate`, `revokeAll`, cookie cancellato, `PasswordChangedEmailEvent`. Test: reset riuscito → login con la nuova password ok, vecchio refresh → 401; codice sbagliato → 400 e tentativo consumato; utente non verificato → forgot senza evento.
 - [ ] **2. Bootstrap (45 min).** `ApplicationRunner` come §4.12, proprietà `app.bootstrap.superadmin.email/password` da `SUPERADMIN_EMAIL`/`SUPERADMIN_PASSWORD`. Test (chiamando direttamente `run`): nessun SUPERADMIN + variabili → utente creato con FAN+SUPERADMIN verificato; secondo `run` → nessuna modifica; variabili assenti → nessuna azione; email di un utente esistente → ruolo aggiunto e password impostata; password di 5 caratteri → `IllegalStateException`. Verifica che la password non compaia nel log.
 - [ ] **3. Documentazione e Postman (30 min).** README: variabili `SUPERADMIN_*` e come impostarle in IntelliJ. Postman: Forgot (204; 400 email mancante), Reset (204; 400 codice sbagliato).
 
-**Criterio:** fase F1 chiusa (11.10 del brief): build verde, test verdi, migrazioni V2–V3 applicate, Postman aggiornata.
+**Criterio:** fase F1 chiusa (11.10 del brief): build verde, test verdi, migrazioni V2–V3 applicate, Postman aggiornata; la nuova password del reset ha un massimo di 72 byte (UTF-8), coerente con il login (`PasswordMax72Bytes`). L'email si normalizza con `strip()` e `toLowerCase(Locale.ROOT)`, allo stesso modo del login (`LoginRequest`).
+**Proposta (da approvare):** eseguire F2-03 (primo deploy su Render) subito dopo F1-04, per provare login e refresh dal browser con il SUPERADMIN creato dal bootstrap. Nessuna card spostata su Trello.
 **Commit proposto:** `feat(auth): add password reset and superadmin bootstrap`
 
 ---
@@ -241,6 +244,7 @@ dominio X").
 ### Card F2-01 · Profilo e ruoli self-service — stima 2,5 h
 
 **Riferimenti:** §5.3, §6.1, §6.5.
+**Sicurezza: sì (facoltativa, se resta budget)**
 **File:** `user/UserController`, `UserService`, `dto/MeResponse` (già creato), `UpdateProfileRequest`, `PublicUserResponse`, `AuthorSummary`, `dto/package-info`; test `ProfileIntegrationTest`, `RoleActivationIntegrationTest`; Postman Users.
 
 - [ ] **1. GET me e profilo pubblico (30 min).** `GET /api/users/me`, `GET /api/users/{id}` (pubblico, ruoli solo di community, niente coordinate, utente non verificato → 404).
@@ -253,6 +257,7 @@ dominio X").
 ### Card F2-02 · Sospensione e nomina ADMIN — stima 3,5 h
 
 **Riferimenti:** §5.4–5.6, §6.10; riuso: `AdminUtenteService`.
+**Sicurezza: sì**
 **File:** `user/PlatformLevelPolicy`; `admin/AdminUserService`, `AdminUserController`, `SuperadminController`, `UserSuspendedEvent`, `dto/SuspendUserRequest`, `AdminUserResponse`, `package-info`; test `PlatformLevelPolicyTest`, `SuspensionIntegrationTest`, `AdminRoleIntegrationTest`, `AdminUserListIntegrationTest`; Postman Admin; `decisioni.md` se emergono scelte nuove.
 
 - [ ] **1. PlatformLevelPolicy (25 min).** Livelli §5.6. Test unitari: ADMIN su FAN ok; ADMIN su ADMIN → `INSUFFICIENT_PLATFORM_LEVEL`; SUPERADMIN su ADMIN ok; chiunque su se stesso → errore; nessuno su SUPERADMIN.
@@ -266,10 +271,11 @@ dominio X").
 ### Card F2-03 · Primo deploy su Render — stima 2 h
 
 **Riferimenti:** §12.4–12.6.
+**Proposta (da approvare):** eseguire questa card subito dopo F1-04, per provare login e refresh dal browser con il SUPERADMIN creato dal bootstrap. Nessuna card spostata su Trello.
 **File:** eventuali correzioni a `render.yaml`/configurazione; `postman/resonance-render.postman_environment.json`; README.
 
 - [ ] **1. Verifica pre-deploy (30 min).** `./mvnw -q verify` verde; `docker build` dalla radice; `docker run` in locale con `SPRING_PROFILES_ACTIVE=prod` e `DATABASE_URL` del container locale (formato Render) → avvio ok, `DatabaseUrl` non stampa la password.
-- [ ] **2. Promemoria merge e applicazione del Blueprint (45 min).** Ricordare allo studente il merge `develop → main` (eseguito da lui). Guidare lo studente su Render: New → Blueprint → repository → Apply; impostare i segreti `sync: false` (SUPERADMIN, Brevo, `GEOCODING_CONTACT`). Controllare i log: Flyway V1–V3, bootstrap SUPERADMIN.
+- [ ] **2. Promemoria merge e applicazione del Blueprint (45 min).** Ricordare allo studente il merge `develop → main` (eseguito da lui). Guidare lo studente su Render: New → Blueprint → repository → Apply; impostare i segreti `sync: false` (SUPERADMIN, Brevo, `MAIL_FROM`, `GEOCODING_CONTACT`). Controllare i log: Flyway V1–V3, bootstrap SUPERADMIN.
 - [ ] **3. Verifica con Postman e documentazione (45 min).** Environment `render` con `baseUrl` reale; health, registrazione (email reale via Brevo), verify, login, refresh, sospensione con il SUPERADMIN. README: link reale al deploy, nota sullo spin-down.
 
 **Criterio:** fase F2 chiusa; servizio raggiungibile; promemoria merge e controlli Render forniti.
@@ -346,6 +352,7 @@ dominio X").
 ### Card F4-03 · Moderazione admin dei contenuti — stima 2,5 h
 
 **Riferimenti:** §5.6–5.7, §6.10.
+**Sicurezza: sì**
 **File:** `moderation/ModerationService`, `ModerationController`, `dto/HideContentRequest`, `HiddenContentResponse`; repository dei quattro tipi (metodi di ricerca dei nascosti); test `ModerationIntegrationTest`; Postman Admin.
 
 - [ ] **1. Hide e restore (60 min).** `POST /api/admin/moderation/{type}/{id}/hide` (`reason` 3–500 obbligatorio) e `/restore`; `{type}` → `ModeratedContentType` (`official-concerts`, `indie-events`, `feed-posts`, `collab-posts`; valore sconosciuto → 400); policy dei livelli sull'autore; codici `CONTENT_ALREADY_HIDDEN`, `CONTENT_NOT_HIDDEN`, `RESTORE_NOT_ALLOWED`. Test per ognuno dei 4 tipi: hide → sparisce dalle liste pubbliche; restore → ricompare; hide senza motivo → 400; contenuto cancellato dal proprietario → restore 409; contenuto di un ADMIN nascosto da un ADMIN → 403; dallo SUPERADMIN → 204.
@@ -362,6 +369,7 @@ dominio X").
 ### Card F5-01 · WebSocket, CONNECT e sessioni — stima 3,5 h
 
 **Riferimenti:** §7.1–7.3, §7.8; riuso: `WebSocketConfig`, `JwtChannelInterceptor`, `GestoreErroriStomp`, `GestoreErroriWebSocket`, `ChatWebSocketTest`.
+**Sicurezza: sì**
 **File:** `config/WebSocketConfig`; `auth/JwtChannelInterceptor`; `common/StompErrorHandler`, `WebSocketExceptionHandler`, `WsError`; `websocket/WebSocketSessionRegistry`, `UserSuspendedSessionCloser`, `package-info`; test `support/StompTestClient`, `WebSocketSecurityTest`, `SessionCloseOnSuspensionTest`.
 
 - [ ] **1. Config e interceptor (60 min).** `/ws` senza SockJS, origini da `app.cors.allowed-origins` (stessa origine sempre ammessa), broker `/queue`, prefissi `/app` e `/user`; interceptor come §7.2–7.3 con `UserAccessService`; `ErrorCode.TOKEN_INVALID` (solo WS); `StompErrorHandler` e `WebSocketExceptionHandler` da NoseY.
@@ -373,6 +381,7 @@ dominio X").
 ### Card F5-02 · Chat — stima 3,5 h
 
 **Riferimenti:** §3.2 (chat), §6.9, §7.4–7.7; riuso: cursore di `MessaggioRepository`, `ChatService.invia`, `MessaggioLiveListener`.
+**Sicurezza: sì**
 **File:** `db/migration/V8__chat.sql`; `chat/ChatConversation`, `ChatMessage`, `ChatConversationRepository`, `ChatMessageRepository`, `ChatService`, `ChatController`, `ChatWebSocketController`, `ChatMessageEvent`, `ChatMessageListener`, `dto/ConversationResponse`, `ChatMessageResponse`, `MessagePageResponse`, `SendMessageRequest`, `CreateConversationRequest`, `package-info`; test `ChatRestIntegrationTest`, `ChatStompIntegrationTest`; `schema-db.md`; Postman Chat.
 
 - [ ] **1. V8 e conversazioni (50 min).** V8 come §3.2 (coppia canonica, `uq_chat_conversations_pair`, indice del cursore). `POST /api/chats {recipientId}`: find-or-create con `INSERT ... ON CONFLICT DO NOTHING` + rilettura; limite `CONVERSATIONS_CREATED`; `CANNOT_MESSAGE_SELF`; destinatario non verificato → 404. `GET /api/chats` con ultimo messaggio e `unreadCount`. Test: A→B e B→A danno la stessa conversazione; se stessi → 400; 21ª conversazione nuova in 24 h → 429.
@@ -385,6 +394,7 @@ dominio X").
 ### Card F5-03 · Notifiche live e candidature — stima 3 h
 
 **Riferimenti:** §6.7 (candidature), §7.4, §7.6; riuso: `NotificaLiveEvent`, `NotificaLiveListener`.
+**Sicurezza: sì (facoltativa, se resta budget)**
 **File:** `notification/LiveNotification`, `NotificationType`, `LiveNotificationEvent`, `LiveNotificationListener`, `package-info`; modifiche a `FeedService` (like), `ChatService` (messaggio); `collab/CollabService.apply`, `dto/ApplyRequest`, `ApplicationResponse`; test `LiveNotificationIntegrationTest`, `CollabApplicationIntegrationTest`; `tools/stomp-test/index.html` (facoltativo); Postman Collab.
 
 - [ ] **1. Pattern delle notifiche (40 min).** Record ed evento come in tabella; listener `AFTER_COMMIT` → `convertAndSendToUser(recipientId, "/queue/notifications", notification)`. Pubblicazione da like (solo inserimento effettivo, autore ≠ chi mette like) e da messaggio (`NEW_MESSAGE` al destinatario, `preview` 100 caratteri).

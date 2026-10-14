@@ -16,6 +16,8 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
@@ -63,6 +65,10 @@ public class SecurityConfig {
                         // e anche sotto /api/admin/** (sezione 6.3), non 401 ne' 403.
                         .requestMatchers(new UnmappedApiRequestMatcher(introspector)).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
+                        // Auth pubblica (sezione 6.3): refresh e logout si difendono con l'header custom
+                        // e il controllo dell'Origin (sezione 8.5), non col Bearer.
+                        .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/refresh").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/auth/refresh").permitAll()
                         // /ws: l'autenticazione avviene al CONNECT (sezione 7.2).
                         // /error: altrimenti l'inoltro interno a /error diventa un 401 e il frontend fa logout.
                         .requestMatchers("/ws/**", "/error").permitAll()
@@ -76,6 +82,14 @@ public class SecurityConfig {
                                 ErrorCode.ACCESS_DENIED, "Ruolo insufficiente per questa risorsa")))
                 .addFilterBefore(new JwtFilter(accessTokens, userAccess), UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    /**
+     * Hash delle password con BCrypt (sezione 8.9). Statico per non creare la configurazione prima dei suoi bean.
+     */
+    @Bean
+    public static PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     /**

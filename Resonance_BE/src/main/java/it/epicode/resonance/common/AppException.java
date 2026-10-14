@@ -1,5 +1,7 @@
 package it.epicode.resonance.common;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -27,7 +29,8 @@ public class AppException extends RuntimeException {
      * eccezione, cosi' si puo' scrivere: throw new AppException(...).withDetails(...).
      */
     public AppException withDetails(Map<String, Object> details) {
-        this.details = details == null ? Map.of() : Map.copyOf(details);
+        // Non Map.copyOf: i dettagli possono avere valori null (es. suspendedUntil di una sospensione indeterminata).
+        this.details = details == null ? Map.of() : Collections.unmodifiableMap(new LinkedHashMap<>(details));
         return this;
     }
 

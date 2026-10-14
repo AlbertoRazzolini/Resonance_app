@@ -3,6 +3,8 @@ package it.epicode.resonance.common;
 import org.springframework.http.HttpStatus;
 
 import java.time.Instant;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -22,7 +24,8 @@ public record ErrorResponse(
 
     public ErrorResponse {
         fields = fields == null ? Map.of() : Map.copyOf(fields);
-        details = details == null ? Map.of() : Map.copyOf(details);
+        // Non Map.copyOf: i valori dei dettagli possono essere null (es. suspendedUntil indeterminata).
+        details = details == null ? Map.of() : Collections.unmodifiableMap(new LinkedHashMap<>(details));
     }
 
     /**

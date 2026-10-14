@@ -1,6 +1,14 @@
 # Produzione su Render. Il database arriva da DATABASE_URL (DatabaseUrl).
 # JWT_SECRET non ha default. SUPERADMIN_*, BREVO_API_KEY, MAIL_FROM e GEOCODING_CONTACT hanno
 # default vuoto in application.yml e vanno impostati in produzione (progettazione, sezione 8.9).
+server:
+  # Il TLS termina nel proxy di Render, che inoltra la richiesta in HTTP e aggiunge X-Forwarded-Proto.
+  # Senza questa impostazione Spring vede "http" mentre il browser usa "https": il filtro CORS considera
+  # cross-origin ogni POST/DELETE del frontend (che invia Origin) e risponde 403 "Invalid CORS request",
+  # login compreso. "native" usa il RemoteIpValve di Tomcat, che si fida degli header solo se la richiesta
+  # arriva da un proxy interno (reti private e loopback). Da verificare su Render: decisione 47.
+  forward-headers-strategy: native
+
 app:
   auth:
     refresh-cookie:

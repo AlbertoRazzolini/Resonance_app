@@ -536,7 +536,7 @@ funziona su HTTP.
 
 ### 4.4 Registrazione
 
-`POST /api/auth/register` `{email, password, displayName}` → 201 `{userId, email}`.
+`POST /api/auth/register` `{email, password, displayName}` → 201 `{email}` (senza l'id: al client non serve, deve solo verificare l'email e fare il login).
 
 1. Email normalizzata (trim, minuscole); password 8–72 caratteri e massimo 72 byte UTF-8.
 2. Lock sulla riga dell'utente con quell'email (`SELECT ... FOR UPDATE`).
@@ -582,7 +582,9 @@ l'utente esiste, non è verificato ed è ACTIVE.
 
 1. Limite `LOGIN_FAILED` per email (10 fallimenti in 15 minuti) → 429.
 2. Utente inesistente o password errata → 401 `INVALID_CREDENTIALS` (stessa risposta, registra il
-   fallimento). Password oltre 72 byte → trattata come errata senza chiamare BCrypt.
+   fallimento). Per un'email sconosciuta si esegue comunque un confronto BCrypt con un hash fittizio, dello
+   stesso costo, così il tempo di risposta non rivela se l'email esiste (decisione 48). Password oltre 72
+   byte → trattata come errata senza chiamare BCrypt.
 3. Email non verificata → 403 `EMAIL_NOT_VERIFIED`.
 4. Sospeso: se `suspended_until` è passato → riattivazione pigra (5.5) e si prosegue; altrimenti
    403 `ACCOUNT_SUSPENDED` con `details` `{suspensionReason, suspendedUntil}`.
@@ -846,7 +848,7 @@ perché servono solo file statici o `index.html`. Un percorso `/api/...` inesist
 
 | Metodo e percorso | Accesso | Request | Response |
 |---|---|---|---|
-| `POST /api/auth/register` | pubblico | `{email, password, displayName}` | 201 `{userId, email}` |
+| `POST /api/auth/register` | pubblico | `{email, password, displayName}` | 201 `{email}` |
 | `POST /api/auth/verify` | pubblico | `{email, code, password}` | 200 `LoginResponse` + cookie |
 | `POST /api/auth/resend-code` | pubblico | `{email}` | 204 |
 | `POST /api/auth/login` | pubblico | `{email, password}` | 200 `LoginResponse` + cookie |
@@ -857,7 +859,9 @@ perché servono solo file statici o `index.html`. Un percorso `/api/...` inesist
 
 `LoginResponse` = `{accessToken, accessTokenExpiresAt, user: MeResponse}`.
 `MeResponse` = `{id, email, displayName, avatarUrl, bio, city, latitude, longitude, roles: [...],
-status, createdAt}`.
+status, createdAt}`. L'`id` compare solo nel proprio profilo: il frontend lo confronta con
+`AuthorSummary.id` e `senderId` per riconoscere i propri contenuti (decisione 49). Gli altri DTO di risposta
+hanno un id solo se serve a un'azione successiva; la registrazione risponde `{email}`.
 
 Validazioni: email `@Email` max 255; password 8–72 caratteri e 72 byte; `displayName` 2–50; `code`
 `\d{6}`.
@@ -1165,6 +1169,11 @@ eseguire al browser della vittima. Difese indipendenti:
 4. Controllo lato server dell'header `Origin`, se presente: deve essere l'origine del servizio o una
    di quelle configurate.
 
+Dietro il proxy di Render il TLS termina nel proxy e il servizio riceve HTTP: il profilo `prod` imposta
+`server.forward-headers-strategy: native`, altrimenti il filtro CORS di Spring vedrebbe lo schema `http`
+contro l'`Origin` `https` del browser e respingerebbe ogni POST/DELETE del frontend, login compreso
+(decisione 47). Il comportamento va verificato al primo deploy su Render.
+
 Il cookie non è considerato protetto solo perché HttpOnly: HttpOnly impedisce a JavaScript di
 leggerlo, non al browser di inviarlo. Access token e refresh token non viaggiano mai sullo stesso
 canale.
@@ -1195,6 +1204,9 @@ riavvio: accettabile con una sola istanza). Valori in `application.yml` (`app.ra
 | `COLLAB_APPLICATIONS` | 10 in 24 ore | utente |
 
 I limiti sui codici email sono nel database (sezione 4.6), quindi sopravvivono ai riavvii.
+
+`LOGIN_FAILED` ha come chiave l'email: chi invia 10 login falliti con l'email di un altro può impedirgli di
+accedere per 15 minuti (conseguenza accettata, decisione 48).
 
 ### 8.9 Segreti e log
 

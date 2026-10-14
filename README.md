@@ -86,17 +86,27 @@ configurazione di avvio di IntelliJ, su Render dal Blueprint o dalla dashboard).
 La collection e gli environment stanno in `postman/`:
 
 - `resonance.postman_collection.json` (formato v2.1): cartelle Health, Auth, Users, Admin, Events,
-  Collab, Feed e Chat. Per ora contiene solo la cartella Health; le altre si riempiono con le card
-  che creano gli endpoint.
+  Collab, Feed e Chat. Per ora contengono richieste Health e Auth (login, refresh, logout); le altre si
+  riempiono con le card che creano gli endpoint. L'autorizzazione Bearer `{{accessToken}}` è impostata a
+  livello di collection.
 - `resonance-local.postman_environment.json` (`baseUrl` = `http://localhost:8080`) e
   `resonance-render.postman_environment.json` (`baseUrl` vuoto finché non c'è il deploy).
 
 Come usarli: in Postman, **Import** e scegli i tre file; poi seleziona l'environment `local` in alto a
 destra, avvia il backend con il profilo `dev` (vedi "Avvio in locale") e lancia le richieste della
-cartella Health. Nei file versionati non c'è nessun segreto: token e credenziali stanno solo nelle
-variabili locali di Postman. La parte STOMP (chat e notifiche) non è nella collection.
+cartella Health. Per le richieste di Auth crea nell'environment le variabili `userEmail` e `userPassword`
+(utente già verificato nel database): lo script del login salva `accessToken` e le altre richieste lo usano
+come Bearer; il refresh e il logout usano il cookie jar di Postman e inviano a mano `X-Requested-With`.
+Nei file versionati non c'è nessun segreto: token e credenziali stanno solo nelle variabili locali di Postman. La parte STOMP (chat e notifiche) non è nella collection.
 
 ## Deploy
 
 Non ancora disponibile. Il Blueprint di Render (database e un solo servizio web) è pronto in
 `render.yaml` ma non è stato applicato; il link verrà aggiunto dopo il primo deploy.
+
+**Da verificare su Render al primo deploy.** Il profilo `prod` imposta `server.forward-headers-strategy:
+native` perché il TLS termina nel proxy di Render. È provato solo con un server locale e una richiesta
+simulata (`ForwardedHeadersRealServerTest`), non su Render: dopo il deploy controllare che il login e il
+refresh dal browser rispondano 200 e non 403 "Invalid CORS request", e il cookie `resonance_refresh` sia
+`Secure` (decisione 47). Se il proxy di Render non risulta "interno" per Tomcat, serve
+`server.tomcat.remoteip.internal-proxies`.
