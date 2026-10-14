@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -120,6 +121,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handle(HttpRequestMethodNotSupportedException ex) {
         return response(ErrorCode.METHOD_NOT_ALLOWED, "Metodo non supportato per questo percorso", Map.of(), Map.of());
+    }
+
+    /**
+     * Content-Type del body non supportato (l'API accetta solo JSON): e' un errore del client e
+     * senza questo handler finirebbe nel catch-all come 500 (progettazione, sezione 6.2).
+     */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handle(HttpMediaTypeNotSupportedException ex) {
+        return response(ErrorCode.UNSUPPORTED_MEDIA_TYPE, "Tipo di contenuto non supportato: usa application/json",
+                Map.of(), Map.of());
     }
 
     /**

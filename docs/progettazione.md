@@ -801,6 +801,7 @@ nascosto → 404. Nessuna cancellazione fisica.
 | `ACCESS_DENIED` | 403 | Ruolo insufficiente, origine non ammessa |
 | `NOT_FOUND` | 404 | Risorsa inesistente o nascosta |
 | `METHOD_NOT_ALLOWED` | 405 | Metodo non supportato |
+| `UNSUPPORTED_MEDIA_TYPE` | 415 | Content-Type del body non supportato (l'API accetta solo JSON) |
 | `CONFLICT` | 409 | Vincolo DB generico |
 | `TOO_MANY_REQUESTS` | 429 | Limiti di frequenza |
 | `INTERNAL_ERROR` | 500 | Errore inatteso (loggato) |

@@ -824,3 +824,23 @@ comportamento è verificato su una vera richiesta in `PageParamsBindingTest`.
 - **`int` con il default nel controller (`@RequestParam(defaultValue = ...)`)**: il default andrebbe
   ripetuto in ogni endpoint e si perderebbe la validazione comune.
 - **`int` con "0 = default"**: accetterebbe `size=0` invece di rifiutarlo.
+
+## Decisione 45: codice UNSUPPORTED_MEDIA_TYPE per il Content-Type non supportato (implementazione)
+
+### Scelta
+
+Una richiesta con un body il cui `Content-Type` non è supportato (l'API accetta solo JSON) risponde
+415 con il codice `UNSUPPORTED_MEDIA_TYPE`. Il codice è stato aggiunto al catalogo della sezione 6.2
+del design, che non lo prevedeva. Una richiesta con un `Accept` non soddisfacibile (406) non è gestita:
+la risposta d'errore stessa è JSON e non si potrebbe scrivere.
+
+### Motivazione
+
+È un errore del client, non del server. Senza un handler dedicato il catch-all lo trasformava in un 500
+`INTERNAL_ERROR` con una voce di errore nel log, come se fosse un guasto dell'applicazione.
+
+### Alternative scartate
+
+- **`VALIDATION_ERROR` 400**: lo stato HTTP corretto per questo caso è 415, e un client che decide in
+  base a `code` confonderebbe un tipo di contenuto sbagliato con dei campi non validi.
+- **Lasciare il 500**: segnala un guasto che non c'è e riempie il log.

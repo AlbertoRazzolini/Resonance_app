@@ -88,6 +88,15 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void unsupportedContentType_returns415() throws Exception {
+        // E' un errore del client, non del server: non deve diventare un 500 con log di errore.
+        mockMvc.perform(post("/test/validate").contentType(MediaType.TEXT_PLAIN).content("ciao"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.status").value(415))
+                .andExpect(jsonPath("$.code").value("UNSUPPORTED_MEDIA_TYPE"));
+    }
+
+    @Test
     void unreadableBody_returns400() throws Exception {
         mockMvc.perform(post("/test/validate").contentType(MediaType.APPLICATION_JSON).content("{non e' json"))
                 .andExpect(status().isBadRequest())
