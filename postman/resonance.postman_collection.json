@@ -292,6 +292,141 @@
           "response": []
         },
         {
+          "name": "Forgot password (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 senza corpo', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/password/forgot",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "password", "forgot"]
+            },
+            "description": "Pubblico. Sempre 204, anche per un'email sconosciuta, non verificata o sospesa (non rivela quali esistono): il codice di reset parte solo per un account esistente, verificato e attivo. Entro 60 secondi dall'ultimo invio, o oltre 5 invii in 24 ore: 429 TOO_MANY_REQUESTS. In locale il codice compare nel log del backend (LogEmailService)."
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot password senza email (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR con fields.email', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(body.fields.email).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/password/forgot",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "password", "forgot"]
+            },
+            "description": "Errore significativo. Senza il campo email: 400 VALIDATION_ERROR con fields.email."
+          },
+          "response": []
+        },
+        {
+          "name": "Reset password (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 senza corpo', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});",
+                  "pm.test('cookie di refresh cancellato', function () {",
+                  "    pm.expect(pm.response.headers.get('Set-Cookie')).to.include('Max-Age=0');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"code\": \"{{resetCode}}\",\n  \"newPassword\": \"{{newPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/password/reset",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "password", "reset"]
+            },
+            "description": "Pubblico. Prima esegui Forgot password e copia il codice dal log del backend nella variabile resetCode; imposta anche newPassword (8-72 caratteri e massimo 72 byte). 204, il cookie di refresh viene cancellato e tutte le sessioni dell'utente sono revocate: non effettua il login, serve un nuovo Login."
+          },
+          "response": []
+        },
+        {
+          "name": "Reset password con codice sbagliato (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 CODE_INVALID', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql('CODE_INVALID');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"code\": \"000000\",\n  \"newPassword\": \"una-password-valida\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/password/reset",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "password", "reset"]
+            },
+            "description": "Errore significativo. Codice sbagliato, scaduto o assente (anche dopo 5 tentativi o 15 minuti): sempre 400 CODE_INVALID, anche per account inesistenti o sospesi (decisione 51). Il tentativo si consuma e la password non cambia."
+          },
+          "response": []
+        },
+        {
           "name": "Login (200)",
           "event": [
             {

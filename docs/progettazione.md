@@ -641,6 +641,8 @@ emesso resta valido fino alla scadenza (massimo 15 minuti, D4): il frontend lo e
   4.5 (tentativo consumato prima del confronto, confronto a tempo costante). In caso di successo:
   nuovo hash, `code = null`, **revoca di tutti i refresh token**, cancellazione del cookie nella
   risposta, evento `PasswordChangedEmailEvent`. Non effettua il login.
+  Errori (decisione 51): codice sbagliato, scaduto, esaurito o assente → sempre 400 `CODE_INVALID`, anche
+  per account inesistenti, non verificati o sospesi; 403 `ACCOUNT_SUSPENDED` solo con il codice valido.
 
 ### 4.11 Casi di revoca totale
 

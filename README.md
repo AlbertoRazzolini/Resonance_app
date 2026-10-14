@@ -54,6 +54,23 @@ Stack: Java 25, Spring Boot 4.1.1, PostgreSQL con Flyway. Il design di riferimen
 5. **Verifica.** `GET http://localhost:8080/api/health` risponde `{"status":"UP","database":"UP"}`.
    All'avvio Flyway applica le migrazioni da solo.
 
+### Primo SUPERADMIN
+
+All'avvio, se non esiste ancora nessun SUPERADMIN, l'applicazione ne crea uno dalle variabili
+d'ambiente `SUPERADMIN_EMAIL` e `SUPERADMIN_PASSWORD`. In IntelliJ aggiungile alle variabili d'ambiente
+della configurazione di avvio, accanto a `JWT_SECRET` (separate da `;`); su Render si impostano a mano
+nella dashboard (`sync: false`, mai nel repository).
+
+- La password deve avere almeno 8 caratteri e al massimo 72 byte in UTF-8, altrimenti l'avvio fallisce
+  con un messaggio chiaro (che non riporta la password).
+- Se manca una delle due variabili, il backend parte lo stesso e scrive un avviso nel log.
+- Se esiste già un utente con quell'email, riceve il ruolo SUPERADMIN, viene marcato verificato e attivo e
+  la sua password diventa quella della variabile. Altrimenti l'utente viene creato (nome "Superadmin").
+- Dal secondo avvio non cambia più nulla: se esiste un SUPERADMIN, le variabili vengono ignorate. La
+  password non compare mai nei log.
+- In dev la password dimenticata si recupera come per qualunque utente: il codice di reset compare nel log
+  del backend (email finta).
+
 Build e test, sempre dalla cartella `Resonance_BE`: `./mvnw -q verify` (in PowerShell
 `.\mvnw.cmd -q verify`). **I test di integrazione richiedono il database acceso:** prima di lanciarli
 esegui `docker compose up -d` dalla radice del repository. Usano il database `resonance_test`,
@@ -77,7 +94,7 @@ configurazione di avvio di IntelliJ, su Render dal Blueprint o dalla dashboard).
 | `ACCESS_TOKEN_TTL` | no | Durata dell'access token (predefinito 15 minuti). |
 | `REFRESH_TOKEN_TTL` | no | Durata del refresh token (predefinito 10 giorni). |
 | `ALLOWED_ORIGIN` | no | Origini esterne ammesse per CORS e WebSocket (solo sviluppo, separate da virgola). |
-| `SUPERADMIN_EMAIL`, `SUPERADMIN_PASSWORD` | per il bootstrap | Credenziali del primo SUPERADMIN, creato all'avvio se non esiste. |
+| `SUPERADMIN_EMAIL`, `SUPERADMIN_PASSWORD` | per il bootstrap | Credenziali del primo SUPERADMIN, creato all'avvio se non esiste (vedi "Primo SUPERADMIN"). |
 | `BREVO_API_KEY`, `MAIL_FROM` | prod | Invio delle email tramite Brevo; mittente confermato in Brevo. |
 | `GEOCODING_CONTACT` | sì | Contatto inserito nello User-Agent delle richieste a Nominatim. |
 
@@ -86,7 +103,7 @@ configurazione di avvio di IntelliJ, su Render dal Blueprint o dalla dashboard).
 La collection e gli environment stanno in `postman/`:
 
 - `resonance.postman_collection.json` (formato v2.1): cartelle Health, Auth, Users, Admin, Events,
-  Collab, Feed e Chat. Per ora contengono richieste Health e Auth (login, refresh, logout); le altre si
+  Collab, Feed e Chat. Per ora contengono richieste Health e Auth (registrazione, verifica, password dimenticata e reset, login, refresh, logout); le altre si
   riempiono con le card che creano gli endpoint. L'autorizzazione Bearer `{{accessToken}}` è impostata a
   livello di collection.
 - `resonance-local.postman_environment.json` (`baseUrl` = `http://localhost:8080`) e
@@ -95,7 +112,8 @@ La collection e gli environment stanno in `postman/`:
 Come usarli: in Postman, **Import** e scegli i tre file; poi seleziona l'environment `local` in alto a
 destra, avvia il backend con il profilo `dev` (vedi "Avvio in locale") e lancia le richieste della
 cartella Health. Per le richieste di Auth crea nell'environment le variabili `userEmail` e `userPassword`
-(utente già verificato nel database): lo script del login salva `accessToken` e le altre richieste lo usano
+(utente già verificato nel database); per il reset della password servono anche `resetCode` (il codice
+scritto nel log del backend dopo "Forgot password") e `newPassword`: lo script del login salva `accessToken` e le altre richieste lo usano
 come Bearer; il refresh e il logout usano il cookie jar di Postman e inviano a mano `X-Requested-With`.
 Nei file versionati non c'è nessun segreto: token e credenziali stanno solo nelle variabili locali di Postman. La parte STOMP (chat e notifiche) non è nella collection.
 

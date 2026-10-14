@@ -5,11 +5,14 @@ import it.epicode.resonance.auth.dto.LoginRequest;
 import it.epicode.resonance.auth.dto.LoginResponse;
 import it.epicode.resonance.auth.dto.RegisterRequest;
 import it.epicode.resonance.auth.dto.RegisterResponse;
+import it.epicode.resonance.auth.dto.ResetPasswordRequest;
 import it.epicode.resonance.auth.dto.VerifyRequest;
 import it.epicode.resonance.common.AppException;
 import it.epicode.resonance.common.ErrorCode;
 import it.epicode.resonance.common.RateLimit;
 import it.epicode.resonance.common.RateLimitService;
+import it.epicode.resonance.mail.PasswordChangedEmailEvent;
+import it.epicode.resonance.mail.PasswordResetCodeEmailEvent;
 import it.epicode.resonance.mail.VerificationCodeEmailEvent;
 import it.epicode.resonance.user.Role;
 import it.epicode.resonance.user.User;
@@ -32,7 +35,7 @@ import java.util.UUID;
 
 /**
  * Registrazione, verifica dell'email, reinvio del codice, login, apertura della sessione (access token +
- * refresh token) e logout (progettazione, sezioni 4.4-4.9). La rotazione del refresh e' in
+ * refresh token), logout e reset della password (progettazione, sezioni 4.4-4.10). La rotazione del refresh e' in
  * {@link RefreshTokenService}, i codici email in {@link EmailCodeService}; qui si costruisce la risposta.
  */
 @Service
@@ -147,6 +150,55 @@ public class AuthService {
     }
 
     /**
+     * Password dimenticata (progettazione, sezione 4.10): invia il codice di reset solo a un account esistente,
+     * verificato e ACTIVE; negli altri casi nessun effetto e il client riceve comunque 204, cosi' non si scopre
+     * quali email esistono. Stessi limiti di invio dei codici di verifica (sezione 4.6).
+     */
+    @Transactional
+    public void forgotPassword(EmailRequest request) {
+        // Lock sulla riga: due richieste insieme = un solo invio.
+        users.findWithLockByEmail(request.email())
+                .filter(user -> user.isEmailVerified() && user.getStatus() == UserStatus.ACTIVE)
+                .ifPresent(user -> {
+                    String code = emailCodes.issue(user.getId(), EmailCodePurpose.PASSWORD_RESET);
+                    events.publishEvent(new PasswordResetCodeEmailEvent(user.getEmail(), user.getDisplayName(), code));
+                });
+    }
+
+    /**
+     * Reset della password (progettazione, sezioni 4.10 e 4.11), con i controlli della verifica ma errori
+     * piu' avari (decisione 51): codice sbagliato, scaduto o assente = sempre CODE_INVALID, e ACCOUNT_SUSPENDED
+     * solo con il codice valido. Il tentativo consumato resta salvato (noRollbackFor), il confronto e' a tempo
+     * costante. A reset riuscito
+     * il codice si annulla, tutte le sessioni si revocano e parte l'email di avviso. Non apre una sessione.
+     */
+    @Transactional(noRollbackFor = AppException.class)
+    public void resetPassword(ResetPasswordRequest request) {
+        // Utente inesistente o non verificato: stessa risposta di un codice sbagliato, non rivela quali email
+        // esistono (a un non verificato non e' mai stato inviato un codice di reset).
+        User user = users.findWithLockByEmail(request.email())
+                .filter(User::isEmailVerified)
+                .orElseThrow(AuthService::invalidResetCode);
+        // Codice sbagliato, scaduto o assente: sempre CODE_INVALID, anche per un account sospeso (decisione 51).
+        // Il tentativo consumato resta salvato comunque (noRollbackFor).
+        try {
+            emailCodes.verify(user.getId(), EmailCodePurpose.PASSWORD_RESET, request.code());
+        } catch (AppException e) {
+            throw invalidResetCode();
+        }
+        // Solo con un codice valido (cioe' dopo aver dimostrato di possedere la casella) si dice che e' sospeso.
+        if (user.getStatus() == UserStatus.SUSPENDED) {
+            throw suspended(user.getSuspensionReason(), user.getSuspendedUntil());
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        emailCodes.invalidate(user.getId(), EmailCodePurpose.PASSWORD_RESET);
+        // Chi ha rubato la vecchia password non deve restare dentro con una sessione gia' aperta.
+        refreshTokens.revokeAll(user.getId());
+        events.publishEvent(new PasswordChangedEmailEvent(user.getEmail(), user.getDisplayName()));
+    }
+
+    /**
      * Login nell'ordine di NoseY (progettazione, sezione 4.7): limite dei fallimenti, credenziali, e solo con
      * la password giusta email verificata e sospensione, cosi' questi due controlli non rivelano quali email
      * esistono. Il limite e' in memoria: il rollback di un errore non annulla i fallimenti registrati.
@@ -212,6 +264,10 @@ public class AuthService {
     @Transactional
     public void logout(String refreshTokenValue) {
         refreshTokens.revoke(refreshTokenValue);
+    }
+
+    private static AppException invalidResetCode() {
+        return new AppException(ErrorCode.CODE_INVALID, "Codice non valido");
     }
 
     private boolean passwordMatches(String password, String hash) {

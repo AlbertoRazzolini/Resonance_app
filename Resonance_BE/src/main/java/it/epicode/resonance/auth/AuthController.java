@@ -5,6 +5,7 @@ import it.epicode.resonance.auth.dto.LoginRequest;
 import it.epicode.resonance.auth.dto.LoginResponse;
 import it.epicode.resonance.auth.dto.RegisterRequest;
 import it.epicode.resonance.auth.dto.RegisterResponse;
+import it.epicode.resonance.auth.dto.ResetPasswordRequest;
 import it.epicode.resonance.auth.dto.VerifyRequest;
 import it.epicode.resonance.common.AppException;
 import it.epicode.resonance.common.ErrorCode;
@@ -76,6 +77,27 @@ public class AuthController {
     public ResponseEntity<Void> resendCode(@Valid @RequestBody EmailRequest request) {
         authService.resendCode(request);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Password dimenticata (progettazione, sezione 4.10): sempre 204, anche per un'email sconosciuta.
+     */
+    @PostMapping("/password/forgot")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody EmailRequest request) {
+        authService.forgotPassword(request);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Reset della password (progettazione, sezioni 4.10 e 4.11): 204 e cookie di refresh cancellato, perche'
+     * tutte le sessioni sono state revocate. Non effettua il login.
+     */
+    @PostMapping("/password/reset")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, cookies.clear().toString())
+                .build();
     }
 
     /**

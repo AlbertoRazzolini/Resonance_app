@@ -1058,3 +1058,37 @@ registrazione, quindi il codice da solo non basta a prendere l'account.
   semplice da testare.
 - **Non sovrascrivere e rinviare solo il codice**: elimina il disturbo di chi registra l'email altrui, ma
   chi ha dimenticato la password scelta non potrebbe più completare la registrazione.
+
+## Decisione 51: errori del reset e della password dimenticata che non rivelano gli account (implementazione)
+
+### Scelta
+
+- **Reset.** Con un codice sbagliato, scaduto, esaurito (5 tentativi) o assente, `POST /api/auth/password/reset`
+  risponde sempre `400 CODE_INVALID`, anche per un account sospeso, non verificato o inesistente. Il `403
+  ACCOUNT_SUSPENDED` arriva solo con un codice valido. Il codice si verifica prima dello stato dell'account.
+  Il tentativo consumato resta salvato in ogni caso.
+- **Perché il login e il reset sono diversi.** Il login dà `ACCOUNT_SUSPENDED` dopo aver verificato la
+  password; il reset lo dà dopo aver verificato il codice. In entrambi i casi chi lo legge ha già dimostrato
+  qualcosa che solo il proprietario possiede (la password, o l'accesso alla casella), quindi l'informazione
+  non è sfruttabile da un estraneo che prova email a caso.
+- **Forgot.** `POST /api/auth/password/forgot` risponde sempre `204` per email sconosciuta, non verificata,
+  sospesa e per account verificato e attivo; il codice parte solo nell'ultimo caso. Il `429` per un secondo
+  invio entro 60 secondi (o oltre 5 in 24 ore) scatta solo per gli account verificati e attivi, perché solo
+  per loro esiste una riga di invio. Il `429` quindi distingue le email verificate, come già nel reinvio del
+  codice di verifica (sezione 4.6). È una perdita di riservatezza piccola e nota, accettata per l'MVP.
+
+### Motivazione
+
+Il design (sezione 4.10) chiede lo "stesso schema di controlli" della verifica, dove però lo stato
+dell'account (sospeso) veniva controllato prima del codice e quindi lo rivelava a chiunque conoscesse
+un'email. Spostare il controllo dopo il codice chiude questa strada senza costi per l'utente legittimo.
+Le due condizioni di `CODE_EXPIRED` e `CODE_INVALID` si fondono nel reset: all'utente basta sapere che deve
+chiedere un nuovo codice.
+
+### Alternative scartate
+
+- **Lasciare `ACCOUNT_SUSPENDED` prima del codice**: rivela a chiunque quali email sono sospese.
+- **Rispondere `CODE_INVALID` anche con il codice valido su un account sospeso**: nasconde tutto, ma
+  l'utente sospeso non capirebbe perché il reset non funziona.
+- **Rendere il `429` di forgot identico per tutte le email** (limite in memoria per email invece di una riga
+  per account): elimina la distinzione, ma richiede un secondo meccanismo di limite e non è nel design.
