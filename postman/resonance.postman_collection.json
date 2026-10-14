@@ -79,8 +79,218 @@
     },
     {
       "name": "Auth",
-      "description": "Registrazione, verifica email, login, refresh e logout (card F1). Per il login imposta le variabili userEmail e userPassword nell'environment (mai nei file versionati): lo script salva accessToken e le altre cartelle lo usano come Bearer. Il refresh usa il cookie jar di Postman.",
+      "description": "Registrazione, verifica email, login, refresh e logout (card F1). Imposta le variabili userEmail e userPassword nell'environment (mai nei file versionati); dopo Register imposta anche verificationCode con il codice letto nel log. Gli script di Verify e Login salvano accessToken e le altre cartelle lo usano come Bearer. Il refresh usa il cookie jar di Postman.",
       "item": [
+        {
+          "name": "Register (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 con la sola email, senza id', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.email).to.be.a('string');",
+                  "    pm.expect(body.id).to.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\",\n  \"displayName\": \"Utente di prova\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Pubblico. 201 con { email }; il codice a 6 cifre parte per email dopo il commit (con il profilo dev si legge nel log di LogEmailService). L'email si normalizza (spazi e maiuscole). Password 8-72 caratteri e massimo 72 byte UTF-8. Email gia' verificata o account sospeso: 409 EMAIL_ALREADY_REGISTERED. Email non verificata: i nuovi dati sovrascrivono quelli in sospeso, ma al massimo 1 invio ogni 60 secondi e 5 in 24 ore (429 TOO_MANY_REQUESTS)."
+          },
+          "response": []
+        },
+        {
+          "name": "Register con email non valida (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR con i campi non validi', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(body.fields.email).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"non-una-email\",\n  \"password\": \"{{userPassword}}\",\n  \"displayName\": \"Utente di prova\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Errore significativo. 400 VALIDATION_ERROR con fields.email. Anche una password sopra i 72 byte (per esempio 30 emoji) da' 400 con fields.password."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con access token e profilo', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+                  "    pm.expect(body.user.roles).to.include('FAN');",
+                  "    pm.expect(body.refreshToken).to.be.undefined;",
+                  "    pm.environment.set('accessToken', body.accessToken);",
+                  "});",
+                  "pm.test('cookie di refresh HttpOnly', function () {",
+                  "    pm.expect(pm.response.headers.get('Set-Cookie')).to.include('resonance_refresh=').and.to.include('HttpOnly');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"code\": \"{{verificationCode}}\",\n  \"password\": \"{{userPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "verify"]
+            },
+            "description": "Pubblico. Imposta verificationCode nell'environment con il codice ricevuto (nel log in dev). 200 con { accessToken, accessTokenExpiresAt, user } e il cookie di refresh, come il login; lo script salva accessToken. La password deve essere quella della registrazione (altrimenti 400 WRONG_PASSWORD, il codice resta usabile)."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify con codice sbagliato (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 CODE_INVALID (o CODE_EXPIRED a tentativi finiti)', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.be.oneOf(['CODE_INVALID', 'CODE_EXPIRED']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"code\": \"000000\",\n  \"password\": \"{{userPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "verify"]
+            },
+            "description": "Errore significativo. Un codice sbagliato da' 400 CODE_INVALID e consuma un tentativo (al massimo 5): finiti i tentativi, o passati 15 minuti, la risposta e' 400 CODE_EXPIRED anche con il codice giusto e serve un nuovo invio. Email gia' verificata: 409 ALREADY_VERIFIED."
+          },
+          "response": []
+        },
+        {
+          "name": "Resend code (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 senza corpo', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/resend-code",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "resend-code"]
+            },
+            "description": "Pubblico. Sempre 204, anche per un'email sconosciuta, verificata o sospesa (non rivela quali esistono): il nuovo codice parte solo per un account esistente, non verificato e attivo, e sostituisce il precedente azzerando i tentativi. Entro 60 secondi dall'ultimo invio, o oltre 5 invii in 24 ore: 429 TOO_MANY_REQUESTS."
+          },
+          "response": []
+        },
+        {
+          "name": "Resend code senza email (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR con fields.email', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(body.fields.email).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/resend-code",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "resend-code"]
+            },
+            "description": "Errore significativo. Senza il campo email: 400 VALIDATION_ERROR con fields.email."
+          },
+          "response": []
+        },
         {
           "name": "Login (200)",
           "event": [

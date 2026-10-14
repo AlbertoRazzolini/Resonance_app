@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
@@ -49,13 +50,18 @@ class AuthServiceTest {
     private AccessTokenService accessTokens;
     @Mock
     private RefreshTokenService refreshTokens;
+    @Mock
+    private EmailCodeService emailCodes;
+    @Mock
+    private ApplicationEventPublisher events;
 
     private AuthService service;
 
     @BeforeEach
     void createService() {
         when(passwordEncoder.encode(anyString())).thenReturn(DUMMY_HASH);
-        service = new AuthService(users, userRoles, userAccess, passwordEncoder, rateLimits, accessTokens, refreshTokens);
+        service = new AuthService(users, userRoles, userAccess, passwordEncoder, rateLimits, accessTokens, refreshTokens,
+                emailCodes, events);
     }
 
     @Test

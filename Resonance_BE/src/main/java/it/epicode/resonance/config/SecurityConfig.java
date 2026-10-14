@@ -67,7 +67,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
                         // Auth pubblica (sezione 6.3): refresh e logout si difendono con l'header custom
                         // e il controllo dell'Origin (sezione 8.5), non col Bearer.
-                        .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/refresh").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/verify",
+                                "/api/auth/resend-code", "/api/auth/login", "/api/auth/refresh").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/auth/refresh").permitAll()
                         // /ws: l'autenticazione avviene al CONNECT (sezione 7.2).
                         // /error: altrimenti l'inoltro interno a /error diventa un 401 e il frontend fa logout.

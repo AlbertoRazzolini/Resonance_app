@@ -1,7 +1,11 @@
 package it.epicode.resonance.auth;
 
+import it.epicode.resonance.auth.dto.EmailRequest;
 import it.epicode.resonance.auth.dto.LoginRequest;
 import it.epicode.resonance.auth.dto.LoginResponse;
+import it.epicode.resonance.auth.dto.RegisterRequest;
+import it.epicode.resonance.auth.dto.RegisterResponse;
+import it.epicode.resonance.auth.dto.VerifyRequest;
 import it.epicode.resonance.common.AppException;
 import it.epicode.resonance.common.ErrorCode;
 import it.epicode.resonance.common.ErrorResponse;
@@ -9,6 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -45,6 +50,32 @@ public class AuthController {
         this.cookies = cookies;
         this.clock = clock;
         this.allowedOrigins = allowedOrigins;
+    }
+
+    /**
+     * Registrazione (progettazione, sezione 4.4): 201 con la sola email; il codice parte per email dopo il commit.
+     */
+    @PostMapping("/register")
+    public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));
+    }
+
+    /**
+     * Verifica dell'email (progettazione, sezione 4.5): 200 con access token e profilo e il refresh token nel
+     * cookie, come il login.
+     */
+    @PostMapping("/verify")
+    public ResponseEntity<LoginResponse> verify(@Valid @RequestBody VerifyRequest request) {
+        return withCookie(authService.verify(request));
+    }
+
+    /**
+     * Reinvio del codice di verifica (progettazione, sezione 4.6): sempre 204, anche per un'email sconosciuta.
+     */
+    @PostMapping("/resend-code")
+    public ResponseEntity<Void> resendCode(@Valid @RequestBody EmailRequest request) {
+        authService.resendCode(request);
+        return ResponseEntity.noContent().build();
     }
 
     /**

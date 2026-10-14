@@ -1,21 +1,29 @@
 package it.epicode.resonance.auth;
 
+import it.epicode.resonance.auth.dto.EmailRequest;
 import it.epicode.resonance.auth.dto.LoginRequest;
 import it.epicode.resonance.auth.dto.LoginResponse;
+import it.epicode.resonance.auth.dto.RegisterRequest;
+import it.epicode.resonance.auth.dto.RegisterResponse;
+import it.epicode.resonance.auth.dto.VerifyRequest;
 import it.epicode.resonance.common.AppException;
 import it.epicode.resonance.common.ErrorCode;
 import it.epicode.resonance.common.RateLimit;
 import it.epicode.resonance.common.RateLimitService;
+import it.epicode.resonance.mail.VerificationCodeEmailEvent;
 import it.epicode.resonance.user.Role;
 import it.epicode.resonance.user.User;
 import it.epicode.resonance.user.UserRepository;
+import it.epicode.resonance.user.UserRole;
 import it.epicode.resonance.user.UserRoleRepository;
+import it.epicode.resonance.user.UserStatus;
 import it.epicode.resonance.user.dto.MeResponse;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -23,14 +31,12 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Login, apertura della sessione (access token + refresh token) e logout (progettazione, sezioni 4.7-4.9).
- * La rotazione del refresh e' in {@link RefreshTokenService}; qui si costruisce la risposta.
+ * Registrazione, verifica dell'email, reinvio del codice, login, apertura della sessione (access token +
+ * refresh token) e logout (progettazione, sezioni 4.4-4.9). La rotazione del refresh e' in
+ * {@link RefreshTokenService}, i codici email in {@link EmailCodeService}; qui si costruisce la risposta.
  */
 @Service
 public class AuthService {
-
-    // BCrypt legge al massimo 72 byte: oltre, la password non puo' essere quella registrata (sezione 4.4).
-    private static final int MAX_PASSWORD_BYTES = 72;
 
     private final UserRepository users;
     private final UserRoleRepository userRoles;
@@ -39,6 +45,8 @@ public class AuthService {
     private final RateLimitService rateLimits;
     private final AccessTokenService accessTokens;
     private final RefreshTokenService refreshTokens;
+    private final EmailCodeService emailCodes;
+    private final ApplicationEventPublisher events;
 
     // Hash di una stringa casuale calcolato all'avvio con lo stesso encoder (stesso costo) dei veri: serve solo a
     // far durare allo stesso modo il login di un'email sconosciuta. Nessuna password reale lo corrisponde.
@@ -46,7 +54,8 @@ public class AuthService {
 
     public AuthService(UserRepository users, UserRoleRepository userRoles, UserAccessService userAccess,
                        PasswordEncoder passwordEncoder, RateLimitService rateLimits,
-                       AccessTokenService accessTokens, RefreshTokenService refreshTokens) {
+                       AccessTokenService accessTokens, RefreshTokenService refreshTokens,
+                       EmailCodeService emailCodes, ApplicationEventPublisher events) {
         this.users = users;
         this.userRoles = userRoles;
         this.userAccess = userAccess;
@@ -54,7 +63,87 @@ public class AuthService {
         this.rateLimits = rateLimits;
         this.accessTokens = accessTokens;
         this.refreshTokens = refreshTokens;
+        this.emailCodes = emailCodes;
+        this.events = events;
         this.dummyHash = passwordEncoder.encode(UUID.randomUUID().toString());
+    }
+
+    /**
+     * Registrazione (progettazione, sezione 4.4). Email gia' verificata o account sospeso: 409. Email non
+     * verificata: dopo i limiti di invio i nuovi dati sovrascrivono quelli in sospeso (nessuno ha ancora
+     * dimostrato di possederla). Utente nuovo: riga in users e ruolo FAN, automatico e non rimovibile.
+     * Niente noRollbackFor: se un limite di invio respinge la richiesta, i dati non devono cambiare.
+     */
+    @Transactional
+    public RegisterResponse register(RegisterRequest request) {
+        // Lock sulla riga: due registrazioni insieme sulla stessa email = un solo invio.
+        Optional<User> existing = users.findWithLockByEmail(request.email());
+        String passwordHash = passwordEncoder.encode(request.password());
+        User user;
+        String code;
+        if (existing.isPresent()) {
+            user = existing.get();
+            if (user.isEmailVerified() || user.getStatus() != UserStatus.ACTIVE) {
+                throw new AppException(ErrorCode.EMAIL_ALREADY_REGISTERED, "Email già registrata");
+            }
+            // Prima il codice, che applica i limiti e puo' lanciare 429: i dati si sovrascrivono solo dopo.
+            code = emailCodes.issue(user.getId(), EmailCodePurpose.EMAIL_VERIFICATION);
+            user.setPasswordHash(passwordHash);
+            user.setDisplayName(request.displayName());
+        } else {
+            // saveAndFlush: con due registrazioni parallele sulla stessa email nuova scatta uq_users_email,
+            // che GlobalExceptionHandler traduce in 409 EMAIL_ALREADY_REGISTERED.
+            user = users.saveAndFlush(new User(request.email(), passwordHash, request.displayName()));
+            userRoles.save(new UserRole(user.getId(), Role.FAN));
+            code = emailCodes.issue(user.getId(), EmailCodePurpose.EMAIL_VERIFICATION);
+        }
+        events.publishEvent(new VerificationCodeEmailEvent(user.getEmail(), user.getDisplayName(), code));
+        return new RegisterResponse(user.getEmail());
+    }
+
+    /**
+     * Verifica dell'email e apertura della sessione (progettazione, sezione 4.5), con i controlli nell'ordine
+     * di NoseY: l'ordine decide quale errore vede il client. noRollbackFor: il tentativo consumato sul codice
+     * deve restare salvato anche quando la verifica fallisce, altrimenti il limite dei 5 tentativi si aggirerebbe.
+     */
+    @Transactional(noRollbackFor = AppException.class)
+    public AuthSession verify(VerifyRequest request) {
+        // 1. utente inesistente: stessa risposta di un codice sbagliato, non rivela quali email esistono.
+        User user = users.findWithLockByEmail(request.email())
+                .orElseThrow(() -> new AppException(ErrorCode.CODE_INVALID, "Codice non valido"));
+        // 2. e 3. gia' verificato, sospeso.
+        if (user.isEmailVerified()) {
+            throw new AppException(ErrorCode.ALREADY_VERIFIED, "Account già verificato");
+        }
+        if (user.getStatus() == UserStatus.SUSPENDED) {
+            throw suspended(user.getSuspensionReason(), user.getSuspendedUntil());
+        }
+        // 4.-6. codice assente o scaduto, tentativo consumato, confronto a tempo costante.
+        emailCodes.verify(user.getId(), EmailCodePurpose.EMAIL_VERIFICATION, request.code());
+        // 7. password della registrazione: una diversa non completa la verifica, il codice resta usabile.
+        if (!passwordMatches(request.password(), user.getPasswordHash())) {
+            throw new AppException(ErrorCode.WRONG_PASSWORD,
+                    "Password diversa da quella della registrazione: se non la ricordi, registrati di nuovo");
+        }
+        // 8. successo.
+        user.setEmailVerified(true);
+        emailCodes.invalidate(user.getId(), EmailCodePurpose.EMAIL_VERIFICATION);
+        return openSession(user.getId(), refreshTokens.create(user.getId()));
+    }
+
+    /**
+     * Nuovo codice di verifica, solo per un account esistente, non verificato e ACTIVE; negli altri casi
+     * nessun effetto e il client riceve comunque 204, cosi' non si scopre quali email esistono.
+     */
+    @Transactional
+    public void resendCode(EmailRequest request) {
+        // Lock sulla riga: due richieste insieme = un solo invio.
+        users.findWithLockByEmail(request.email())
+                .filter(user -> !user.isEmailVerified() && user.getStatus() == UserStatus.ACTIVE)
+                .ifPresent(user -> {
+                    String code = emailCodes.issue(user.getId(), EmailCodePurpose.EMAIL_VERIFICATION);
+                    events.publishEvent(new VerificationCodeEmailEvent(user.getEmail(), user.getDisplayName(), code));
+                });
     }
 
     /**
@@ -127,15 +216,18 @@ public class AuthService {
 
     private boolean passwordMatches(String password, String hash) {
         // Oltre 72 byte si risponde come per una password errata, senza chiamare BCrypt (review focus 2).
-        return password.getBytes(StandardCharsets.UTF_8).length <= MAX_PASSWORD_BYTES
-                && passwordEncoder.matches(password, hash);
+        return !PasswordMax72BytesValidator.exceedsLimit(password) && passwordEncoder.matches(password, hash);
     }
 
     private AppException suspended(UserAccess access) {
+        return suspended(access.suspensionReason(), access.suspendedUntil());
+    }
+
+    private AppException suspended(String reason, Instant until) {
         // Il valore null e' ammesso: suspendedUntil e' nullo per una sospensione a tempo indeterminato.
         Map<String, Object> details = new LinkedHashMap<>();
-        details.put("suspensionReason", access.suspensionReason());
-        details.put("suspendedUntil", access.suspendedUntil());
+        details.put("suspensionReason", reason);
+        details.put("suspendedUntil", until);
         return new AppException(ErrorCode.ACCOUNT_SUSPENDED, "Account sospeso").withDetails(details);
     }
 }

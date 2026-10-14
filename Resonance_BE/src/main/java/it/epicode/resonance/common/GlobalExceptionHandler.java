@@ -34,7 +34,8 @@ public class GlobalExceptionHandler {
      * Codice d'errore per nome di vincolo del database. Si aggiunge una riga quando una card
      * introduce un vincolo che ha un codice proprio (es. uq_users_email); gli altri sono CONFLICT.
      */
-    private static final Map<String, ErrorCode> CODES_BY_CONSTRAINT = Map.of();
+    private static final Map<String, ErrorCode> CODES_BY_CONSTRAINT = Map.of(
+            "uq_users_email", ErrorCode.EMAIL_ALREADY_REGISTERED);
 
     private final Clock clock;
 

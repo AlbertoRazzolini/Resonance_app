@@ -11,8 +11,9 @@ creato e si aggiorna a ogni migrazione che modifica lo schema, nello stesso sott
 |---|---|---|---|
 | `V1__users_and_roles` | F0-02 | enum `user_role`, `user_status`; tabelle `users`, `user_roles` | Applicata |
 | `V2__refresh_tokens` | F1-02 | tabella `refresh_tokens` | Applicata |
+| `V3__email_codes` | F1-03 | enum `email_code_purpose`; tabella `email_codes` | Applicata |
 
-Migrazioni ancora da fare (progettazione, sezione 3.6): `V3__email_codes` (F1-03), `V4__official_concerts` (F3-02), `V5__indie_events` (F3-03),
+Migrazioni ancora da fare (progettazione, sezione 3.6): `V4__official_concerts` (F3-02), `V5__indie_events` (F3-03),
 `V6__collab_posts` (F4-01), `V7__feed_and_likes` (F4-02), `V8__chat` (F5-02).
 
 ## Convenzioni
@@ -30,6 +31,7 @@ Migrazioni ancora da fare (progettazione, sezione 3.6): `V3__email_codes` (F1-03
 |---|---|---|
 | `user_role` | `FAN`, `MUSICIAN`, `HOST`, `ADMIN`, `SUPERADMIN` | `Role` |
 | `user_status` | `ACTIVE`, `SUSPENDED` | `UserStatus` |
+| `email_code_purpose` | `EMAIL_VERIFICATION`, `PASSWORD_RESET` | `EmailCodePurpose` |
 
 ## Tabelle
 
@@ -91,6 +93,26 @@ Vincolo di controllo `ck_refresh_tokens_revoked`: `revoked` è vero se e solo se
 `replaced_by` può essere valorizzato solo per un token revocato. Indici `ix_refresh_tokens_user (user_id)`
 e `ix_refresh_tokens_expires (expires_at)` per la revoca totale e la pulizia dei token scaduti.
 
+### email_codes
+
+Una riga per coppia (utente, scopo): contiene il codice attivo e i contatori dei limiti di invio.
+
+| Colonna | Tipo | Vincoli |
+|---|---|---|
+| `id` | uuid | PK `pk_email_codes`, default `gen_random_uuid()` |
+| `user_id` | uuid | NOT NULL, FK `fk_email_codes_user` → `users(id)` ON DELETE CASCADE |
+| `purpose` | email_code_purpose | NOT NULL |
+| `code` | varchar(6) | NULL (NULL = nessun codice attivo, dopo l'uso); salvato in chiaro: 6 cifre hanno troppa poca entropia perché un hash protegga davvero, la protezione è data da scadenza, tentativi e limiti |
+| `sent_at` | timestamptz | NULL; ultimo invio, da cui contano i 60 secondi fra due invii e i 15 minuti di validità |
+| `attempts` | int | NOT NULL, default 0; tentativi di verifica consumati (massimo 5) |
+| `sends_count` | int | NOT NULL, default 0; invii nella finestra corrente di 24 ore (massimo 5) |
+| `sends_window_start` | timestamptz | NULL; inizio della finestra di 24 ore |
+| `created_at` | timestamptz | NOT NULL, default `now()` |
+
+Vincoli: `uq_email_codes_user_purpose (user_id, purpose)`; `ck_email_codes_code` (se `code` non è nullo,
+`sent_at` non è nullo, perché la scadenza si calcola da lì). Dopo l'uso `code` torna NULL ma i contatori
+restano, così l'uso di un codice non azzera i limiti di invio.
+
 ## Relazioni (diagramma ER)
 
 ```mermaid
@@ -99,6 +121,7 @@ erDiagram
     USERS |o--o{ USERS : "sospeso da (suspended_by)"
     USERS ||--o{ REFRESH_TOKENS : "ha sessioni"
     REFRESH_TOKENS |o--o| REFRESH_TOKENS : "sostituito da (replaced_by)"
+    USERS ||--o{ EMAIL_CODES : "riceve codici"
 
     USERS {
         uuid id PK
@@ -134,5 +157,17 @@ erDiagram
         timestamptz created_at
         timestamptz revoked_at
         uuid replaced_by FK
+    }
+
+    EMAIL_CODES {
+        uuid id PK
+        uuid user_id FK
+        email_code_purpose purpose UK
+        varchar code
+        timestamptz sent_at
+        int attempts
+        int sends_count
+        timestamptz sends_window_start
+        timestamptz created_at
     }
 ```

@@ -1030,3 +1030,31 @@ senza risposta la domanda "questo contenuto è mio?", che il design risolve con 
   sicurezza.
 - **Id temporanei per sessione**: stato in memoria che si perde al riavvio del servizio gratuito, problemi
   con più schede e con la chat in tempo reale.
+
+## Decisione 50: codice email in chiaro e registrazione su email non verificata (implementazione)
+
+### Scelta
+
+- **Codice in chiaro.** Il codice di verifica di 6 cifre è salvato in chiaro nella colonna
+  `email_codes.code`. La protezione reale sono i 5 tentativi consumati in modo atomico, i 15 minuti di
+  validità e i limiti di invio (1 al minuto, 5 in 24 ore); il confronto resta a tempo costante. Dopo l'uso
+  la colonna torna NULL.
+- **Registrazione su email già presente ma non verificata.** Dopo aver emesso il nuovo codice (e quindi
+  superato i limiti di invio), la registrazione sovrascrive nome e password. Chi registra l'email altrui non
+  può verificarla, perché il codice arriva solo alla casella del proprietario. Può però far arrivare fino a 5
+  email al giorno e, finché dura il limite, impedire al proprietario di registrarsi di nuovo (risposta 429 per
+  quasi un giorno). È la scelta del design (sezione 4.4) e di NoseY, accettata per l'MVP.
+
+### Motivazione
+
+Un hash di un numero con un milione di valori si inverte in pochi istanti: non aggiungerebbe protezione e
+complicherebbe il confronto. Per la sovrascrittura, chi si registra con una password dimenticata o un nome
+sbagliato deve poter ripartire senza assistenza; il passo di verifica richiede la password della
+registrazione, quindi il codice da solo non basta a prendere l'account.
+
+### Alternative scartate
+
+- **Hash del codice (SHA-256 o BCrypt)**: nessun vantaggio reale con 6 cifre, in più un confronto meno
+  semplice da testare.
+- **Non sovrascrivere e rinviare solo il codice**: elimina il disturbo di chi registra l'email altrui, ma
+  chi ha dimenticato la password scelta non potrebbe più completare la registrazione.
