@@ -1188,3 +1188,74 @@ risponderebbe 409 invece di 200. L'`INSERT` condizionale è atomico e non richie
   dei livelli cambiasse.
 - **Query JPQL con `(:status is null or u.status = :status)`**: non provata: con il tipo enum nominato di
   PostgreSQL un parametro nullo può non avere un tipo determinabile, e la `Specification` evita il problema.
+
+## Decisione 55: ogni errore del client Nominatim è GEOCODING_UNAVAILABLE (implementazione)
+
+### Scelta
+
+Nel client `NominatimGeocodingService` ogni errore del servizio diventa `GEOCODING_UNAVAILABLE` (502): timeout,
+errore di rete, risposta 429 o 5xx (come già previsto dalla decisione 3), ma anche corpo JSON illeggibile,
+coordinate non numeriche e attesa del proprio turno interrotta. Un indirizzo vuoto o una lista di risultati
+vuota danno `ADDRESS_NOT_FOUND` (400, `fields.address`), l'indirizzo vuoto senza chiamare Nominatim. Nel log
+finiscono solo il tipo di eccezione e lo stato HTTP, mai l'indirizzo.
+
+### Motivazione
+
+- Per chi pubblica un evento una risposta malformata di Nominatim equivale a un servizio che non funziona: può
+  solo riprovare più tardi, e il frontend mostra lo stesso messaggio.
+- L'indirizzo è un dato scritto dall'utente: tenerlo fuori dal log evita di conservare luoghi e indirizzi privati.
+- Questa decisione estende l'elenco della decisione 3 (che nominava solo timeout, rete, 5xx e 429); la regola
+  arriva all'API con F3-02, la prima card in cui questi errori vengono mostrati al client.
+
+### Alternative scartate
+
+- **500 `INTERNAL_ERROR` per le risposte malformate**: il frontend non potrebbe distinguere un servizio esterno
+  fuori uso da un errore dell'applicazione, e l'errore finirebbe nel log come bug nostro.
+
+## Decisione 56: scelte di implementazione dei concerti ufficiali (implementazione)
+
+### Scelta
+
+- **`Moderation` non è mai null nell'entity.** `OfficialConcert.getModeration()` ricrea un `Moderation` vuoto se
+  Hibernate ne ha letto uno nullo. Con `@Embeddable` e tutte le colonne a `NULL` (cioè ogni contenuto visibile)
+  Hibernate 7 restituisce `null`: l'impostazione `hibernate.create_empty_composites.enabled`, che lo evitava nelle
+  versioni precedenti, non esiste più. Lo stesso getter servirà alle altre tre entity moderabili.
+- **Ricerca nelle vicinanze in due query.** La query nativa (bounding box + Haversine SQL, sezione 10.2)
+  restituisce solo id e distanza della pagina, insieme a una query di conteggio con gli stessi filtri; i concerti
+  e i loro autori si caricano con una seconda query (`findByIdIn` con `EntityGraph`) e si rimettono nell'ordine
+  della prima. La formula della distanza sta in una costante condivisa dalle due query native.
+- **Geocodifica fuori dalla transazione con `TransactionTemplate`.** `OfficialConcertService.create` non è
+  `@Transactional`: chiama Nominatim e poi apre la transazione di salvataggio con `TransactionTemplate`, perché
+  una chiamata a un metodo `@Transactional` della stessa classe non passerebbe dal proxy.
+- **Un body con un valore illeggibile indica il campo.** Per `HttpMessageNotReadableException`, se Jackson sa
+  quale campo non ha potuto leggere (per esempio `eventDate: "2026-10-20T21:00"`, senza fuso orario),
+  `GlobalExceptionHandler` lo mette in `fields`, come una validazione; con JSON malformato `fields` resta vuoto.
+  Il valore ricevuto non viene mai ripetuto nella risposta.
+- **`radiusKm` obbligatorio** insieme a `lat` e `lng` in `GET /api/official-concerts/nearby`: nessun raggio di
+  default inventato; la mancanza di uno dei tre è un 400 `VALIDATION_ERROR`.
+- **Gli admin non cancellano come proprietari.** `DELETE /api/official-concerts/{id}` fatto da un non
+  proprietario, admin compresi, è 403 `NOT_OWNER`: gli admin moderano con gli endpoint dedicati (F4-03). Un
+  concerto già nascosto è 404 per tutti, proprietario compreso.
+
+### Motivazione
+
+- Un getter che non restituisce mai null evita controlli sparsi nel codice e funziona con qualsiasi versione di
+  Hibernate; un `@Embeddable` con costruttore vuoto non permette di fare di meglio senza una configurazione
+  non più disponibile.
+- Una query sola con tutte le colonne più la distanza obbligherebbe a mappare un'entity con un campo calcolato;
+  due query semplici sono più chiare e il costo è una lettura per chiave primaria su una pagina da al massimo 100
+  righe.
+- Il metodo `@Transactional` interno ignorato dal proxy è un errore classico di Spring: `TransactionTemplate`
+  rende esplicito dove inizia la transazione.
+- Dire all'utente quale campo ha sbagliato (la data senza fuso orario) è più utile di un errore generico e non
+  richiede di cambiare il tipo del campo in `String`.
+
+### Alternative scartate
+
+- **Un metodo `@Transactional` in un bean separato per il salvataggio**: funziona, ma crea una classe in più
+  solo per aprire una transazione.
+- **Query nativa che restituisce direttamente le entity più un campo distanza**: mappatura più fragile, e la
+  paginazione e il conteggio sarebbero comunque due query.
+- **`eventDate` come `String` da convertire a mano**: perde la validazione `@Future` di Bean Validation e
+  sposta nel service il controllo del formato.
+- **Raggio di default (per esempio 25 km)**: una scelta di prodotto non prevista dal design.

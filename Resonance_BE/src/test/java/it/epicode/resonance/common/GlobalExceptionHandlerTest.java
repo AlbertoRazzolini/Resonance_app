@@ -72,6 +72,25 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void unreadableBody_withInvalidValue_namesTheField() throws Exception {
+        // Una data senza fuso orario non e' un Instant: l'errore indica il campo, come una validazione.
+        mockMvc.perform(post("/test/when").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"when\": \"2026-10-20T21:00\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.fields.when").exists())
+                .andExpect(content().string(not(containsString("2026-10-20T21:00"))));
+    }
+
+    @Test
+    void unreadableBody_withBrokenJson_hasNoFields() throws Exception {
+        mockMvc.perform(post("/test/when").contentType(MediaType.APPLICATION_JSON).content("{non json"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.fields").isEmpty());
+    }
+
+    @Test
     void response_alwaysHasFieldsAndDetailsAsObjects() throws Exception {
         // Il frontend puo' leggere fields e details senza controllare se esistono.
         mockMvc.perform(get("/test/app-exception"))
@@ -169,6 +188,14 @@ class GlobalExceptionHandlerTest {
     static class TestController {
 
         record Body(@NotBlank String name) {
+        }
+
+        record WhenBody(Instant when) {
+        }
+
+        @PostMapping("/when")
+        String when(@RequestBody WhenBody body) {
+            return String.valueOf(body.when());
         }
 
         @GetMapping("/app-exception")

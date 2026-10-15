@@ -1589,8 +1589,445 @@
     },
     {
       "name": "Events",
-      "description": "Concerti ufficiali e indie event (card F3).",
-      "item": []
+      "description": "Concerti ufficiali e indie event (card F3). Concerti: eseguire in ordine; servono il login come HOST (accessToken) e fanAccessToken, copiato da un login come FAN. Nominatim e' reale: serve la rete.",
+      "item": [
+        {
+          "name": "Crea concerto (201)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Data del concerto: tra 30 giorni, in UTC (l'API richiede un fuso orario esplicito).",
+                  "pm.environment.set('concertDate', new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 con coordinate dalla geocodifica e generi normalizzati', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.latitude).to.be.a('number');",
+                  "    pm.expect(body.longitude).to.be.a('number');",
+                  "    pm.expect(body.genreTags).to.eql(['rock', 'jazz']);",
+                  "    pm.expect(body.distanceKm).to.eql(null);",
+                  "    pm.environment.set('concertId', body.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/official-concerts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "official-concerts"
+              ]
+            },
+            "description": "Richiede il login come utente con ruolo HOST (accessToken). L'indirizzo viene geocodificato con Nominatim: le coordinate non si inviano. I generi sono normalizzati (minuscoli, senza duplicati). Lo script salva concertId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Concerto da Postman\",\n  \"description\": \"Serata di prova\",\n  \"venueName\": \"Teatro di prova\",\n  \"address\": \"Piazza della Signoria, Firenze\",\n  \"eventDate\": \"{{concertDate}}\",\n  \"genreTags\": [\"Rock\", \"jazz\", \"rock\"],\n  \"coverImageUrl\": \"https://example.com/cover.jpg\",\n  \"externalTicketUrl\": \"https://example.com/biglietti\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crea concerto come FAN (403)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Data del concerto: tra 30 giorni, in UTC (l'API richiede un fuso orario esplicito).",
+                  "pm.environment.set('concertDate', new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 ACCESS_DENIED', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('ACCESS_DENIED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/official-concerts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "official-concerts"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Errore significativo. Usa fanAccessToken (utente senza ruolo HOST): solo gli HOST pubblicano concerti.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Concerto da Postman\",\n  \"description\": \"Serata di prova\",\n  \"venueName\": \"Teatro di prova\",\n  \"address\": \"Piazza della Signoria, Firenze\",\n  \"eventDate\": \"{{concertDate}}\",\n  \"genreTags\": [\"Rock\", \"jazz\", \"rock\"],\n  \"coverImageUrl\": \"https://example.com/cover.jpg\",\n  \"externalTicketUrl\": \"https://example.com/biglietti\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crea concerto con indirizzo non trovato (400)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Data del concerto: tra 30 giorni, in UTC (l'API richiede un fuso orario esplicito).",
+                  "pm.environment.set('concertDate', new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 ADDRESS_NOT_FOUND sul campo address', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('ADDRESS_NOT_FOUND');",
+                  "    pm.expect(body.fields).to.have.property('address');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/official-concerts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "official-concerts"
+              ]
+            },
+            "description": "Errore significativo. Un indirizzo che Nominatim non trova non salva nulla. Login come HOST (accessToken).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Concerto da Postman\",\n  \"description\": \"Serata di prova\",\n  \"venueName\": \"Teatro di prova\",\n  \"address\": \"xqzvbn kjhgf 123456 zzzz\",\n  \"eventDate\": \"{{concertDate}}\",\n  \"genreTags\": [\"Rock\", \"jazz\", \"rock\"],\n  \"coverImageUrl\": \"https://example.com/cover.jpg\",\n  \"externalTicketUrl\": \"https://example.com/biglietti\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Concerti vicini (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con la pagina dei concerti piu\\' vicini', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.all.keys('content', 'page', 'size', 'totalElements', 'totalPages');",
+                  "    pm.expect(body.content.length).to.be.above(0);",
+                  "    pm.expect(body.content[0].distanceKm).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/official-concerts/nearby?lat=43.7696&lng=11.2558&radiusKm=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "official-concerts",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "43.7696"
+                },
+                {
+                  "key": "lng",
+                  "value": "11.2558"
+                },
+                {
+                  "key": "radiusKm",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Pubblico. Centro e raggio (0,1-200 km) sono obbligatori e arrivano sempre dalla richiesta. Solo concerti futuri e non nascosti, dal piu' vicino; distanceKm in chilometri. Paginazione con page e size."
+          },
+          "response": []
+        },
+        {
+          "name": "Concerti vicini senza lat (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql('VALIDATION_ERROR');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/official-concerts/nearby?lng=11.2558&radiusKm=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "official-concerts",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lng",
+                  "value": "11.2558"
+                },
+                {
+                  "key": "radiusKm",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Errore significativo. Senza lat la ricerca non parte."
+          },
+          "response": []
+        },
+        {
+          "name": "Dettaglio concerto (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con il concerto e l\\'autore pubblico', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.id).to.eql(pm.environment.get('concertId'));",
+                  "    pm.expect(body.host).to.have.all.keys('id', 'displayName', 'avatarUrl');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/official-concerts/{{concertId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "official-concerts",
+                "{{concertId}}"
+              ]
+            },
+            "description": "Pubblico. Eseguire dopo Crea concerto (usa concertId). Un concerto nascosto risponde 404."
+          },
+          "response": []
+        },
+        {
+          "name": "Dettaglio concerto inesistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 NOT_FOUND', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql('NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/official-concerts/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "official-concerts",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            },
+            "description": "Errore significativo. Un id che non esiste (o un concerto nascosto) e' un 404."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancella il concerto di un altro (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 NOT_OWNER', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('NOT_OWNER');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/official-concerts/{{concertId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "official-concerts",
+                "{{concertId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Errore significativo. Usa fanAccessToken: chi non ha creato il concerto non puo' cancellarlo (gli admin moderano con gli endpoint dedicati)."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancella il proprio concerto (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 senza corpo', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/official-concerts/{{concertId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "official-concerts",
+                "{{concertId}}"
+              ]
+            },
+            "description": "Richiede il login come l'HOST che ha creato il concerto (accessToken). Il body con il motivo e' facoltativo (massimo 500 caratteri). Cancellazione logica: dopo, il concerto sparisce da dettaglio e ricerca.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Concerto annullato\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
     },
     {
       "name": "Collab",

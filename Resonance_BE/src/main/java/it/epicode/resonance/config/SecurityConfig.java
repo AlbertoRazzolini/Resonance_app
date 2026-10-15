@@ -75,6 +75,12 @@ public class SecurityConfig {
                         // anche il profilo proprio.
                         .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/users/{id}").permitAll()
+                        // Concerti ufficiali (sezione 6.6): lettura pubblica, creazione solo HOST. La
+                        // cancellazione del proprietario richiede il login (anyRequest) e il controllo
+                        // di proprieta' sta nel service.
+                        .requestMatchers(HttpMethod.POST, "/api/official-concerts").hasRole("HOST")
+                        .requestMatchers(HttpMethod.GET, "/api/official-concerts/nearby",
+                                "/api/official-concerts/{id}").permitAll()
                         // /ws: l'autenticazione avviene al CONNECT (sezione 7.2).
                         // /error: altrimenti l'inoltro interno a /error diventa un 401 e il frontend fa logout.
                         .requestMatchers("/ws/**", "/error").permitAll()

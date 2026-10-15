@@ -12,9 +12,10 @@ creato e si aggiorna a ogni migrazione che modifica lo schema, nello stesso sott
 | `V1__users_and_roles` | F0-02 | enum `user_role`, `user_status`; tabelle `users`, `user_roles` | Applicata |
 | `V2__refresh_tokens` | F1-02 | tabella `refresh_tokens` | Applicata |
 | `V3__email_codes` | F1-03 | enum `email_code_purpose`; tabella `email_codes` | Applicata |
+| `V4__official_concerts` | F3-02 | tabella `official_concerts` | Applicata |
 
-Migrazioni ancora da fare (progettazione, sezione 3.6): `V4__official_concerts` (F3-02), `V5__indie_events` (F3-03),
-`V6__collab_posts` (F4-01), `V7__feed_and_likes` (F4-02), `V8__chat` (F5-02).
+Migrazioni ancora da fare (progettazione, sezione 3.6): `V5__indie_events` (F3-03), `V6__collab_posts` (F4-01),
+`V7__feed_and_likes` (F4-02), `V8__chat` (F5-02).
 
 ## Convenzioni
 
@@ -113,6 +114,40 @@ Vincoli: `uq_email_codes_user_purpose (user_id, purpose)`; `ck_email_codes_code`
 `sent_at` non è nullo, perché la scadenza si calcola da lì). Dopo l'uso `code` torna NULL ma i contatori
 restano, così l'uso di un codice non azzera i limiti di invio.
 
+### official_concerts
+
+Concerti pubblicati dagli utenti con ruolo HOST. Le coordinate vengono dalla geocodifica dell'indirizzo, mai dal
+client.
+
+| Colonna | Tipo | Vincoli |
+|---|---|---|
+| `id` | uuid | PK `pk_official_concerts`, default `gen_random_uuid()` |
+| `host_id` | uuid | NOT NULL, FK `fk_official_concerts_host` → `users(id)` |
+| `title` | varchar(150) | NOT NULL |
+| `description` | varchar(5000) | NULL |
+| `venue_name` | varchar(150) | NOT NULL |
+| `address` | varchar(255) | NOT NULL; indirizzo digitato dall'host |
+| `latitude` | double precision | NOT NULL; gradi, da geocodifica |
+| `longitude` | double precision | NOT NULL; gradi, da geocodifica |
+| `event_date` | timestamptz | NOT NULL |
+| `genre_tags` | text[] | NOT NULL, default `'{}'`; minuscoli e senza duplicati (li normalizza l'applicazione) |
+| `cover_image_url` | varchar(2048) | NULL; solo http/https (validato dall'applicazione) |
+| `external_ticket_url` | varchar(2048) | NULL; solo http/https (validato dall'applicazione) |
+| `created_at` | timestamptz | NOT NULL, default `now()` |
+| `hidden_at` | timestamptz | NULL; valorizzata = contenuto nascosto (moderazione o cancellazione del proprietario) |
+| `hidden_by` | uuid | NULL, FK `fk_official_concerts_hidden_by` → `users(id)` |
+| `hidden_reason` | varchar(500) | NULL |
+
+Vincoli di controllo:
+
+- `ck_official_concerts_coordinates`: latitudine fra −90 e 90, longitudine fra −180 e 180.
+- `ck_official_concerts_hidden`: `hidden_at` e `hidden_by` sono entrambi nulli o entrambi presenti, e
+  `hidden_reason` può esistere solo se il contenuto è nascosto. Che il motivo sia obbligatorio per gli admin lo
+  controlla il service (il database non sa chi nasconde).
+
+Indici: `ix_official_concerts_host (host_id)`, `ix_official_concerts_coordinates (latitude, longitude)` per il
+prefiltro a bounding box della ricerca nelle vicinanze e `ix_official_concerts_event_date (event_date)`.
+
 ## Relazioni (diagramma ER)
 
 ```mermaid
@@ -122,6 +157,8 @@ erDiagram
     USERS ||--o{ REFRESH_TOKENS : "ha sessioni"
     REFRESH_TOKENS |o--o| REFRESH_TOKENS : "sostituito da (replaced_by)"
     USERS ||--o{ EMAIL_CODES : "riceve codici"
+    USERS ||--o{ OFFICIAL_CONCERTS : "pubblica (HOST)"
+    USERS |o--o{ OFFICIAL_CONCERTS : "nasconde (hidden_by)"
 
     USERS {
         uuid id PK
@@ -169,5 +206,24 @@ erDiagram
         int sends_count
         timestamptz sends_window_start
         timestamptz created_at
+    }
+
+    OFFICIAL_CONCERTS {
+        uuid id PK
+        uuid host_id FK
+        varchar title
+        varchar description
+        varchar venue_name
+        varchar address
+        double latitude
+        double longitude
+        timestamptz event_date
+        text_array genre_tags
+        varchar cover_image_url
+        varchar external_ticket_url
+        timestamptz created_at
+        timestamptz hidden_at
+        uuid hidden_by FK
+        varchar hidden_reason
     }
 ```

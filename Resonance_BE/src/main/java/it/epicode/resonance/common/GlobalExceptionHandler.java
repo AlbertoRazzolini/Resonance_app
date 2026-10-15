@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import tools.jackson.core.JacksonException;
 
 import java.time.Clock;
 import java.util.LinkedHashMap;
@@ -82,11 +83,18 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Body illeggibile (JSON non valido, tipo sbagliato): e' un errore di validazione, non un 500.
+     * Body illeggibile (JSON non valido, tipo sbagliato): e' un errore di validazione, non un 500. Se Jackson
+     * sa quale campo non ha potuto leggere (es. una data senza fuso orario) lo indica in fields, come una
+     * validazione; il valore ricevuto non viene mai ripetuto nella risposta.
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handle(HttpMessageNotReadableException ex) {
-        return response(ErrorCode.VALIDATION_ERROR, "Corpo della richiesta non leggibile", Map.of(), Map.of());
+        Map<String, String> fields = new LinkedHashMap<>();
+        String field = unreadableField(ex);
+        if (field != null) {
+            fields.put(field, "Valore non valido");
+        }
+        return response(ErrorCode.VALIDATION_ERROR, "Corpo della richiesta non leggibile", fields, Map.of());
     }
 
     /**
@@ -173,6 +181,23 @@ public class GlobalExceptionHandler {
             return hibernateEx.getConstraintName();
         }
         return null;
+    }
+
+    /**
+     * Nome del campo del body che Jackson non ha saputo leggere, o null se l'errore non riguarda un campo
+     * (JSON malformato). Con liste o oggetti annidati vale l'ultimo nome di campo del percorso.
+     */
+    private static String unreadableField(HttpMessageNotReadableException ex) {
+        if (!(ex.getCause() instanceof JacksonException jackson)) {
+            return null;
+        }
+        String name = null;
+        for (JacksonException.Reference reference : jackson.getPath()) {
+            if (reference.getPropertyName() != null) {
+                name = reference.getPropertyName();
+            }
+        }
+        return name;
     }
 
     private ResponseEntity<ErrorResponse> response(ErrorCode code, String message, Map<String, String> fields,
