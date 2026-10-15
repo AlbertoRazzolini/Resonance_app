@@ -28,7 +28,7 @@ Stack: Java 25, Spring Boot 4.1.1, PostgreSQL con Flyway. Il design di riferimen
 
 > Stato: setup iniziale (fase F0). Sono pronti progetto, profili, PostgreSQL locale, la migrazione V1
 > (utenti e ruoli), l'health check `GET /api/health`, la gestione comune degli errori, il Dockerfile
-> e il Blueprint di Render (`render.yaml`, non ancora applicato); le altre API arrivano con le card
+> e il Blueprint di Render (`render.yaml`, applicato: vedi "Deploy"); le altre API arrivano con le card
 > successive.
 
 ## Prerequisiti
@@ -107,7 +107,7 @@ La collection e gli environment stanno in `postman/`:
   riempiono con le card che creano gli endpoint. L'autorizzazione Bearer `{{accessToken}}` è impostata a
   livello di collection.
 - `resonance-local.postman_environment.json` (`baseUrl` = `http://localhost:8080`) e
-  `resonance-render.postman_environment.json` (`baseUrl` vuoto finché non c'è il deploy).
+  `resonance-render.postman_environment.json` (`baseUrl` = `https://resonance-6o89.onrender.com`).
 
 Come usarli: in Postman, **Import** e scegli i tre file; poi seleziona l'environment `local` in alto a
 destra, avvia il backend con il profilo `dev` (vedi "Avvio in locale") e lancia le richieste della
@@ -119,12 +119,23 @@ Nei file versionati non c'è nessun segreto: token e credenziali stanno solo nel
 
 ## Deploy
 
-Non ancora disponibile. Il Blueprint di Render (database e un solo servizio web) è pronto in
-`render.yaml` ma non è stato applicato; il link verrà aggiunto dopo il primo deploy.
+Il backend è online su Render: **https://resonance-6o89.onrender.com** (health check:
+`/api/health`). Il Blueprint `render.yaml` crea il database `resonance-db` (PostgreSQL 17) e un solo
+servizio web `resonance` (Docker, piano gratuito, Frankfurt); il deploy parte dai push su `main`. Per
+ora il servizio contiene solo il backend: il frontend arriva dal 20 ottobre.
 
-**Da verificare su Render al primo deploy.** Il profilo `prod` imposta `server.forward-headers-strategy:
-native` perché il TLS termina nel proxy di Render. È provato solo con un server locale e una richiesta
-simulata (`ForwardedHeadersRealServerTest`), non su Render: dopo il deploy controllare che il login e il
-refresh dal browser rispondano 200 e non 403 "Invalid CORS request", e il cookie `resonance_refresh` sia
-`Secure` (decisione 47). Se il proxy di Render non risulta "interno" per Tomcat, serve
-`server.tomcat.remoteip.internal-proxies`.
+**Spin-down.** Il piano gratuito sospende il servizio dopo circa 15 minuti senza traffico: la prima
+richiesta dopo la pausa attende il risveglio (circa un minuto; il primo avvio a freddo è durato quasi
+tre minuti). Prima di una prova o di una demo conviene aprire `/api/health` qualche minuto prima.
+
+**Segreti.** Si impostano a mano nel pannello Render (Environment del servizio `resonance`), mai nel
+repository: `SUPERADMIN_EMAIL`, `SUPERADMIN_PASSWORD`, `BREVO_API_KEY`, `MAIL_FROM`,
+`GEOCODING_CONTACT`.
+
+**Verificato su Render** (con `curl` e con il Collection Runner di Postman, non da un browser): registrazione con invio reale del codice
+via Brevo, verifica, login, refresh e logout; il cookie `resonance_refresh` arriva con `Secure`,
+`HttpOnly` e `SameSite=Lax` (decisione 47); login e refresh con `Origin` della stessa origine
+rispondono 200, mentre un `Origin` di un altro sito dà 403 "Invalid CORS request". Il proxy di
+Render risulta quindi interno per Tomcat e non serve `server.tomcat.remoteip.internal-proxies`. Non
+ancora provato: il refresh da un browser reale (si fa con il frontend) e la sospensione di un
+utente (endpoint della card F2-02).

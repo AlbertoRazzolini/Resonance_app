@@ -932,7 +932,7 @@ Il controllo nel controller (punto 2) è quindi un secondo livello: per `Origin`
 filtro CORS. Resta utile per i casi che il filtro lascia passare e per non dipendere da una sola difesa. Il
 confronto sull'host è esatto (non "inizia con"): `host.evil.example` non passa.
 
-### Cosa si assume sul proxy di Render (da verificare al primo deploy, F2)
+### Cosa si assume sul proxy di Render (verificato al primo deploy, F2-03)
 
 - Render termina il TLS e inoltra in HTTP aggiungendo `X-Forwarded-Proto` (e `X-Forwarded-For`).
 - Il proxy contatta il servizio da un indirizzo di una rete privata o di loopback: `native` si fida degli
@@ -942,7 +942,10 @@ confronto sull'host è esatto (non "inizia con"): `host.evil.example` non passa.
 - L'header `Host` arriva invariato (il dominio `.onrender.com`, senza porta). Se Render lo cambiasse, il
   confronto fra `Origin` e `Host` andrebbe rivisto.
 
-Nessuna di queste ipotesi è stata provata su Render: il README ricorda di verificare il deploy.
+Esito del primo deploy (15 ottobre, con `curl`): login e refresh con `Origin` uguale all'indirizzo
+`https://…onrender.com` rispondono 200 e un `Origin` di un altro sito 403, quindi gli header del proxy
+sono accettati e `remoteip.internal-proxies` non serve. Il cookie `resonance_refresh` arriva `Secure`.
+Non è stata provata la richiesta da un browser reale (si farà con il frontend).
 
 ### Alternative scartate
 
