@@ -1,0 +1,38 @@
+package it.epicode.resonance.user;
+
+import it.epicode.resonance.support.IntegrationTest;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+/**
+ * Salvataggio di un utente con piu' ruoli e rilettura di utente e ruoli dal database.
+ */
+class UserRepositoryTest extends IntegrationTest {
+
+    @Autowired
+    private UserRepository users;
+
+    @Autowired
+    private UserRoleRepository roles;
+
+    @Test
+    void saveUserWithRoles() {
+        User user = new User("mario@example.com", "hash-di-prova", "Mario");
+        users.save(user);
+        roles.save(new UserRole(user.getId(), Role.FAN));
+        roles.save(new UserRole(user.getId(), Role.MUSICIAN));
+
+        User found = users.findByEmail("mario@example.com").orElseThrow();
+
+        assertThat(found.getId()).isEqualTo(user.getId());
+        assertThat(found.getStatus()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(found.isEmailVerified()).isFalse();
+        // createdAt arriva dal DEFAULT now() del database, non da Java.
+        assertThat(found.getCreatedAt()).isNotNull();
+        assertThat(roles.findRolesByUserId(user.getId())).containsExactlyInAnyOrder(Role.FAN, Role.MUSICIAN);
+        assertThat(roles.existsByIdRole(Role.MUSICIAN)).isTrue();
+        assertThat(roles.existsByIdRole(Role.SUPERADMIN)).isFalse();
+    }
+}

@@ -5,15 +5,20 @@ Backend Spring Boot in `Resonance_BE/` (capstone Epicode). Frontend in `Resonanc
 
 ## Inizio di ogni sessione
 
-Leggere, in quest'ordine:
+Ogni card si fa in una sessione nuova: lo studente scrive `/clear` e poi `/prossima-card` (comando
+locale in `.claude/commands/`, non versionato). Per non rileggere ogni volta tutto il progetto, si
+legge solo ciò che serve alla card corrente:
 
-1. `CLAUDE.md` (questo file)
-2. `docs/brief.md` — requisiti e vincoli. **La D1 del brief è sostituita** (servizio Render unico
-   per API e frontend, nessun dominio personalizzato): vedi `docs/decisioni.md`, decisione 1.
-3. `docs/progettazione.md` — design approvato, riferimento principale.
-4. `docs/riuso-nosey.md` — mappa del riuso; da NoseY leggere solo i file della card corrente
+1. `CLAUDE.md` (questo file), sempre.
+2. Il piano in `docs/superpowers/plans/` (fonte di verità; Trello ne è lo specchio): "Vincoli
+   globali", "Interfacce condivise" e la sezione della card.
+3. Di `docs/progettazione.md` (design approvato, riferimento principale) solo le sezioni indicate dai
+   "Riferimenti" della card; di `docs/decisioni.md` solo le decisioni citate.
+4. `docs/riuso-nosey.md` (mappa del riuso) e, da NoseY, solo i file della card corrente
    (`C:\Users\VGit\OneDrive\Desktop\Appunti e coding\UPLOADxGIT\Back-end\BW5\NoseY`, mai modificarlo).
-5. Il piano di implementazione in `docs/superpowers/plans/` (fonte di verità; Trello ne è lo specchio).
+5. `docs/brief.md` solo se un requisito o un vincolo non è chiaro dal design. **La D1 del brief è
+   sostituita** (servizio Render unico per API e frontend, nessun dominio personalizzato): vedi
+   `docs/decisioni.md`, decisione 1.
 
 Se è attivo uno stile di risposta sintetico, le spiegazioni delle scelte tecniche e le richieste di
 decisione restano complete e comprensibili: l'utente è uno studente.
@@ -37,9 +42,12 @@ decisione restano complete e comprensibili: l'utente è uno studente.
 4. A fine card: build e test completi (`./mvnw -q verify`, dettagli solo in caso di errore);
    riepilogo breve con sotto-task, file modificati raggruppati per sotto-task (documentazione
    compresa), verifiche ed esiti; proposta di messaggio Conventional Commits (titolo + elenco dei
-   sotto-task).
-5. **FERMARSI.** Niente commit, niente card successiva. Quando l'utente conferma il commit: card in
-   "Fatto" e attesa del via per la card successiva.
+   sotto-task). Il messaggio è **in italiano**, con il prefisso Conventional Commits in inglese
+   (es. `feat(auth): aggiunge la rotazione del refresh token`); vale anche per l'elenco dei
+   sotto-task. Se il piano riporta un "Commit proposto" in inglese, si traduce.
+5. **FERMARSI.** Niente commit, niente card successiva. La card la sposta in "Fatto" lo studente, a
+   mano, dopo il commit: non spostarla. Attendere il via per la card successiva (di norma `/clear`
+   e `/prossima-card`).
 
 Fermarsi e chiedere solo se: serve una decisione dell'utente; un errore non si risolve in tempi
 ragionevoli; si dovrebbe uscire dal piano approvato o dalla card corrente. Mai dichiarare test o
@@ -76,6 +84,27 @@ verifiche non eseguiti.
 - Commenti su scelte non ovvie: "progettazione, sezione N", senza copiare paragrafi.
 - La documentazione descrive solo ciò che è implementato. Nessuna card finale "scrivere la
   documentazione".
+
+## Commenti nel codice (decisione 42)
+
+- In italiano. Una riga di Javadoc su ogni classe e su ogni metodo non banale (esclusi getter,
+  setter e costruttori ovvi): dice cosa fa e perché, senza ripetere il codice.
+- Scelte non ovvie: commento sul perché con "progettazione, sezione N".
+- Campi delle entity: commentati solo se la colonna ha una regola o un'unità.
+- Test: una riga per classe di test che dice cosa verifica, più un commento sui casi non evidenti dal
+  nome; i nomi dei test restano descrittivi.
+- La regola vale anche per il codice già scritto: ogni card la applica ai file che crea o modifica.
+
+## Costruttori ed entità JPA (decisioni 41 e 43)
+
+- **Mai `@AllArgsConstructor`, in nessuna classe**: i costruttori si scrivono a mano, assegnando i
+  campi con `this.`.
+- Entity: costruttore pubblico con i campi obbligatori (NOT NULL senza default del database) e
+  `@NoArgsConstructor(access = AccessLevel.PROTECTED)` per JPA; gli altri campi restano con i setter.
+- Ordine delle annotazioni: `@Entity`, `@Table`, `@NoArgsConstructor`, `@ToString`, `@Getter`,
+  `@Setter`. `@Id` senza setter (`@Setter(AccessLevel.NONE)`); hash della password fuori da JSON e
+  `toString`. Le entity senza campi modificabili (chiavi composte, righe di sola lettura) non hanno `@Setter`.
+- Niente `length` nelle `@Column`: le lunghezze stanno nelle migrazioni e nei DTO.
 
 ## Postman e WebSocket
 

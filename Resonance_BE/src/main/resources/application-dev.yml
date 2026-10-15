@@ -1,0 +1,16 @@
+# Sviluppo locale: PostgreSQL in Docker sulla porta 5433 (progettazione, sezione 12.1).
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/resonance}
+    # Credenziali di sviluppo non sensibili, le stesse di docker-compose.yml.
+    username: ${DB_USERNAME:resonance}
+    password: ${DB_PASSWORD:resonance}
+
+app:
+  auth:
+    refresh-cookie:
+      # In locale si usa HTTP: un cookie Secure non verrebbe salvato.
+      secure: false
+  cors:
+    # Dev server Vite, per chi chiama il backend senza proxy e per l'handshake WebSocket.
+    allowed-origins: ${ALLOWED_ORIGIN:http://localhost:5173}

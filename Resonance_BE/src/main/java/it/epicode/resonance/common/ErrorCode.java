@@ -1,0 +1,47 @@
+package it.epicode.resonance.common;
+
+import org.springframework.http.HttpStatus;
+
+/**
+ * Catalogo dei codici d'errore stabili su cui decide il frontend (progettazione, sezione 6.2).
+ * Contiene solo i codici generali: gli altri si aggiungono card per card, insieme alla funzionalita'
+ * che li usa. httpStatus e' null per i codici che esistono solo sul WebSocket.
+ */
+public enum ErrorCode {
+
+    VALIDATION_ERROR(HttpStatus.BAD_REQUEST),
+    UNAUTHENTICATED(HttpStatus.UNAUTHORIZED),
+    ACCESS_DENIED(HttpStatus.FORBIDDEN),
+    NOT_FOUND(HttpStatus.NOT_FOUND),
+    METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED),
+    UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE),
+    CONFLICT(HttpStatus.CONFLICT),
+    TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS),
+    INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR),
+    INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED),
+    EMAIL_NOT_VERIFIED(HttpStatus.FORBIDDEN),
+    ACCOUNT_SUSPENDED(HttpStatus.FORBIDDEN),
+    CSRF_HEADER_MISSING(HttpStatus.FORBIDDEN),
+    REFRESH_TOKEN_INVALID(HttpStatus.UNAUTHORIZED),
+    REFRESH_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED),
+    REFRESH_TOKEN_REUSED(HttpStatus.UNAUTHORIZED),
+    REFRESH_CONFLICT(HttpStatus.CONFLICT),
+    EMAIL_ALREADY_REGISTERED(HttpStatus.CONFLICT),
+    ALREADY_VERIFIED(HttpStatus.CONFLICT),
+    CODE_INVALID(HttpStatus.BAD_REQUEST),
+    CODE_EXPIRED(HttpStatus.BAD_REQUEST),
+    WRONG_PASSWORD(HttpStatus.BAD_REQUEST);
+
+    private final HttpStatus httpStatus;
+
+    ErrorCode(HttpStatus httpStatus) {
+        this.httpStatus = httpStatus;
+    }
+
+    /**
+     * Stato HTTP della risposta, o null per i codici solo WebSocket.
+     */
+    public HttpStatus httpStatus() {
+        return httpStatus;
+    }
+}

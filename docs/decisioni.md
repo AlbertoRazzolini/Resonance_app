@@ -6,7 +6,8 @@ in cui vengono prese. Riferimento principale: `docs/progettazione.md`.
 
 Origine delle voci: **brief** = vincolo o decisione già presa in `docs/brief.md`; **brainstorming** =
 scelta dello studente durante il brainstorming (13 ottobre); **design** = scelta tecnica proposta nel
-documento di design e approvata con esso (13 ottobre).
+documento di design e approvata con esso (13 ottobre); **implementazione** = scelta fatta durante lo
+sviluppo e approvata dallo studente in revisione.
 
 ---
 
@@ -191,6 +192,15 @@ meno di 10 secondi, la risposta è 409 `REFRESH_CONFLICT`: nessun token emesso, 
 cookie non cancellato; il client ritenta con il cookie nuovo. Oltre i 10 secondi, o per un token
 revocato da logout o reset, si revocano tutti i token. Le richieste sullo stesso token sono
 serializzate con un lock di riga.
+
+**Il confine è incluso**: la condizione è `adesso − revoked_at ≤ 10 s`, quindi a 10 secondi esatti la
+risposta è ancora 409 e solo oltre (a 10,001 s) è un riuso. I test verificano 9, 9,5, 10,5 e 11 secondi
+con un orologio senza frazioni di secondo; non c'è un test sul secondo esatto, perché PostgreSQL salva i
+microsecondi e arrotonda: con l'`Instant.now()` di un test reale l'esito a 10 secondi esatti dipenderebbe
+dall'arrotondamento e il test sarebbe instabile. Una finestra a 9 o a 11 secondi viene scoperta dai test
+a 9,5 e a 10,5 secondi; scambiare "incluso" con "escluso" no, e non cambia nulla di osservabile se non
+all'istante esatto del confine. Il lock di riga è coperto da un test con due richieste concorrenti vere,
+ripetuto 20 volte (`RefreshTokenServiceTest`).
 
 ### Motivazione
 
@@ -631,13 +641,16 @@ Riusa il controller STOMP di NoseY; chiunque può scrivere a chiunque senza sist
 
 - **Invio del primo messaggio direttamente all'id del destinatario**: due percorsi di invio da gestire.
 
-## Decisione 36: ciclo di sviluppo con commit manuali dello studente (brief)
+## Decisione 36: ciclo di sviluppo con commit manuali dello studente (brief + richiesta dello studente)
 
 ### Scelta
 
 Una card alla volta, un commit per card; a fine card riepilogo e messaggio di commit proposto in
 stile Conventional Commits; il commit lo esegue lo studente. Lavoro su `develop`; il merge
-`develop → main` (deploy automatico su Render) lo esegue lo studente a fine fase.
+`develop → main` (deploy automatico su Render) lo esegue lo studente a fine fase. I messaggi di
+commit proposti sono in italiano, con il prefisso Conventional Commits in inglese (es.
+`feat(auth): aggiunge la rotazione del refresh token`), come richiesto dallo studente all'avvio di F0.
+Le card passano in "Fatto" su Trello per mano dello studente, dopo il commit.
 
 ### Motivazione
 
@@ -678,3 +691,433 @@ La documentazione resta coerente con il codice; nessun recupero a fine progetto.
 ### Alternative scartate
 
 - **Documentazione scritta alla fine**: rischio di descrivere un sistema diverso da quello reale.
+
+## Decisione 39: nomi delle chiavi di configurazione dei limiti e della geocodifica (implementazione)
+
+### Scelta
+
+Il design fissa i valori e il prefisso `app.rate-limits.*` (sezione 8.8) ma non i nomi delle
+sottochiavi, né quelli delle chiavi di geocodifica: i nomi sono stati scelti in fase di
+implementazione (F0-01) e approvati dallo studente in revisione; le card successive li usano
+**così come sono**, senza rinominarli.
+
+- `app.rate-limits.<limite>.max` (numero intero) e `app.rate-limits.<limite>.window` (durata, es.
+  `15m`, `24h`), con `<limite>` uno fra `login-failed`, `chat-messages`, `conversations-created`,
+  `collab-applications`.
+- `app.geocoding.url`, `app.geocoding.contact` (da `GEOCODING_CONTACT`: entra nello User-Agent
+  identificativo delle richieste a Nominatim, decisione 3), `app.geocoding.connect-timeout`,
+  `app.geocoding.read-timeout`.
+
+### Motivazione
+
+Più card leggono queste chiavi (limiti di frequenza, geocodifica degli eventi): fissarne i nomi
+subito evita incoerenze fra codice, `application.yml` e documentazione. `ApplicationConfigTest`
+ne verifica la risoluzione con il profilo `test`.
+
+### Alternative scartate
+
+- **Nomi in italiano come in NoseY (`massimo`, `finestra`)**: codice, classi, tabelle e colonne
+  sono in inglese (brief, sezione 2); le chiavi di configurazione seguono la stessa convenzione.
+- **Nomi decisi card per card**: rischio di nomi diversi per lo stesso concetto.
+
+## Decisione 40: database di sviluppo esposto solo su localhost (implementazione)
+
+### Scelta
+
+Nel `docker-compose.yml` la porta di PostgreSQL è legata a `127.0.0.1`: `"127.0.0.1:5433:5432"`. Il
+design (sezione 12.1) e il piano sono stati aggiornati di conseguenza. `docs/brief.md` non è
+modificato e riporta ancora `"5433:5432"`.
+
+### Motivazione
+
+Il database di sviluppo ha credenziali semplici (`resonance`/`resonance`) e non deve essere
+raggiungibile da altre macchine sulla rete locale. pgAdmin e IntelliJ si collegano comunque a
+`localhost:5433`.
+
+### Alternative scartate
+
+- **`"5433:5432"` senza indirizzo** (come nel brief e nel design originale): Docker espone la porta
+  su tutte le interfacce, quindi il database con credenziali semplici sarebbe raggiungibile dalla
+  rete locale.
+
+## Decisione 41: costruzione delle entità JPA (implementazione)
+
+### Scelta
+
+Ogni entity ha un costruttore pubblico con i campi obbligatori (NOT NULL senza default del
+database) e `@NoArgsConstructor(access = AccessLevel.PROTECTED)`, che serve solo a JPA. Gli altri
+campi restano con i setter. Per le entity con chiave composta il costruttore riceve i dati della
+chiave. Le entity nuove nascono già così; `User`, `UserRole` e `UserRoleId` la rispettano. Ogni entity ha `@ToString`. Il campo
+`id` non ha setter (`@Setter(AccessLevel.NONE)`) e i campi sensibili, come l'hash della password,
+stanno fuori da JSON e da `toString` (`@JsonIgnore`, `@ToString.Exclude`). `@AllArgsConstructor` non
+si usa in nessuna classe: i costruttori si scrivono a mano, assegnando i campi con `this.`.
+
+### Motivazione
+
+Un oggetto incompleto, per esempio un utente senza email, non si può creare: l'errore si vede alla
+compilazione e non come violazione di `NOT NULL` al salvataggio. Hibernate continua a creare gli
+oggetti con il costruttore vuoto, che resta protetto e quindi non usabile dal codice normale.
+
+### Alternative scartate
+
+- **Solo `@Getter`/`@Setter` con costruttore implicito** (modello di NoseY e prima versione del
+  design, sezione 2.1): permette entity incomplete, con l'errore rinviato al database.
+- **`@AllArgsConstructor`**: inutilizzabile con molti campi facoltativi e con campi valorizzati dal
+  database, come `created_at`.
+- **Builder**: più codice per ogni entity, per un vantaggio piccolo quando i campi obbligatori sono
+  pochi.
+
+## Decisione 42: commento del codice (implementazione)
+
+### Scelta
+
+Commenti in italiano. Nel codice di produzione una riga di Javadoc su ogni classe e su ogni metodo
+non banale (esclusi getter, setter e costruttori ovvi), che dice cosa fa e perché; le scelte non
+ovvie hanno un commento sul perché con il riferimento "progettazione, sezione N". I campi delle
+entity sono commentati solo se la colonna ha una regola o un'unità. Nei test: una riga per classe che
+dice cosa verifica e un commento sui casi non evidenti dal nome del test. La regola vale anche per il
+codice già scritto (applicata a F0) e per ogni file che una card crea o modifica.
+
+### Motivazione
+
+Il progetto è un lavoro di studio da presentare e da mantenere dopo la consegna: una riga per classe e
+per metodo rende il codice leggibile senza aprire il design. Il limite ai metodi non banali evita
+commenti che ripetono il codice.
+
+### Alternative scartate
+
+- **Solo classi e scelte non ovvie** (livello che c'era prima): i metodi restano senza spiegazione.
+- **Tutto, anche campi e costruttori**: più rumore e più tempo su ogni card, con la scadenza del 25
+  ottobre.
+- **Test commentati come il codice di produzione**: quasi ogni test avrebbe un commento, quando il
+  nome descrittivo basta.
+
+## Decisione 43: lunghezze delle colonne solo nelle migrazioni e nei DTO (implementazione)
+
+### Scelta
+
+Le entity non dichiarano `length` nelle `@Column`. La lunghezza delle colonne la fissano le migrazioni
+Flyway (descritte in `docs/schema-db.md`) e la validazione dei DTO. Le lunghezze di `users` restano
+quelle del design (sezione 3.2): non sono state ridotte.
+
+### Motivazione
+
+Lo schema lo decide Flyway (`ddl-auto: validate`, mai `update`): ripetere la lunghezza nell'entity è
+una seconda fonte da tenere allineata. Con `validate` Hibernate non controlla la lunghezza delle
+colonne: l'avvio e i test passano anche con lunghezze diverse da quelle del database.
+
+### Alternative scartate
+
+- **`length` ripetuta in ogni `@Column`** (com'era in `User`): doppia dichiarazione senza effetto
+  sullo schema.
+- **Ridurre le lunghezze di `users` (per esempio email 100, `password_hash` 60, `avatar_url` 255)**:
+  valutata e non adottata per scelta dello studente; avrebbe richiesto di riscrivere V1 o di
+  aggiungere una migrazione e di aggiornare il design.
+
+## Decisione 44: PageParams con componenti Integer (implementazione)
+
+### Scelta
+
+`PageParams` è un record con componenti `Integer page` e `Integer size`, non `int` come nella tabella
+delle interfacce del piano. Il costruttore compatto applica i default (page 0, size 20) quando il
+parametro manca.
+
+### Motivazione
+
+Con `int` un parametro assente e uno a 0 sono indistinguibili: `size=0` deve dare 400
+(progettazione, sezione 6.1) e `size` assente deve valere 20. Con `Integer` l'assenza è `null`. Il
+comportamento è verificato su una vera richiesta in `PageParamsBindingTest`.
+
+### Alternative scartate
+
+- **`int` con il default nel controller (`@RequestParam(defaultValue = ...)`)**: il default andrebbe
+  ripetuto in ogni endpoint e si perderebbe la validazione comune.
+- **`int` con "0 = default"**: accetterebbe `size=0` invece di rifiutarlo.
+
+## Decisione 45: codice UNSUPPORTED_MEDIA_TYPE per il Content-Type non supportato (implementazione)
+
+### Scelta
+
+Una richiesta con un body il cui `Content-Type` non è supportato (l'API accetta solo JSON) risponde
+415 con il codice `UNSUPPORTED_MEDIA_TYPE`. Il codice è stato aggiunto al catalogo della sezione 6.2
+del design, che non lo prevedeva. Una richiesta con un `Accept` non soddisfacibile (406) non è gestita:
+la risposta d'errore stessa è JSON e non si potrebbe scrivere.
+
+### Motivazione
+
+È un errore del client, non del server. Senza un handler dedicato il catch-all lo trasformava in un 500
+`INTERNAL_ERROR` con una voce di errore nel log, come se fosse un guasto dell'applicazione.
+
+### Alternative scartate
+
+- **`VALIDATION_ERROR` 400**: lo stato HTTP corretto per questo caso è 415, e un client che decide in
+  base a `code` confonderebbe un tipo di contenuto sbagliato con dei campi non validi.
+- **Lasciare il 500**: segnala un guasto che non c'è e riempie il log.
+
+## Decisione 46: percorsi /api inesistenti riconosciuti dai soli mapping dei controller (implementazione)
+
+### Scelta
+
+Un percorso `/api/...` per cui nessun controller ha un handler risponde sempre 404 `NOT_FOUND` in JSON,
+anche senza token e anche sotto `/api/admin/**` (design, sezione 6.3). Lo ottiene la **prima** regola di
+`SecurityConfig`, un `RequestMatcher` (`UnmappedApiRequestMatcher`) che interroga **solo** i
+`RequestMappingHandlerMapping` (i controller) e lascia passare la richiesta se nessuno ha un handler. Se
+un mapping solleva un'eccezione (metodo o tipo di contenuto non accettati) il percorso esiste e segue le
+regole normali: 401 o 403 prima del 405. La ricerca gira su una copia della richiesta che tiene per sé gli
+attributi, così la ricerca vera del `DispatcherServlet` parte pulita.
+
+### Motivazione
+
+Il piano suggeriva di basare il matcher su `HandlerMappingIntrospector.getMatchableHandlerMapping`. In
+Spring Boot però il mapping delle risorse statiche (`/**`) risponde a qualunque percorso, quindi
+l'introspector troverebbe sempre un handler e ogni `/api/...` inesistente diventerebbe un 401. Limitare la
+ricerca ai controller dà la risposta giusta; il fallback SPA di F6-03 non la cambia, perché riguarda solo i
+percorsi fuori da `/api/**`.
+
+### Conseguenza accettata
+
+Senza token, 404 e 401 distinguono le rotte inesistenti da quelle esistenti ma protette: chi non è
+autenticato può quindi capire se un percorso `/api/...` esiste. È la forma che il design richiede
+(sezione 6.3) e non espone dati: i percorsi dell'API non sono segreti (compaiono in Swagger, F6-02) e i
+dati restano dietro l'autenticazione. Vale anche per il metodo: un percorso esistente chiamato con il
+metodo sbagliato risponde 401 o 403 prima del 405, non 404.
+
+### Allineamento del design
+
+Nella stessa card il design è stato corretto in due punti:
+
+- `UserAccessService.loadActive` (sezioni 5.2, 7.2 e 8.2) è diventato `UserAccessService.resolve`, il nome
+  del piano e del codice. `resolve` restituisce anche gli stati `SUSPENDED`, `NOT_VERIFIED` e
+  `NOT_FOUND`, che i chiamanti (filtro, login, refresh) distinguono.
+- Nella tabella della sezione 6.2 la riga `ACCESS_DENIED` non cita più l'"origine non ammessa": il rifiuto
+  CORS è un 403 senza corpo JSON, scritto da Spring prima di arrivare ai nostri handler, quindi non ha il
+  codice `ACCESS_DENIED`. Il frontend non può leggerlo come un `ErrorResponse`.
+
+### Alternative scartate
+
+- **`HandlerMappingIntrospector.getMatchableHandlerMapping` così com'è**: vede anche il mapping delle
+  risorse statiche, quindi non distingue i percorsi inesistenti.
+- **Disattivare il mapping delle risorse statiche**: romperebbe il servizio dei file del frontend (D1).
+- **Rispondere 401 a tutto ciò che non è pubblico**: contraddice il design (404 anche sotto
+  `/api/admin/**`) e il frontend scambierebbe un percorso sbagliato per un token scaduto, facendo
+  partire un refresh inutile.
+
+## Decisione 47: Origin del refresh e forward-headers-strategy in produzione (implementazione)
+
+### Scelta
+
+Due cose vanno insieme:
+
+1. **Profilo `prod`: `server.forward-headers-strategy: native`.** Il TLS termina nel proxy di Render, che
+   inoltra la richiesta in HTTP con `X-Forwarded-Proto: https`. Con `native` il `RemoteIpValve` di Tomcat
+   ricostruisce schema e porta veri, così Spring vede la richiesta come HTTPS.
+2. **Controllo dell'`Origin` su refresh e logout** (progettazione, sezioni 4.8 e 8.5): un `Origin` è
+   accettato se è fra le origini configurate (`ALLOWED_ORIGIN`) oppure se host e porta coincidono con quelli
+   dell'header `Host`; lo schema non si confronta. Un `Origin` assente passa (lo difendono `SameSite=Lax` e
+   `X-Requested-With`).
+
+### Motivazione
+
+Il filtro CORS di Spring gira **prima** del controller e considera cross-origin ogni richiesta il cui
+`Origin` non coincide con schema, host e porta che vede. I browser inviano `Origin` su ogni POST, anche
+same-origin. Senza il punto 1, dietro il proxy il servizio vede `http` mentre l'`Origin` è `https`: il filtro
+risponde 403 "Invalid CORS request" (testo semplice, non il nostro JSON) a **login, refresh e logout**, cioè
+a ogni POST/DELETE del frontend. Il problema è stato riprodotto in F1-02 con una richiesta simulata
+(`Host`, `X-Forwarded-Proto: https`, `Origin: https://...`) e risolto da `ForwardedHeadersRealServerTest`,
+che avvia un server vero su porta casuale con i profili `test` e `prod`: login, refresh e logout passano, un
+`Origin` esterno, `null` o con lo stesso prefisso dell'host resta bloccato, e senza `X-Forwarded-Proto` un
+`Origin` https è bloccato.
+
+Il controllo nel controller (punto 2) è quindi un secondo livello: per `Origin` esterno e `null` risponde già il
+filtro CORS. Resta utile per i casi che il filtro lascia passare e per non dipendere da una sola difesa. Il
+confronto sull'host è esatto (non "inizia con"): `host.evil.example` non passa.
+
+### Cosa si assume sul proxy di Render (da verificare al primo deploy, F2)
+
+- Render termina il TLS e inoltra in HTTP aggiungendo `X-Forwarded-Proto` (e `X-Forwarded-For`).
+- Il proxy contatta il servizio da un indirizzo di una rete privata o di loopback: `native` si fida degli
+  header solo se la richiesta arriva da un proxy interno (default di Tomcat: 10.x, 172.16-31.x, 192.168.x,
+  127.x, ::1 e simili). Se l'indirizzo di Render non rientrasse, gli header sarebbero ignorati e il login
+  darebbe 403: la correzione è `server.tomcat.remoteip.internal-proxies` con l'intervallo giusto.
+- L'header `Host` arriva invariato (il dominio `.onrender.com`, senza porta). Se Render lo cambiasse, il
+  confronto fra `Origin` e `Host` andrebbe rivisto.
+
+Nessuna di queste ipotesi è stata provata su Render: il README ricorda di verificare il deploy.
+
+### Alternative scartate
+
+- **`forward-headers-strategy: framework`** (`ForwardedHeaderFilter` di Spring): funziona anche se
+  l'indirizzo del proxy non è "interno", ma si fida di `X-Forwarded-*` da chiunque, anche da chi contatta il
+  servizio direttamente. `native` limita la fiducia ai proxy noti ed è applicato in Tomcat, prima dei filtri
+  di Spring.
+- **Confrontare l'`Origin` con una sola origine configurata (`APP_ORIGIN`)**: una variabile in più da non
+  dimenticare e da tenere uguale al dominio assegnato da Render, e non risolve il 403 del filtro CORS.
+- **Escludere refresh e login dal CORS**: il filtro è globale su `/api/**`; escluderne alcuni percorsi
+  indebolirebbe la difesa del punto 2 e della sezione 8.5.
+
+### Dettagli collegati
+
+I `details` di un errore possono avere valori `null` (`suspendedUntil` di una sospensione a tempo
+indeterminato, che il design vuole presente nel JSON): `AppException` ed `ErrorResponse` non usano più
+`Map.copyOf`, che rifiuta i `null`, ma una copia non modificabile che li ammette.
+
+## Decisione 48: limite dei login falliti per email e confronto BCrypt fittizio (implementazione)
+
+### Scelta
+
+- **Limite dei fallimenti (`LOGIN_FAILED`, progettazione 4.7 e 8.8)**: la chiave è l'**email**, 10
+  fallimenti in 15 minuti, finestra scorrevole in memoria. Il controllo viene prima delle credenziali: oltre
+  il limite il login risponde 429 anche con la password giusta. Un login riuscito azzera il contatore; i
+  controlli di email non verificata e di sospensione, fatti solo dopo la password giusta, non contano come
+  fallimenti.
+- **Confronto BCrypt fittizio**: se l'email non esiste, `AuthService` confronta comunque la password con un
+  hash calcolato una volta all'avvio con lo stesso `PasswordEncoder` (stesso costo) da una stringa casuale, e
+  scarta il risultato. Il test `AuthServiceTest` verifica che `matches` sia chiamato anche per un'email
+  sconosciuta. Sopra i 72 byte BCrypt non si chiama né per utenti veri né per il confronto fittizio.
+
+### Motivazione
+
+Senza il confronto fittizio l'email sconosciuta risponde in circa 6 ms contro circa 68 ms di una password
+errata (misurato in locale in F1-02): il tempo rivela quali email sono registrate, vanificando la risposta
+identica 401 `INVALID_CREDENTIALS`. La chiave per email protegge una password dall'attacco a tentativi
+ripetuti senza bloccare chi ne prova una sola su molti account.
+
+### Conseguenza accettata
+
+Poiché la chiave è l'email e non l'utente o l'indirizzo IP, **chiunque può bloccare il login di un altro
+utente per 15 minuti**: basta inviare 10 login falliti con la sua email. L'utente bloccato non perde nulla
+(il limite è solo in memoria, scade da solo e non tocca la sessione già aperta), ma non può accedere finché la
+finestra non scorre. Un limite per IP non risolverebbe: dietro i proxy l'indirizzo è condiviso e manipolabile,
+e un attaccante con molti indirizzi lo aggirerebbe. Nell'MVP si accetta; un CAPTCHA o un limite combinato
+sono evoluzioni successive (Post-V1).
+
+### Alternative scartate
+
+- **Chiave per indirizzo IP**: dietro il proxy di Render tutti gli utenti condividono pochi indirizzi
+  (falsi positivi) e un attaccante distribuito lo aggira.
+- **Nessun confronto fittizio (come NoseY)**: più semplice, ma la differenza di tempo rende l'enumerazione
+  delle email immediata.
+- **Ritardo casuale invece del confronto fittizio**: meno affidabile (il tempo medio resta diverso) e
+  allunga anche le risposte legittime.
+
+## Decisione 49: id nei DTO di risposta solo dove servono a un'azione (implementazione)
+
+### Scelta
+
+Un DTO di risposta contiene un id solo se il client lo usa per un'azione successiva (aprire un dettaglio,
+mettere un like, scrivere a un utente). Per questo:
+
+- la registrazione risponde solo `{email}` (progettazione 4.4 e 6.4): dopo di essa il client deve solo
+  verificare l'email e fare il login;
+- `MeResponse` **contiene l'`id`**, solo per il proprio profilo: il frontend lo confronta con
+  `AuthorSummary.id` e `senderId` per riconoscere i propri contenuti;
+- gli id dei contenuti e degli autori restano nelle liste e nei dettagli; l'interfaccia non mostra mai un id
+  all'utente (regola per le card FE).
+
+### Motivazione
+
+Mostrare meno dati riduce l'esposizione, ma non è un livello di sicurezza: la protezione reale sono i
+controlli nel service (ruoli dal database, `NOT_OWNER`, 404 sui contenuti nascosti). L'id di un utente è
+comunque già nel `sub` del JWT e nelle risposte degli altri utenti. Togliere l'id da `MeResponse` lasciava
+senza risposta la domanda "questo contenuto è mio?", che il design risolve con il confronto degli id.
+
+### Alternative scartate
+
+- **Flag `mine`/`fromMe` calcolati dal server in ogni DTO**: il client non avrebbe bisogno del proprio id,
+  ma cambia molti DTO e gli eventi WebSocket (chat, notifiche) andrebbero calcolati per ogni destinatario.
+- **Identificatore pubblico separato dall'id interno (`public_id`, slug)**: sarebbe comunque un
+  identificatore visibile, con migrazioni su ogni tabella esposta e card già fatte da rifare; non aggiunge
+  sicurezza.
+- **Id temporanei per sessione**: stato in memoria che si perde al riavvio del servizio gratuito, problemi
+  con più schede e con la chat in tempo reale.
+
+## Decisione 50: codice email in chiaro e registrazione su email non verificata (implementazione)
+
+### Scelta
+
+- **Codice in chiaro.** Il codice di verifica di 6 cifre è salvato in chiaro nella colonna
+  `email_codes.code`. La protezione reale sono i 5 tentativi consumati in modo atomico, i 15 minuti di
+  validità e i limiti di invio (1 al minuto, 5 in 24 ore); il confronto resta a tempo costante. Dopo l'uso
+  la colonna torna NULL.
+- **Registrazione su email già presente ma non verificata.** Dopo aver emesso il nuovo codice (e quindi
+  superato i limiti di invio), la registrazione sovrascrive nome e password. Chi registra l'email altrui non
+  può verificarla, perché il codice arriva solo alla casella del proprietario. Può però far arrivare fino a 5
+  email al giorno e, finché dura il limite, impedire al proprietario di registrarsi di nuovo (risposta 429 per
+  quasi un giorno). È la scelta del design (sezione 4.4) e di NoseY, accettata per l'MVP.
+
+### Motivazione
+
+Un hash di un numero con un milione di valori si inverte in pochi istanti: non aggiungerebbe protezione e
+complicherebbe il confronto. Per la sovrascrittura, chi si registra con una password dimenticata o un nome
+sbagliato deve poter ripartire senza assistenza; il passo di verifica richiede la password della
+registrazione, quindi il codice da solo non basta a prendere l'account.
+
+### Alternative scartate
+
+- **Hash del codice (SHA-256 o BCrypt)**: nessun vantaggio reale con 6 cifre, in più un confronto meno
+  semplice da testare.
+- **Non sovrascrivere e rinviare solo il codice**: elimina il disturbo di chi registra l'email altrui, ma
+  chi ha dimenticato la password scelta non potrebbe più completare la registrazione.
+
+## Decisione 51: errori del reset e della password dimenticata che non rivelano gli account (implementazione)
+
+### Scelta
+
+- **Reset.** Con un codice sbagliato, scaduto, esaurito (5 tentativi) o assente, `POST /api/auth/password/reset`
+  risponde sempre `400 CODE_INVALID`, anche per un account sospeso, non verificato o inesistente. Il `403
+  ACCOUNT_SUSPENDED` arriva solo con un codice valido. Il codice si verifica prima dello stato dell'account.
+  Il tentativo consumato resta salvato in ogni caso.
+- **Perché il login e il reset sono diversi.** Il login dà `ACCOUNT_SUSPENDED` dopo aver verificato la
+  password; il reset lo dà dopo aver verificato il codice. In entrambi i casi chi lo legge ha già dimostrato
+  qualcosa che solo il proprietario possiede (la password, o l'accesso alla casella), quindi l'informazione
+  non è sfruttabile da un estraneo che prova email a caso.
+- **Forgot.** `POST /api/auth/password/forgot` risponde sempre `204` per email sconosciuta, non verificata,
+  sospesa e per account verificato e attivo; il codice parte solo nell'ultimo caso. Il `429` per un secondo
+  invio entro 60 secondi (o oltre 5 in 24 ore) scatta solo per gli account verificati e attivi, perché solo
+  per loro esiste una riga di invio. Il `429` quindi distingue le email verificate, come già nel reinvio del
+  codice di verifica (sezione 4.6). È una perdita di riservatezza piccola e nota, accettata per l'MVP.
+
+### Motivazione
+
+Il design (sezione 4.10) chiede lo "stesso schema di controlli" della verifica, dove però lo stato
+dell'account (sospeso) veniva controllato prima del codice e quindi lo rivelava a chiunque conoscesse
+un'email. Spostare il controllo dopo il codice chiude questa strada senza costi per l'utente legittimo.
+Le due condizioni di `CODE_EXPIRED` e `CODE_INVALID` si fondono nel reset: all'utente basta sapere che deve
+chiedere un nuovo codice.
+
+### Alternative scartate
+
+- **Lasciare `ACCOUNT_SUSPENDED` prima del codice**: rivela a chiunque quali email sono sospese.
+- **Rispondere `CODE_INVALID` anche con il codice valido su un account sospeso**: nasconde tutto, ma
+  l'utente sospeso non capirebbe perché il reset non funziona.
+- **Rendere il `429` di forgot identico per tutte le email** (limite in memoria per email invece di una riga
+  per account): elimina la distinzione, ma richiede un secondo meccanismo di limite e non è nel design.
+
+## Decisione 52: DatabaseUrl non forza sslmode (implementazione)
+
+### Scelta
+
+`DatabaseUrl` converte `DATABASE_URL` (`postgresql://utente:password@host:porta/db`) in un URL JDBC con le
+credenziali separate e **mantiene i parametri già presenti nell'URL**, senza aggiungerne. Non c'è più
+`sslmode=require` forzato. L'URL **esterno** di Render ha già `?sslmode=require` e quindi usa TLS; l'URL
+**interno** non ha parametri e il suo server non offre TLS, quindi la connessione resta in chiaro dentro la
+rete privata di Render. Anche lo schema `postgres://` è accettato. Il log stampa l'URL JDBC senza credenziali e
+oscura un eventuale parametro `password=`.
+
+### Motivazione
+
+La scelta è stata fatta dopo un avvio di prova con il profilo `prod` e una `DATABASE_URL` in formato Render
+senza parametri verso il PostgreSQL di Docker Compose (che non offre TLS): con `sslmode=require` forzato
+l'applicazione non partiva (Flyway: "Il server non supporta SSL"). Lo stesso succederebbe sull'URL interno di
+Render, che è quello collegato dal Blueprint (`fromDatabase`, `connectionString`; da confermare al primo deploy, F2-03). Lasciare i parametri a chi fornisce l'URL è più
+semplice e corretto: chi vuole TLS lo ha già nell'URL (quello esterno), chi non lo offre non viene rotto.
+Dopo la modifica la stessa prova parte, Flyway applica le tre migrazioni e il SUPERADMIN viene creato.
+
+### Alternative scartate
+
+- **`sslmode=require` sempre** (design originale, sezione 12.3 e brief): funziona solo se il server offre TLS,
+  quindi rompe l'URL interno di Render e il database locale di Compose.
+- **`sslmode=require` solo se manca nell'URL e l'host non è interno**: richiede di indovinare dall'host se il
+  server offre TLS, fragile e non verificabile senza Render.
+- **Variabile d'ambiente dedicata (`DB_SSLMODE`)**: una configurazione in più da tenere allineata quando
+  l'URL può già contenere il parametro.

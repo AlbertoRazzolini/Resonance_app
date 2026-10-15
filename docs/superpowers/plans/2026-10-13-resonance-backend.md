@@ -23,7 +23,8 @@ quel documento. Il piano è la fonte di verità; Trello (board `Sviluppo_Resonan
 ## Vincoli globali
 
 - Package base `it.epicode.resonance`; codice, classi, tabelle e colonne in inglese; commenti e
-  documentazione in italiano; commenti sulle scelte non ovvie con "progettazione, sezione N".
+  documentazione in italiano; commenti sulle scelte non ovvie con "progettazione, sezione N"; una riga
+  di Javadoc su ogni classe e metodo non banale, e una riga per classe di test (decisione 42).
 - Chiavi primarie ed esterne `uuid`, `GenerationType.UUID`; `ddl-auto: validate`, mai `update`.
 - Migrazioni Flyway `V1`…`V8` come §3.6; mai modificare una migrazione già applicata.
 - Ruoli e stato sempre dal database, mai dai claim del JWT (§5.2).
@@ -109,7 +110,7 @@ dominio X").
 | `AppException` | `AppException(ErrorCode code, String message)`, `(code, message, Map<String,String> fields)`, `withDetails(Map<String,Object>)` | F0-03 |
 | `ErrorCode` | enum con `HttpStatus httpStatus()` (null per i codici solo WebSocket) | F0-03 |
 | `PageResponse<T>` | `record(List<T> content, int page, int size, long totalElements, int totalPages)`, `static from(Page<T>)` | F0-03 |
-| `PageParams` | `record(@Min(0) int page, @Min(1) @Max(100) int size)` con default 0/20, `Pageable toPageable(Sort)` | F0-03 |
+| `PageParams` | `record(@Min(0) Integer page, @Min(1) @Max(100) Integer size)`, `null` → default 0/20 (decisione 44), `Pageable toPageable(Sort)` | F0-03 |
 | `RateLimitService` | `consume(RateLimit, String key)`, `check(...)`, `record(...)`, `reset(...)` | F0-03 |
 | `Role` / `UserStatus` | enum `FAN, MUSICIAN, HOST, ADMIN, SUPERADMIN` / `ACTIVE, SUSPENDED` | F0-02 |
 | `AccessTokenService` | `IssuedAccessToken issue(UUID userId)`; `Optional<AccessTokenClaims> parse(String token)`; record `IssuedAccessToken(String token, Instant expiresAt)`, `AccessTokenClaims(UUID userId, Instant expiresAt)` | F1-01 |
@@ -141,7 +142,7 @@ dominio X").
 - [ ] **1. pom.xml (45 min).** groupId `it.epicode`, artifactId `resonance-be`, name `Resonance`. Dipendenze dal pom di NoseY con le stesse versioni: starter webmvc, data-jpa, validation, security, websocket, mail, thymeleaf, flyway + `flyway-database-postgresql`, `postgresql` (scope compile, serve `PSQLException`), jjwt-api/impl/jackson 0.13.0, lombok (+ annotation processor in `maven-compiler-plugin`), devtools (runtime, optional), starter-test. Esclusi: `hibernate-maven-plugin`, Actuator, dipendenze AI. Verifica: `./mvnw -q -DskipTests package` compila.
 - [ ] **2. Package e classe main (20 min).** `ResonanceApplication` in `it.epicode.resonance` (la chiamata a `DatabaseUrl` arriva in F0-02); test spostato in `it.epicode.resonance.ResonanceApplicationTests`; `package-info.java` per `it.epicode.resonance` e `config`. Rimuovere il package `com.example`.
 - [ ] **3. Profili YAML (40 min).** `application.yml` comune (§2.3): `spring.application.name: resonance`, esclusione `UserDetailsServiceAutoConfiguration`, `jpa.hibernate.ddl-auto: validate`, `open-in-view: false`, `jdbc.time_zone: UTC`, `mvc.log-resolved-exception: false`, `server.port: ${PORT:8080}`, `server.shutdown: graceful`, blocco `app:` con `jwt.secret: ${JWT_SECRET}`, `auth.access-token-ttl: ${ACCESS_TOKEN_TTL:15m}`, `auth.refresh-token-ttl: ${REFRESH_TOKEN_TTL:10d}`, `auth.refresh-grace: 10s`, `auth.refresh-cookie.secure`, `cors.allowed-origins: ${ALLOWED_ORIGIN:}`, `rate-limits.*` (§8.8), `geocoding.*`, `mail.*`, `bootstrap.superadmin.*`. `application-dev.yml`: datasource `jdbc:postgresql://localhost:5433/resonance` con `${DB_URL:...}`, utente/password di sviluppo, `secure: false`, origini `http://localhost:5173`. `application-prod.yml`: `secure: true`. `application-test.yml`: database `resonance_test`, `secure: false`. `ClockConfig` (`Clock.systemUTC()`), `AsyncConfig` (`@EnableAsync`), `SchedulingConfig` (`@EnableScheduling`). Il test di contesto viene disattivato con `@Disabled("abilitato in F0-02 con il database")` finché non esiste il DB: lo si dichiara nel riepilogo.
-- [ ] **4. `.gitignore` di radice e README (25 min).** `.gitignore`: `**/target/`, `**/node_modules/`, `**/dist/`, `.idea/`, `*.iml`, `.env*`, `HELP.md`. README in italiano: cos'è Resonance, responsabilità del backend, prerequisiti (JDK 25, Docker), avvio locale (sezione completata in F0-02), elenco delle variabili d'ambiente (§12.4) senza valori, "Deploy: non ancora disponibile".
+- [ ] **4. `.gitignore` di radice e README (25 min).** `.gitignore`: `**/target/`, `**/node_modules/`, `**/dist/`, `.idea/`, `*.iml`, `.env*`, `HELP.md`. README in italiano: cos'è Resonance, responsabilità del backend, prerequisiti (JDK 25, Docker), avvio locale (sezione completata in F0-02), elenco delle variabili d'ambiente (§12.4) senza valori, "Deploy: non ancora disponibile". Regola sui messaggi di commit (italiano, prefisso Conventional Commits in inglese): `CLAUDE.md` (ciclo per card, punto 4) e `docs/decisioni.md` (decisione 36).
 
 **Criterio di completamento:** `./mvnw -q verify` verde; nessun riferimento a `com.example`.
 **Documentazione:** README, `package-info.java`.
@@ -152,13 +153,13 @@ dominio X").
 **Riferimenti:** §3.2 (`users`, `user_roles`), §3.6, §6.11, §12.1, §12.3.
 **File:** `docker-compose.yml`, `docker/postgres/init/01-create-test-db.sql`; `db/migration/V1__users_and_roles.sql`; `user/User`, `UserRole`, `UserRoleId`, `Role`, `UserStatus`, `UserRepository`, `UserRoleRepository`, `package-info`; `config/DatabaseUrl`; `web/HealthController`, `package-info`; test `support/IntegrationTest`, `support/MutableClock`, `support/TestClockConfig`, `config/DatabaseUrlTest`, `web/HealthControllerTest`; `docs/schema-db.md`, README.
 
-- [ ] **1. Docker Compose (25 min).** Servizio `resonance-db`, immagine `postgres:17`, porta `"5433:5432"`, `POSTGRES_DB=resonance`, `POSTGRES_USER=resonance`, `POSTGRES_PASSWORD=resonance` (credenziali di sviluppo non sensibili), volume `resonance-db-data`, mount di `./docker/postgres/init` su `/docker-entrypoint-initdb.d`. Lo script crea `resonance_test` con owner `resonance`. Verifica: `docker compose up -d`, poi `docker compose exec resonance-db psql -U resonance -l` mostra i due database.
+- [ ] **1. Docker Compose (25 min).** Servizio `resonance-db`, immagine `postgres:17`, porta `"127.0.0.1:5433:5432"` (solo localhost), `POSTGRES_DB=resonance`, `POSTGRES_USER=resonance`, `POSTGRES_PASSWORD=resonance` (credenziali di sviluppo non sensibili), volume `resonance-db-data`, mount di `./docker/postgres/init` su `/docker-entrypoint-initdb.d`. Lo script crea `resonance_test` con owner `resonance`. Verifica: `docker compose up -d`, poi `docker compose exec resonance-db psql -U resonance -l` mostra i due database.
 - [ ] **2. V1 e entity (45 min).** V1 come §3.2: enum `user_role` e `user_status`; `users` con i vincoli `uq_users_email`, `ck_users_coordinates`, `ck_users_suspension`, `fk_users_suspended_by`; `user_roles` con `pk_user_roles`, `fk_user_roles_user` `ON DELETE CASCADE`, `ix_user_roles_role`. Entity `User` (Lombok, enum con `@JdbcTypeCode(SqlTypes.NAMED_ENUM)`), `UserRole` con `@EmbeddedId UserRoleId(UUID userId, Role role)`. Repository: `UserRepository.findByEmail(String)`, `findWithLockByEmail(String)` e `findWithLockById(UUID)` con `PESSIMISTIC_WRITE`; `UserRoleRepository.findRolesByUserId(UUID)` (`Set<Role>`), `existsByIdRole(Role)`.
 - [ ] **3. Supporto ai test + test di avvio (30 min).** `IntegrationTest` (abstract, `@SpringBootTest`, `@ActiveProfiles("test")`, MockMvc, `@BeforeEach` con `TRUNCATE` di tutte le tabelle applicative tranne `flyway_schema_history`, `CASCADE`); `MutableClock extends Clock` con `advance(Duration)` e `setInstant(Instant)`; `TestClockConfig` con `@Primary`. Riabilitare `ResonanceApplicationTests` (contesto + `ddl-auto: validate` passano). Test `UserRepositoryTest.saveUserWithRoles` (utente con FAN+MUSICIAN, rilettura dei ruoli).
 - [ ] **4. DatabaseUrl e health (25 min).** `DatabaseUrl.applyIfPresent()` tradotta da NoseY, chiamata in `main`. Test unitario `DatabaseUrlTest` sulla conversione (estrarre il metodo puro `toJdbc(String)`): `postgresql://u:p@host:5432/db` → `jdbc:postgresql://host:5432/db?sslmode=require`, porta assente → 5432, già `jdbc:` → invariato. `HealthController` `GET /api/health` → `{status:"UP", database:"UP"}`; `DataAccessException` → 503 `{status:"DOWN", database:"DOWN"}`. Test `HealthControllerTest` 200. In questa card la sicurezza è ancora quella automatica di Spring: aggiungere un `SecurityConfig` temporaneo che permette solo `/api/health` e nega tutto il resto (sostituito in F1-01).
 - [ ] **5. Documentazione (15 min).** `docs/schema-db.md`: stato V1 applicata, enum, tabelle `users` e `user_roles` con tipi e vincoli, ER Mermaid (USERS, USER_ROLES, autorelazione "sospeso da"). README: `docker compose up -d`, porta 5433 (anche per pgAdmin), profilo dev, `JWT_SECRET` nella configurazione di avvio di IntelliJ.
 
-**Criterio:** applicazione avviata con profilo dev, `GET http://localhost:8080/api/health` → 200; `./mvnw -q verify` verde.
+**Criterio:** applicazione avviata con profilo dev, `GET http://localhost:8080/api/health` → 200; `./mvnw -q verify` verde; riabilitare `ResonanceApplicationTests` (rimuovere `@Disabled`) e verificare che il contesto parta con il database.
 **Commit proposto:** `feat(db): add local postgres, flyway V1 users and roles, health check`
 
 ### Card F0-03 · Errori comuni, Dockerfile, Blueprint e Postman — stima 2,5 h
@@ -182,14 +183,14 @@ dominio X").
 ### Card F1-01 · Security, access token e JwtFilter — stima 2,5 h
 
 **Riferimenti:** §4.1, §5.1–5.2, §8.1–8.4, §6.12; riuso: `SecurityConfig`, `CorsConfig`, `TokenService`, `JwtFilter`.
-**File:** `auth/AccessTokenService`, `AuthenticatedUser`, `UserAccessService`, `UserAccess`, `AccessStatus`, `JwtFilter`, `package-info`; `config/SecurityConfig` (sostituisce quello temporaneo), `config/CorsConfig`; test `auth/AccessTokenServiceTest`, `UserAccessServiceTest`, `JwtFilterIntegrationTest`.
+**File:** `auth/AccessTokenService`, `AuthenticatedUser`, `UserAccessService`, `UserAccess`, `AccessStatus`, `JwtFilter`, `package-info`; `config/SecurityConfig` (sostituisce quello temporaneo), `config/CorsConfig`; test `auth/AccessTokenServiceTest`, `UserAccessServiceTest`, `JwtFilterIntegrationTest`; `postman/resonance.postman_collection.json` (richiesta Health sul percorso inesistente).
 
 - [ ] **1. AccessTokenService (40 min).** HS256 fisso, segreto da `app.jwt.secret` (meno di 32 byte → l'avvio fallisce), `sub` = id, `iat`, `exp` = `clock + ttl` troncato ai secondi. `parse` → `Optional.empty()` per firma errata, scaduto, malformato, `sub` non UUID. Test: emissione e lettura; scaduto dopo `advance(16 min)`; firmato con un altro segreto → vuoto; nessun claim di ruolo nel payload.
 - [ ] **2. UserAccessService (40 min).** Una query per utente + ruoli; `NOT_FOUND`, `NOT_VERIFIED`, `SUSPENDED` (con motivo e scadenza), `ACTIVE`. Riattivazione pigra: `UserRepository.reactivateIfExpired(UUID id, Instant now)` (`@Modifying` `UPDATE ... WHERE status='SUSPENDED' AND suspended_until <= :now`, azzera i campi di sospensione). Test: sospeso con `until` futuro → `SUSPENDED`; `until` passato → `ACTIVE` e riga aggiornata; `until` null → resta sospeso.
-- [ ] **3. JwtFilter, EntryPoint, SecurityConfig, CORS (50 min).** Filtro come §8.2 (non `@Component`); authority `ROLE_<ruolo>`; `RoleHierarchy` `SUPERADMIN > ADMIN`; EntryPoint 401 `UNAUTHENTICATED`; AccessDenied 403 `ACCESS_DENIED`; endpoint pubblici attuali: `GET /api/health`, `/error`, `/ws/**` (gli endpoint di auth si aggiungono nelle card successive). `CorsConfig` §6.12. Aggiungere a `ErrorCode`: `UNAUTHENTICATED`, `ACCESS_DENIED`.
-- [ ] **4. Test di integrazione del filtro (30 min).** Controller di prova solo nei test (`/api/test/me` autenticato, `/api/test/admin` con `hasRole("ADMIN")` via `/api/admin/test`): nessun token → 401 JSON; token malformato → 401; token scaduto → 401; utente sospeso → 401; utente FAN → 403 su admin; ADMIN promosso **dopo** l'emissione del token → 200 (ruoli dal DB); SUPERADMIN → 200 su `/api/admin/**`.
+- [ ] **3. JwtFilter, EntryPoint, SecurityConfig, CORS (50 min).** Filtro come §8.2 (non `@Component`); authority `ROLE_<ruolo>`; `RoleHierarchy` `SUPERADMIN > ADMIN`; EntryPoint 401 `UNAUTHENTICATED`; AccessDenied 403 `ACCESS_DENIED`; endpoint pubblici attuali: `GET /api/health`, `/error`, `/ws/**` (gli endpoint di auth si aggiungono nelle card successive). `CorsConfig` §6.12. Aggiungere a `ErrorCode`: `UNAUTHENTICATED`, `ACCESS_DENIED`. **Percorsi inesistenti (§6.3):** un `/api/...` senza handler risponde sempre 404 `NOT_FOUND` in JSON, anche senza token e anche sotto `/api/admin/**`, mai 401 o 403. Si ottiene con la **prima** regola di `SecurityConfig`: un `RequestMatcher` (basato su `HandlerMappingIntrospector`) che riconosce le richieste per cui nessun controller ha un handler e le lascia passare, così arrivano al `DispatcherServlet` e al `GlobalExceptionHandler`. I percorsi che esistono seguono le regole normali (anche con il metodo sbagliato: 401 o 403 prima del 405). Stima: questo punto può aggiungere circa 30 minuti alla card.
+- [ ] **4. Test di integrazione del filtro (30 min).** Controller di prova solo nei test (`/api/test/me` autenticato, `/api/test/admin` con `hasRole("ADMIN")` via `/api/admin/test`): nessun token → 401 JSON; token malformato → 401; token scaduto → 401; utente sospeso → 401; utente FAN → 403 su admin; ADMIN promosso **dopo** l'emissione del token → 200 (ruoli dal DB); SUPERADMIN → 200 su `/api/admin/**`. Percorsi inesistenti: `/api/inesistente` e `/api/admin/inesistente` senza token → 404 `NOT_FOUND` JSON; un percorso che esiste e richiede il login (`/api/test/me`), senza token → 401; metodo sbagliato su un percorso protetto esistente, senza token → 401. Postman: la richiesta Health "Percorso non pubblico (403)" diventa "Percorso inesistente (404)", con il test sul 404.
 
-**Criterio:** test verdi; nessuna richiesta pubblica bloccata da un token vecchio.
+**Criterio:** test verdi; nessuna richiesta pubblica bloccata da un token vecchio; sostituire il `SecurityConfig` temporaneo di F0-02 e aggiornare o rimuovere `HealthControllerTest.otherEndpoints_areNotPublic`; un percorso `/api/...` inesistente risponde 404 `NOT_FOUND` in JSON anche senza token (progettazione, sezione 6.3).
 **Documentazione:** `package-info` di `auth`.
 **Commit proposto:** `feat(auth): add stateless security, access tokens and database-backed jwt filter`
 
@@ -200,7 +201,7 @@ dominio X").
 
 - [ ] **1. V2 e RefreshTokenService (60 min).** V2 come §3.2 (`refresh_tokens` con `revoked_at`, `replaced_by` `ON DELETE SET NULL`, `ck_refresh_tokens_revoked`, indici). `create`: 32 byte `SecureRandom`, base64url, hash SHA-256 esadecimale salvato. `rotate` (transazione, `findWithLockByTokenHash`): esiti di §4.8 nei passi 3–7, con revoca totale salvata anche negli esiti di errore (il service restituisce `RefreshOutcome`, non lancia). `revoke`, `revokeAll` (`UPDATE` in blocco), `deleteExpired` `@Scheduled(fixedDelay = 24h)`. Test con `MutableClock`: rotazione (vecchio revocato con `replaced_by`, nuovo con 10 giorni); token ruotato da 5 s → `Conflict` senza revoche; da 11 s → `Rejected(REFRESH_TOKEN_REUSED)` e tutti revocati; scaduto → `REFRESH_TOKEN_EXPIRED`; sconosciuto → `REFRESH_TOKEN_INVALID`; utente sospeso → `ACCOUNT_SUSPENDED` + revoca totale.
 - [ ] **2. Cookie (20 min).** `RefreshCookieFactory` come §4.3. Test: attributi in dev (`Secure` assente) e in prod (`Secure`), `clear()` con `Max-Age=0` e stesso Path.
-- [ ] **3. Login (40 min).** `POST /api/auth/login` come §4.7, con `LoginResponse` + `Set-Cookie`; codici `INVALID_CREDENTIALS`, `EMAIL_NOT_VERIFIED`, `ACCOUNT_SUSPENDED` (con `details`), `TOO_MANY_REQUESTS`. Test (utenti creati direttamente nel DB, verificati): successo con cookie; password errata → 401; email inesistente → stessa risposta; `login_normalizesEmail` (`"  Mario@Example.COM "`); password di 30 emoji → 401 senza eccezione; non verificato → 403; sospeso → 403 con `suspensionReason`; sospensione scaduta → 200; 11° fallimento → 429.
+- [ ] **3. Login (40 min).** `POST /api/auth/login` come §4.7 (con confronto BCrypt fittizio per l'email sconosciuta, decisione 48), con `LoginResponse` + `Set-Cookie`; `MeResponse` include `id` (solo il proprio profilo, decisione 49); codici `INVALID_CREDENTIALS`, `EMAIL_NOT_VERIFIED`, `ACCOUNT_SUSPENDED` (con `details`), `TOO_MANY_REQUESTS`. Test (utenti creati direttamente nel DB, verificati): successo con cookie; password errata → 401; email inesistente → stessa risposta; `login_normalizesEmail` (`"  Mario@Example.COM "`); password di 30 emoji → 401 senza eccezione; non verificato → 403; sospeso → 403 con `suspensionReason`; sospensione scaduta → 200; 11° fallimento → 429.
 - [ ] **4. Refresh e logout via HTTP (40 min).** `POST /api/auth/refresh` e `DELETE /api/auth/refresh` (pubblici) con `X-Requested-With` obbligatorio (`CSRF_HEADER_MISSING`) e controllo dell'`Origin` (§4.8 passo 1). Mappatura di `RefreshOutcome` in risposta: `Rotated` → 200 + nuovo cookie; `Conflict` → 409 senza `Set-Cookie`; `Rejected` → codice + cookie cancellato se richiesto. Test MockMvc: refresh senza header → 403; con `Origin: https://evil.example` → 403; due refresh con lo stesso cookie a 1 s → secondo 409; logout → 204 e cookie cancellato; un refresh successivo con il cookie del logout (token revocato senza `replaced_by`) → 401 `REFRESH_TOKEN_REUSED` e revoca di tutti i token dell'utente (§4.8 passo 4).
 - [ ] **5. Documentazione e Postman (30 min).** `schema-db.md` (V2, ER aggiornato). Postman Auth: Login (successo, script che salva `accessToken`; 401 password errata), Refresh (successo con `X-Requested-With`; 403 senza header), Logout (204; 403 senza header). Nella collection: autorizzazione Bearer `{{accessToken}}` a livello di collection.
 
@@ -210,27 +211,30 @@ dominio X").
 ### Card F1-03 · Registrazione, verifica email e mail — stima 3 h
 
 **Riferimenti:** §4.4–4.6, §9; riuso: `AuthService.registra/verifica/reinviaCodice`, package `mail`.
+**Sicurezza: sì**
 **File:** `db/migration/V3__email_codes.sql`; `auth/EmailCode`, `EmailCodeRepository`, `EmailCodePurpose`, `EmailCodeService`, `PasswordMax72Bytes`(+Validator), `dto/RegisterRequest`, `RegisterResponse`, `VerifyRequest`, `EmailRequest`; `mail/*` + `package-info`; `templates/mail/verification-code.html`; test `EmailCodeServiceTest`, `RegistrationIntegrationTest`, `BrevoEmailServiceTest`; `schema-db.md`; Postman.
 
 - [ ] **1. V3 e EmailCodeService (60 min).** V3 come §3.2. `issue`: riga per (utente, scopo) creata o aggiornata, limiti di §4.6 (`TOO_MANY_REQUESTS`), codice `%06d` da `SecureRandom`, `attempts=0`. `verify`: codice assente/scaduto/5 tentativi → `CODE_EXPIRED`; `consumeAttempt` atomico (`UPDATE ... SET attempts = attempts + 1 WHERE id=:id AND attempts < 5`, 0 righe → `CODE_EXPIRED`) **prima** del confronto `MessageDigest.isEqual`; sbagliato → `CODE_INVALID`. Test con `MutableClock`: scadenza a 15 min + 1 s; 5 tentativi sbagliati poi anche quello giusto → `CODE_EXPIRED`; secondo invio entro 60 s → 429; sesto invio in 24 h → 429; dopo 24 h di nuovo ammesso.
 - [ ] **2. Mail (40 min).** Da NoseY: `EmailService` (3 metodi: codice di verifica, codice di reset, password cambiata), `HtmlEmailService`, `LogEmailService` (`!prod`), `BrevoEmailService` (`prod`), `EmailEventListener` (`@Async` + `AFTER_COMMIT`), eventi record. Template `verification-code.html` in italiano. Test `BrevoEmailServiceTest` con `MockRestServiceServer`: header `api-key`, mittente e destinatario; chiave mancante → nessuna richiesta e nessuna eccezione.
-- [ ] **3. Register, verify, resend (50 min).** Come §4.4–4.6 e ordine dei controlli §4.5 (`noRollbackFor = AppException.class`); utente nuovo con riga `FAN`; verify emette i token come il login (riusa il metodo comune). Codici aggiunti: `EMAIL_ALREADY_REGISTERED`, `ALREADY_VERIFIED`, `CODE_INVALID`, `CODE_EXPIRED`, `WRONG_PASSWORD`. Endpoint pubblici aggiunti a `SecurityConfig`.
+- [ ] **3. Register, verify, resend (50 min).** Come §4.4–4.6 e ordine dei controlli §4.5 (`noRollbackFor = AppException.class`); utente nuovo con riga `FAN`; verify emette i token come il login (riusa il metodo comune). `RegisterResponse` contiene solo `{email}`: nessun id utente nelle risposte dove non serve a un'azione successiva. Codici aggiunti: `EMAIL_ALREADY_REGISTERED`, `ALREADY_VERIFIED`, `CODE_INVALID`, `CODE_EXPIRED`, `WRONG_PASSWORD`. Endpoint pubblici aggiunti a `SecurityConfig`.
 - [ ] **4. Test di integrazione (30 min).** Codice letto con `@RecordApplicationEvents`. Casi: registrazione → 201 e ruolo FAN; `register_normalizesEmail`; password di 30 emoji → 400 `fields.password`; email già verificata → 409; re-registrazione di email non verificata sovrascrive `displayName`; verify corretta → 200 + cookie + `emailVerified`; codice sbagliato → 400 e tentativo consumato anche dopo il rollback della risposta; password diversa → 400 `WRONG_PASSWORD`; resend su email inesistente → 204 senza evento.
 - [ ] **5. Documentazione e Postman (20 min).** `schema-db.md` (V3). Postman: Register (201; 400 email non valida), Verify (200; 400 codice sbagliato), Resend (204; 400 email mancante).
 
-**Criterio:** test verdi; con il profilo dev il codice di verifica compare nel log scritto da `LogEmailService`.
+**Criterio:** test verdi; con il profilo dev il codice di verifica compare nel log scritto da `LogEmailService`; la password ha un massimo di 72 byte (UTF-8), coerente con il login (`PasswordMax72Bytes`). L'email si normalizza con `strip()` e `toLowerCase(Locale.ROOT)`, allo stesso modo del login (`LoginRequest`).
 **Commit proposto:** `feat(auth): add registration, email verification codes and event-driven email`
 
 ### Card F1-04 · Password dimenticata, reset e bootstrap SUPERADMIN — stima 2 h
 
 **Riferimenti:** §4.10, §4.12; riuso: `AuthService.passwordDimenticata/reimpostaPassword`.
+**Sicurezza: sì**
 **File:** `AuthService` (forgot, reset), `dto/ResetPasswordRequest`; `auth/SuperadminBootstrap`; template `password-reset-code.html`, `password-changed.html`; test `PasswordResetIntegrationTest`, `SuperadminBootstrapTest`; README; Postman.
 
 - [ ] **1. Forgot e reset (45 min).** Come §4.10: forgot sempre 204, codice solo a utenti verificati e ACTIVE; reset con controlli come la verifica, nuovo hash, `invalidate`, `revokeAll`, cookie cancellato, `PasswordChangedEmailEvent`. Test: reset riuscito → login con la nuova password ok, vecchio refresh → 401; codice sbagliato → 400 e tentativo consumato; utente non verificato → forgot senza evento.
 - [ ] **2. Bootstrap (45 min).** `ApplicationRunner` come §4.12, proprietà `app.bootstrap.superadmin.email/password` da `SUPERADMIN_EMAIL`/`SUPERADMIN_PASSWORD`. Test (chiamando direttamente `run`): nessun SUPERADMIN + variabili → utente creato con FAN+SUPERADMIN verificato; secondo `run` → nessuna modifica; variabili assenti → nessuna azione; email di un utente esistente → ruolo aggiunto e password impostata; password di 5 caratteri → `IllegalStateException`. Verifica che la password non compaia nel log.
 - [ ] **3. Documentazione e Postman (30 min).** README: variabili `SUPERADMIN_*` e come impostarle in IntelliJ. Postman: Forgot (204; 400 email mancante), Reset (204; 400 codice sbagliato).
 
-**Criterio:** fase F1 chiusa (11.10 del brief): build verde, test verdi, migrazioni V2–V3 applicate, Postman aggiornata.
+**Criterio:** fase F1 chiusa (11.10 del brief): build verde, test verdi, migrazioni V2–V3 applicate, Postman aggiornata; la nuova password del reset ha un massimo di 72 byte (UTF-8), coerente con il login (`PasswordMax72Bytes`). L'email si normalizza con `strip()` e `toLowerCase(Locale.ROOT)`, allo stesso modo del login (`LoginRequest`).
+**Proposta (da approvare):** eseguire F2-03 (primo deploy su Render) subito dopo F1-04, per provare login e refresh dal browser con il SUPERADMIN creato dal bootstrap. Nessuna card spostata su Trello.
 **Commit proposto:** `feat(auth): add password reset and superadmin bootstrap`
 
 ---
@@ -240,6 +244,7 @@ dominio X").
 ### Card F2-01 · Profilo e ruoli self-service — stima 2,5 h
 
 **Riferimenti:** §5.3, §6.1, §6.5.
+**Sicurezza: sì (facoltativa, se resta budget)**
 **File:** `user/UserController`, `UserService`, `dto/MeResponse` (già creato), `UpdateProfileRequest`, `PublicUserResponse`, `AuthorSummary`, `dto/package-info`; test `ProfileIntegrationTest`, `RoleActivationIntegrationTest`; Postman Users.
 
 - [ ] **1. GET me e profilo pubblico (30 min).** `GET /api/users/me`, `GET /api/users/{id}` (pubblico, ruoli solo di community, niente coordinate, utente non verificato → 404).
@@ -252,6 +257,7 @@ dominio X").
 ### Card F2-02 · Sospensione e nomina ADMIN — stima 3,5 h
 
 **Riferimenti:** §5.4–5.6, §6.10; riuso: `AdminUtenteService`.
+**Sicurezza: sì**
 **File:** `user/PlatformLevelPolicy`; `admin/AdminUserService`, `AdminUserController`, `SuperadminController`, `UserSuspendedEvent`, `dto/SuspendUserRequest`, `AdminUserResponse`, `package-info`; test `PlatformLevelPolicyTest`, `SuspensionIntegrationTest`, `AdminRoleIntegrationTest`, `AdminUserListIntegrationTest`; Postman Admin; `decisioni.md` se emergono scelte nuove.
 
 - [ ] **1. PlatformLevelPolicy (25 min).** Livelli §5.6. Test unitari: ADMIN su FAN ok; ADMIN su ADMIN → `INSUFFICIENT_PLATFORM_LEVEL`; SUPERADMIN su ADMIN ok; chiunque su se stesso → errore; nessuno su SUPERADMIN.
@@ -265,10 +271,11 @@ dominio X").
 ### Card F2-03 · Primo deploy su Render — stima 2 h
 
 **Riferimenti:** §12.4–12.6.
+**Proposta (da approvare):** eseguire questa card subito dopo F1-04, per provare login e refresh dal browser con il SUPERADMIN creato dal bootstrap. Nessuna card spostata su Trello.
 **File:** eventuali correzioni a `render.yaml`/configurazione; `postman/resonance-render.postman_environment.json`; README.
 
 - [ ] **1. Verifica pre-deploy (30 min).** `./mvnw -q verify` verde; `docker build` dalla radice; `docker run` in locale con `SPRING_PROFILES_ACTIVE=prod` e `DATABASE_URL` del container locale (formato Render) → avvio ok, `DatabaseUrl` non stampa la password.
-- [ ] **2. Promemoria merge e applicazione del Blueprint (45 min).** Ricordare allo studente il merge `develop → main` (eseguito da lui). Guidare lo studente su Render: New → Blueprint → repository → Apply; impostare i segreti `sync: false` (SUPERADMIN, Brevo, `GEOCODING_CONTACT`). Controllare i log: Flyway V1–V3, bootstrap SUPERADMIN.
+- [ ] **2. Promemoria merge e applicazione del Blueprint (45 min).** Ricordare allo studente il merge `develop → main` (eseguito da lui). Guidare lo studente su Render: New → Blueprint → repository → Apply; impostare i segreti `sync: false` (SUPERADMIN, Brevo, `MAIL_FROM`, `GEOCODING_CONTACT`). Controllare i log: Flyway V1–V3, bootstrap SUPERADMIN.
 - [ ] **3. Verifica con Postman e documentazione (45 min).** Environment `render` con `baseUrl` reale; health, registrazione (email reale via Brevo), verify, login, refresh, sospensione con il SUPERADMIN. README: link reale al deploy, nota sullo spin-down.
 
 **Criterio:** fase F2 chiusa; servizio raggiungibile; promemoria merge e controlli Render forniti.
@@ -345,6 +352,7 @@ dominio X").
 ### Card F4-03 · Moderazione admin dei contenuti — stima 2,5 h
 
 **Riferimenti:** §5.6–5.7, §6.10.
+**Sicurezza: sì**
 **File:** `moderation/ModerationService`, `ModerationController`, `dto/HideContentRequest`, `HiddenContentResponse`; repository dei quattro tipi (metodi di ricerca dei nascosti); test `ModerationIntegrationTest`; Postman Admin.
 
 - [ ] **1. Hide e restore (60 min).** `POST /api/admin/moderation/{type}/{id}/hide` (`reason` 3–500 obbligatorio) e `/restore`; `{type}` → `ModeratedContentType` (`official-concerts`, `indie-events`, `feed-posts`, `collab-posts`; valore sconosciuto → 400); policy dei livelli sull'autore; codici `CONTENT_ALREADY_HIDDEN`, `CONTENT_NOT_HIDDEN`, `RESTORE_NOT_ALLOWED`. Test per ognuno dei 4 tipi: hide → sparisce dalle liste pubbliche; restore → ricompare; hide senza motivo → 400; contenuto cancellato dal proprietario → restore 409; contenuto di un ADMIN nascosto da un ADMIN → 403; dallo SUPERADMIN → 204.
@@ -361,6 +369,7 @@ dominio X").
 ### Card F5-01 · WebSocket, CONNECT e sessioni — stima 3,5 h
 
 **Riferimenti:** §7.1–7.3, §7.8; riuso: `WebSocketConfig`, `JwtChannelInterceptor`, `GestoreErroriStomp`, `GestoreErroriWebSocket`, `ChatWebSocketTest`.
+**Sicurezza: sì**
 **File:** `config/WebSocketConfig`; `auth/JwtChannelInterceptor`; `common/StompErrorHandler`, `WebSocketExceptionHandler`, `WsError`; `websocket/WebSocketSessionRegistry`, `UserSuspendedSessionCloser`, `package-info`; test `support/StompTestClient`, `WebSocketSecurityTest`, `SessionCloseOnSuspensionTest`.
 
 - [ ] **1. Config e interceptor (60 min).** `/ws` senza SockJS, origini da `app.cors.allowed-origins` (stessa origine sempre ammessa), broker `/queue`, prefissi `/app` e `/user`; interceptor come §7.2–7.3 con `UserAccessService`; `ErrorCode.TOKEN_INVALID` (solo WS); `StompErrorHandler` e `WebSocketExceptionHandler` da NoseY.
@@ -372,6 +381,7 @@ dominio X").
 ### Card F5-02 · Chat — stima 3,5 h
 
 **Riferimenti:** §3.2 (chat), §6.9, §7.4–7.7; riuso: cursore di `MessaggioRepository`, `ChatService.invia`, `MessaggioLiveListener`.
+**Sicurezza: sì**
 **File:** `db/migration/V8__chat.sql`; `chat/ChatConversation`, `ChatMessage`, `ChatConversationRepository`, `ChatMessageRepository`, `ChatService`, `ChatController`, `ChatWebSocketController`, `ChatMessageEvent`, `ChatMessageListener`, `dto/ConversationResponse`, `ChatMessageResponse`, `MessagePageResponse`, `SendMessageRequest`, `CreateConversationRequest`, `package-info`; test `ChatRestIntegrationTest`, `ChatStompIntegrationTest`; `schema-db.md`; Postman Chat.
 
 - [ ] **1. V8 e conversazioni (50 min).** V8 come §3.2 (coppia canonica, `uq_chat_conversations_pair`, indice del cursore). `POST /api/chats {recipientId}`: find-or-create con `INSERT ... ON CONFLICT DO NOTHING` + rilettura; limite `CONVERSATIONS_CREATED`; `CANNOT_MESSAGE_SELF`; destinatario non verificato → 404. `GET /api/chats` con ultimo messaggio e `unreadCount`. Test: A→B e B→A danno la stessa conversazione; se stessi → 400; 21ª conversazione nuova in 24 h → 429.
@@ -384,6 +394,7 @@ dominio X").
 ### Card F5-03 · Notifiche live e candidature — stima 3 h
 
 **Riferimenti:** §6.7 (candidature), §7.4, §7.6; riuso: `NotificaLiveEvent`, `NotificaLiveListener`.
+**Sicurezza: sì (facoltativa, se resta budget)**
 **File:** `notification/LiveNotification`, `NotificationType`, `LiveNotificationEvent`, `LiveNotificationListener`, `package-info`; modifiche a `FeedService` (like), `ChatService` (messaggio); `collab/CollabService.apply`, `dto/ApplyRequest`, `ApplicationResponse`; test `LiveNotificationIntegrationTest`, `CollabApplicationIntegrationTest`; `tools/stomp-test/index.html` (facoltativo); Postman Collab.
 
 - [ ] **1. Pattern delle notifiche (40 min).** Record ed evento come in tabella; listener `AFTER_COMMIT` → `convertAndSendToUser(recipientId, "/queue/notifications", notification)`. Pubblicazione da like (solo inserimento effettivo, autore ≠ chi mette like) e da messaggio (`NEW_MESSAGE` al destinatario, `preview` 100 caratteri).

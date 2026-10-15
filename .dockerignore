@@ -1,0 +1,26 @@
+# Il contesto di build e' la radice del repository (progettazione, sezione 12.5): qui si escludono
+# tutti i file che l'immagine non usa, cosi' il contesto resta piccolo e la cache stabile.
+
+.git
+.gitignore
+.idea
+**/.idea
+*.iml
+**/*.iml
+
+# Documentazione, collection Postman, strumenti di prova e database locale
+docs
+postman
+tools
+docker
+docker-compose.yml
+README.md
+CLAUDE.md
+
+# Risultati di build e dipendenze: si rigenerano dentro l'immagine
+**/target
+**/node_modules
+**/dist
+
+# Segreti locali
+.env*

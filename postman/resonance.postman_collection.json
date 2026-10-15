@@ -1,0 +1,662 @@
+{
+  "info": {
+    "_postman_id": "6f1c2b7e-3a5d-4c8e-9b14-2d7a8e5f0c31",
+    "name": "Resonance",
+    "description": "Richieste REST del backend di Resonance. Si usa con l'environment `local` o `render`: la variabile baseUrl decide su quale server girano. STOMP (chat e notifiche) non e' qui: si verifica con i test di integrazione.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{accessToken}}", "type": "string" }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "description": "Controlli tecnici, senza autenticazione.",
+      "item": [
+        {
+          "name": "Health check (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con applicazione e database UP', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('UP');",
+                  "    pm.expect(body.database).to.eql('UP');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            },
+            "description": "Pubblico. 200 con {status: UP, database: UP} se applicazione e database rispondono, 503 con DOWN altrimenti. E' l'health check di Render."
+          },
+          "response": []
+        },
+        {
+          "name": "Percorso inesistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 NOT_FOUND in JSON anche senza token', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/inesistente",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inesistente"]
+            },
+            "description": "Errore significativo. Un percorso /api/... senza handler risponde sempre 404 NOT_FOUND in JSON, anche senza token e anche sotto /api/admin/** (progettazione, sezione 6.3): mai 401 ne' 403. Un percorso che esiste e richiede il login risponde invece 401 UNAUTHENTICATED senza token."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "description": "Registrazione, verifica email, login, refresh e logout (card F1). Imposta le variabili userEmail e userPassword nell'environment (mai nei file versionati); dopo Register imposta anche verificationCode con il codice letto nel log. Gli script di Verify e Login salvano accessToken e le altre cartelle lo usano come Bearer. Il refresh usa il cookie jar di Postman.",
+      "item": [
+        {
+          "name": "Register (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 con la sola email, senza id', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.email).to.be.a('string');",
+                  "    pm.expect(body.id).to.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\",\n  \"displayName\": \"Utente di prova\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Pubblico. 201 con { email }; il codice a 6 cifre parte per email dopo il commit (con il profilo dev si legge nel log di LogEmailService). L'email si normalizza (spazi e maiuscole). Password 8-72 caratteri e massimo 72 byte UTF-8. Email gia' verificata o account sospeso: 409 EMAIL_ALREADY_REGISTERED. Email non verificata: i nuovi dati sovrascrivono quelli in sospeso, ma al massimo 1 invio ogni 60 secondi e 5 in 24 ore (429 TOO_MANY_REQUESTS)."
+          },
+          "response": []
+        },
+        {
+          "name": "Register con email non valida (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR con i campi non validi', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(body.fields.email).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"non-una-email\",\n  \"password\": \"{{userPassword}}\",\n  \"displayName\": \"Utente di prova\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Errore significativo. 400 VALIDATION_ERROR con fields.email. Anche una password sopra i 72 byte (per esempio 30 emoji) da' 400 con fields.password."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con access token e profilo', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+                  "    pm.expect(body.user.roles).to.include('FAN');",
+                  "    pm.expect(body.refreshToken).to.be.undefined;",
+                  "    pm.environment.set('accessToken', body.accessToken);",
+                  "});",
+                  "pm.test('cookie di refresh HttpOnly', function () {",
+                  "    pm.expect(pm.response.headers.get('Set-Cookie')).to.include('resonance_refresh=').and.to.include('HttpOnly');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"code\": \"{{verificationCode}}\",\n  \"password\": \"{{userPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "verify"]
+            },
+            "description": "Pubblico. Imposta verificationCode nell'environment con il codice ricevuto (nel log in dev). 200 con { accessToken, accessTokenExpiresAt, user } e il cookie di refresh, come il login; lo script salva accessToken. La password deve essere quella della registrazione (altrimenti 400 WRONG_PASSWORD, il codice resta usabile)."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify con codice sbagliato (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 CODE_INVALID (o CODE_EXPIRED a tentativi finiti)', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.be.oneOf(['CODE_INVALID', 'CODE_EXPIRED']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"code\": \"000000\",\n  \"password\": \"{{userPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "verify"]
+            },
+            "description": "Errore significativo. Un codice sbagliato da' 400 CODE_INVALID e consuma un tentativo (al massimo 5): finiti i tentativi, o passati 15 minuti, la risposta e' 400 CODE_EXPIRED anche con il codice giusto e serve un nuovo invio. Email gia' verificata: 409 ALREADY_VERIFIED."
+          },
+          "response": []
+        },
+        {
+          "name": "Resend code (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 senza corpo', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/resend-code",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "resend-code"]
+            },
+            "description": "Pubblico. Sempre 204, anche per un'email sconosciuta, verificata o sospesa (non rivela quali esistono): il nuovo codice parte solo per un account esistente, non verificato e attivo, e sostituisce il precedente azzerando i tentativi. Entro 60 secondi dall'ultimo invio, o oltre 5 invii in 24 ore: 429 TOO_MANY_REQUESTS."
+          },
+          "response": []
+        },
+        {
+          "name": "Resend code senza email (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR con fields.email', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(body.fields.email).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/resend-code",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "resend-code"]
+            },
+            "description": "Errore significativo. Senza il campo email: 400 VALIDATION_ERROR con fields.email."
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot password (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 senza corpo', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/password/forgot",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "password", "forgot"]
+            },
+            "description": "Pubblico. Sempre 204, anche per un'email sconosciuta, non verificata o sospesa (non rivela quali esistono): il codice di reset parte solo per un account esistente, verificato e attivo. Entro 60 secondi dall'ultimo invio, o oltre 5 invii in 24 ore: 429 TOO_MANY_REQUESTS. In locale il codice compare nel log del backend (LogEmailService)."
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot password senza email (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR con fields.email', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(body.fields.email).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/password/forgot",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "password", "forgot"]
+            },
+            "description": "Errore significativo. Senza il campo email: 400 VALIDATION_ERROR con fields.email."
+          },
+          "response": []
+        },
+        {
+          "name": "Reset password (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 senza corpo', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});",
+                  "pm.test('cookie di refresh cancellato', function () {",
+                  "    pm.expect(pm.response.headers.get('Set-Cookie')).to.include('Max-Age=0');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"code\": \"{{resetCode}}\",\n  \"newPassword\": \"{{newPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/password/reset",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "password", "reset"]
+            },
+            "description": "Pubblico. Prima esegui Forgot password e copia il codice dal log del backend nella variabile resetCode; imposta anche newPassword (8-72 caratteri e massimo 72 byte). 204, il cookie di refresh viene cancellato e tutte le sessioni dell'utente sono revocate: non effettua il login, serve un nuovo Login."
+          },
+          "response": []
+        },
+        {
+          "name": "Reset password con codice sbagliato (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 CODE_INVALID', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql('CODE_INVALID');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"code\": \"000000\",\n  \"newPassword\": \"una-password-valida\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/password/reset",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "password", "reset"]
+            },
+            "description": "Errore significativo. Codice sbagliato, scaduto o assente (anche dopo 5 tentativi o 15 minuti): sempre 400 CODE_INVALID, anche per account inesistenti o sospesi (decisione 51). Il tentativo si consuma e la password non cambia."
+          },
+          "response": []
+        },
+        {
+          "name": "Login (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con access token e profilo', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+                  "    pm.expect(body.user.email).to.be.a('string');",
+                  "    pm.expect(body.refreshToken).to.be.undefined;",
+                  "    pm.environment.set('accessToken', body.accessToken);",
+                  "});",
+                  "pm.test('cookie di refresh HttpOnly', function () {",
+                  "    pm.expect(pm.response.headers.get('Set-Cookie')).to.include('resonance_refresh=').and.to.include('HttpOnly');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Pubblico. 200 con { accessToken, accessTokenExpiresAt, user } e il refresh token nel cookie HttpOnly resonance_refresh (Path /api/auth/refresh). Lo script salva accessToken nell'environment."
+          },
+          "response": []
+        },
+        {
+          "name": "Login con password errata (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 INVALID_CREDENTIALS', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().code).to.eql('INVALID_CREDENTIALS');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"password-sicuramente-sbagliata\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Errore significativo. Email inesistente e password errata danno la stessa risposta 401 INVALID_CREDENTIALS. Dopo 10 fallimenti in 15 minuti per la stessa email: 429 TOO_MANY_REQUESTS. Email non verificata: 403 EMAIL_NOT_VERIFIED; account sospeso: 403 ACCOUNT_SUSPENDED con details.suspensionReason e details.suspendedUntil (solo con la password giusta)."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con nuovo access token e nuovo cookie', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+                  "    pm.environment.set('accessToken', body.accessToken);",
+                  "    pm.expect(pm.response.headers.get('Set-Cookie')).to.include('resonance_refresh=');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "X-Requested-With", "value": "XMLHttpRequest" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Cookie + header X-Requested-With (obbligatorio, aggiunto a mano perche' Postman non e' un browser). Il cookie resonance_refresh lo manda il cookie jar di Postman dopo il login. Ruota il token: il vecchio non vale piu'. Due refresh con lo stesso cookie entro 10 secondi: il secondo risponde 409 REFRESH_CONFLICT; oltre 10 secondi, 401 REFRESH_TOKEN_REUSED e revoca di tutti i token."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh senza header (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 CSRF_HEADER_MISSING', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('CSRF_HEADER_MISSING');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Errore significativo. Senza X-Requested-With il refresh e' rifiutato prima di toccare il token (difesa CSRF, progettazione sezione 8.5). Anche un header Origin di un altro sito da' 403."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 e cookie cancellato', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "    pm.expect(pm.response.headers.get('Set-Cookie')).to.include('resonance_refresh=').and.to.include('Max-Age=0');",
+                  "    pm.environment.unset('accessToken');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "DELETE",
+            "header": [{ "key": "X-Requested-With", "value": "XMLHttpRequest" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Cookie + X-Requested-With. Sempre 204 e cookie cancellato; revoca il solo token di questo dispositivo. Non richiede il Bearer, quindi funziona anche con l'access token scaduto. Un refresh fatto dopo il logout con lo stesso cookie risponde 401 REFRESH_TOKEN_REUSED."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout senza header (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 CSRF_HEADER_MISSING', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('CSRF_HEADER_MISSING');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Errore significativo. Senza X-Requested-With il logout e' rifiutato e il token non viene toccato."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "description": "Profilo e ruoli self-service (card F2-01).",
+      "item": []
+    },
+    {
+      "name": "Admin",
+      "description": "Sospensione, nomina degli ADMIN e moderazione (card F2-02 e F4-03).",
+      "item": []
+    },
+    {
+      "name": "Events",
+      "description": "Concerti ufficiali e indie event (card F3).",
+      "item": []
+    },
+    {
+      "name": "Collab",
+      "description": "Annunci di collaborazione (card F4-01).",
+      "item": []
+    },
+    {
+      "name": "Feed",
+      "description": "Post e like (card F4-02).",
+      "item": []
+    },
+    {
+      "name": "Chat",
+      "description": "Conversazioni e storico dei messaggi, solo la parte REST (card F5).",
+      "item": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    }
+  ]
+}

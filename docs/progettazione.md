@@ -140,6 +140,8 @@ contiene entity, repository, service, controller e DTO del proprio dominio. Stra
 - **DTO**: `record` Java con metodo statico `from(...)`; le entity non escono mai dai controller.
   Normalizzazione (trim, email minuscola) nel costruttore compatto del record, come in NoseY.
 - **Entity**: Lombok `@Getter`/`@Setter`, id `@GeneratedValue(strategy = GenerationType.UUID)`.
+  Costruttore pubblico con i campi obbligatori e `@NoArgsConstructor(access = AccessLevel.PROTECTED)`
+  per JPA (decisione 41). Mai `@AllArgsConstructor`: i costruttori si scrivono a mano.
 
 Componenti trasversali: gestione centralizzata degli errori, `Clock` iniettato, limiti di frequenza
 in memoria, eventi applicativi con `@TransactionalEventListener(AFTER_COMMIT)` per email e push live.
@@ -209,7 +211,8 @@ Sintesi:
 ### 2.5 Commenti nel codice
 
 Le scelte non ovvie hanno un commento breve che rimanda alla sezione di questo documento
-("progettazione, sezione 4.6"), senza copiarne i paragrafi.
+("progettazione, sezione 4.6"), senza copiarne i paragrafi. In più ogni classe e ogni metodo non
+banale ha una riga di Javadoc in italiano; i test hanno una riga per classe (decisione 42).
 
 ---
 
@@ -533,7 +536,7 @@ funziona su HTTP.
 
 ### 4.4 Registrazione
 
-`POST /api/auth/register` `{email, password, displayName}` → 201 `{userId, email}`.
+`POST /api/auth/register` `{email, password, displayName}` → 201 `{email}` (senza l'id: al client non serve, deve solo verificare l'email e fare il login).
 
 1. Email normalizzata (trim, minuscole); password 8–72 caratteri e massimo 72 byte UTF-8.
 2. Lock sulla riga dell'utente con quell'email (`SELECT ... FOR UPDATE`).
@@ -579,7 +582,9 @@ l'utente esiste, non è verificato ed è ACTIVE.
 
 1. Limite `LOGIN_FAILED` per email (10 fallimenti in 15 minuti) → 429.
 2. Utente inesistente o password errata → 401 `INVALID_CREDENTIALS` (stessa risposta, registra il
-   fallimento). Password oltre 72 byte → trattata come errata senza chiamare BCrypt.
+   fallimento). Per un'email sconosciuta si esegue comunque un confronto BCrypt con un hash fittizio, dello
+   stesso costo, così il tempo di risposta non rivela se l'email esiste (decisione 48). Password oltre 72
+   byte → trattata come errata senza chiamare BCrypt.
 3. Email non verificata → 403 `EMAIL_NOT_VERIFIED`.
 4. Sospeso: se `suspended_until` è passato → riattivazione pigra (5.5) e si prosegue; altrimenti
    403 `ACCOUNT_SUSPENDED` con `details` `{suspensionReason, suspendedUntil}`.
@@ -595,7 +600,9 @@ I controlli 3 e 4 avvengono solo dopo una password corretta, così non rivelano 
 
 1. Header `X-Requested-With` assente → 403 `CSRF_HEADER_MISSING`. Header `Origin` presente ma
    diverso dall'origine del servizio e non fra le origini ammesse in configurazione (in prod
-   nessuna) → 403 `ACCESS_DENIED`.
+   nessuna) → 403 **senza `ErrorResponse`**: lo rifiuta il filtro CORS di Spring con il testo
+   "Invalid CORS request", prima dei nostri handler, quindi non ha il codice `ACCESS_DENIED` (il controllo
+   nel controller resta come seconda difesa).
 2. Cookie assente → 401 `REFRESH_TOKEN_INVALID` + cancellazione del cookie.
 3. Hash del valore; `SELECT ... FOR UPDATE` per `token_hash`. Non trovato → 401
    `REFRESH_TOKEN_INVALID` + cancellazione.
@@ -636,6 +643,8 @@ emesso resta valido fino alla scadenza (massimo 15 minuti, D4): il frontend lo e
   4.5 (tentativo consumato prima del confronto, confronto a tempo costante). In caso di successo:
   nuovo hash, `code = null`, **revoca di tutti i refresh token**, cancellazione del cookie nella
   risposta, evento `PasswordChangedEmailEvent`. Non effettua il login.
+  Errori (decisione 51): codice sbagliato, scaduto, esaurito o assente → sempre 400 `CODE_INVALID`, anche
+  per account inesistenti, non verificati o sospesi; 403 `ACCOUNT_SUSPENDED` solo con il codice valido.
 
 ### 4.11 Casi di revoca totale
 
@@ -686,7 +695,7 @@ Le credenziali non compaiono mai in migrazioni, file versionati o log.
 
 ### 5.2 Caricamento a ogni richiesta
 
-`UserAccessService.loadActive(userId)` legge con una sola query utente, stato, `email_verified`,
+`UserAccessService.resolve(userId)` legge con una sola query utente, stato, `email_verified`,
 `suspended_until` e ruoli. Lo usano `JwtFilter` (ogni richiesta REST con Bearer),
 `JwtChannelInterceptor` (CONNECT), il controllo a ogni SEND STOMP, login e refresh. Promozioni,
 revoche e sospensioni hanno quindi effetto **dalla richiesta successiva**, senza attendere la
@@ -795,19 +804,20 @@ nascosto → 404. Nessuna cancellazione fisica.
 |---|---|---|
 | `VALIDATION_ERROR` | 400 | Bean Validation, body illeggibile, parametri non validi |
 | `UNAUTHENTICATED` | 401 | Bearer assente/non valido su endpoint protetto (EntryPoint) |
-| `ACCESS_DENIED` | 403 | Ruolo insufficiente, origine non ammessa |
+| `ACCESS_DENIED` | 403 | Ruolo insufficiente |
 | `NOT_FOUND` | 404 | Risorsa inesistente o nascosta |
 | `METHOD_NOT_ALLOWED` | 405 | Metodo non supportato |
+| `UNSUPPORTED_MEDIA_TYPE` | 415 | Content-Type del body non supportato (l'API accetta solo JSON) |
 | `CONFLICT` | 409 | Vincolo DB generico |
 | `TOO_MANY_REQUESTS` | 429 | Limiti di frequenza |
 | `INTERNAL_ERROR` | 500 | Errore inatteso (loggato) |
 | `EMAIL_ALREADY_REGISTERED` | 409 | Registrazione |
 | `ALREADY_VERIFIED` | 409 | Verifica |
-| `CODE_INVALID` / `CODE_EXPIRED` | 400 | Verifica, reset |
+| `CODE_INVALID` / `CODE_EXPIRED` | 400 | Verifica (entrambi). Reset: solo `CODE_INVALID`, anche per codice scaduto, esaurito o assente (decisione 51) |
 | `WRONG_PASSWORD` | 400 | Verifica con password diversa |
 | `INVALID_CREDENTIALS` | 401 | Login |
 | `EMAIL_NOT_VERIFIED` | 403 | Login |
-| `ACCOUNT_SUSPENDED` | 403 | Login, refresh, verifica; `details: {suspensionReason, suspendedUntil}` |
+| `ACCOUNT_SUSPENDED` | 403 | Login, refresh, verifica, reset (solo con il codice valido, decisione 51); `details: {suspensionReason, suspendedUntil}` |
 | `CSRF_HEADER_MISSING` | 403 | Refresh/logout senza `X-Requested-With` |
 | `REFRESH_TOKEN_INVALID` / `REFRESH_TOKEN_EXPIRED` / `REFRESH_TOKEN_REUSED` | 401 | Refresh |
 | `REFRESH_CONFLICT` | 409 | Refresh concorrente entro la finestra |
@@ -842,7 +852,7 @@ perché servono solo file statici o `index.html`. Un percorso `/api/...` inesist
 
 | Metodo e percorso | Accesso | Request | Response |
 |---|---|---|---|
-| `POST /api/auth/register` | pubblico | `{email, password, displayName}` | 201 `{userId, email}` |
+| `POST /api/auth/register` | pubblico | `{email, password, displayName}` | 201 `{email}` |
 | `POST /api/auth/verify` | pubblico | `{email, code, password}` | 200 `LoginResponse` + cookie |
 | `POST /api/auth/resend-code` | pubblico | `{email}` | 204 |
 | `POST /api/auth/login` | pubblico | `{email, password}` | 200 `LoginResponse` + cookie |
@@ -853,7 +863,9 @@ perché servono solo file statici o `index.html`. Un percorso `/api/...` inesist
 
 `LoginResponse` = `{accessToken, accessTokenExpiresAt, user: MeResponse}`.
 `MeResponse` = `{id, email, displayName, avatarUrl, bio, city, latitude, longitude, roles: [...],
-status, createdAt}`.
+status, createdAt}`. L'`id` compare solo nel proprio profilo: il frontend lo confronta con
+`AuthorSummary.id` e `senderId` per riconoscere i propri contenuti (decisione 49). Gli altri DTO di risposta
+hanno un id solo se serve a un'azione successiva; la registrazione risponde `{email}`.
 
 Validazioni: email `@Email` max 255; password 8–72 caratteri e 72 byte; `displayName` 2–50; `code`
 `\d{6}`.
@@ -1020,7 +1032,7 @@ notifiche, appeal delle sospensioni (sezione 15).
 Header nativo `Authorization: Bearer <accessToken>`. `JwtChannelInterceptor`:
 
 1. Verifica firma e scadenza del JWT.
-2. `UserAccessService.loadActive` dal database: utente esistente, verificato e ACTIVE (con
+2. `UserAccessService.resolve` dal database: utente esistente, verificato e ACTIVE (con
    riattivazione pigra); ruoli caricati dal DB, mai dai claim.
 3. Successo: `accessor.setUser(AuthenticatedUser{id, roles, accessTokenExpiresAt})`.
 4. Errore: `AppException` (`TOKEN_INVALID` o `ACCOUNT_SUSPENDED`) → `StompErrorHandler` invia un
@@ -1122,7 +1134,7 @@ di 8.5.
 - Nessun Bearer o token non valido/scaduto → **prosegue senza autenticare**. Il 401
   `UNAUTHENTICATED` lo produce l'`AuthenticationEntryPoint` solo sugli endpoint protetti, così un
   token vecchio non blocca le pagine pubbliche.
-- Token valido → `UserAccessService.loadActive`: utente inesistente, non verificato o sospeso →
+- Token valido → `UserAccessService.resolve`: utente inesistente, non verificato o sospeso →
   nessuna autenticazione (il frontend scopre la sospensione al refresh, che risponde
   `ACCOUNT_SUSPENDED` con i dettagli).
 - Altrimenti `SecurityContext` con `AuthenticatedUser` e una authority `ROLE_*` per ruolo.
@@ -1161,6 +1173,11 @@ eseguire al browser della vittima. Difese indipendenti:
 4. Controllo lato server dell'header `Origin`, se presente: deve essere l'origine del servizio o una
    di quelle configurate.
 
+Dietro il proxy di Render il TLS termina nel proxy e il servizio riceve HTTP: il profilo `prod` imposta
+`server.forward-headers-strategy: native`, altrimenti il filtro CORS di Spring vedrebbe lo schema `http`
+contro l'`Origin` `https` del browser e respingerebbe ogni POST/DELETE del frontend, login compreso
+(decisione 47). Il comportamento va verificato al primo deploy su Render.
+
 Il cookie non è considerato protetto solo perché HttpOnly: HttpOnly impedisce a JavaScript di
 leggerlo, non al browser di inviarlo. Access token e refresh token non viaggiano mai sullo stesso
 canale.
@@ -1191,6 +1208,9 @@ riavvio: accettabile con una sola istanza). Valori in `application.yml` (`app.ra
 | `COLLAB_APPLICATIONS` | 10 in 24 ore | utente |
 
 I limiti sui codici email sono nel database (sezione 4.6), quindi sopravvivono ai riavvii.
+
+`LOGIN_FAILED` ha come chiave l'email: chi invia 10 login falliti con l'email di un altro può impedirgli di
+accedere per 15 minuti (conseguenza accettata, decisione 48).
 
 ### 8.9 Segreti e log
 
@@ -1338,8 +1358,8 @@ facoltativa.
 ### 12.1 PostgreSQL locale
 
 `docker-compose.yml` nella radice: immagine `postgres:17` (stessa versione maggiore del database
-Render da verificare alla creazione), porta `"5433:5432"` (il PostgreSQL di Windows occupa la
-5432), database `resonance`, utente e password di sviluppo non sensibili, volume persistente
+Render da verificare alla creazione), porta `"127.0.0.1:5433:5432"` (solo sul computer locale; il
+PostgreSQL di Windows occupa la 5432), database `resonance`, utente e password di sviluppo non sensibili, volume persistente
 `resonance-db-data`, script di init `docker/postgres/init/01-create-test-db.sql` che crea
 `resonance_test`. Connessione da pgAdmin su `localhost:5433`.
 
@@ -1351,8 +1371,10 @@ Profili `dev`, `prod`, `test` (sezione 2.3). Flyway applica le migrazioni all'av
 ### 12.3 DatabaseUrl
 
 `ResonanceApplication.main` chiama `DatabaseUrl.applyIfPresent()` prima di avviare Spring: converte
-`DATABASE_URL` di Render (`postgresql://utente:password@host:porta/db`) in URL JDBC con
-`sslmode=require` e credenziali separate; stampa solo l'URL JDBC, mai la password.
+`DATABASE_URL` di Render (`postgresql://utente:password@host:porta/db`) in URL JDBC con credenziali
+separate, **mantenendo i parametri già presenti** (decisione 52): l'URL esterno di Render ha già
+`?sslmode=require`, quello interno non ha parametri e il suo server non offre TLS, quindi `DatabaseUrl` non
+aggiunge `sslmode`. Stampa solo l'URL JDBC, mai la password.
 
 ### 12.4 Variabili d'ambiente
 
