@@ -27,7 +27,7 @@ alla card corrente, senza rileggere l'intero progetto.
 | `config/SecurityConfig` | `config.SecurityConfig` | A | F1-01 | Stateless, niente httpBasic/formLogin, endpoint pubblici espliciti, `/ws/**` e `/error` permessi, EntryPoint/AccessDenied con `ErrorResponse`. `RoleHierarchy` solo `SUPERADMIN > ADMIN`. Regola `GET` statici in F6-03. |
 | `config/WebSocketConfig` | `config.WebSocketConfig` | R | F5-01 | `/ws` senza SockJS, broker `/queue`, prefissi `/app` e `/user`; aggiungere decorator per il registro sessioni. |
 | `web/StatoController` | `web.HealthController` (`GET /api/health`) | A | F0-02 | Risposta `{status, database}`, 503 se il DB non risponde. |
-| `be/Dockerfile` | `Resonance_BE/Dockerfile` | A | F0-03 | Stage JDK/JRE e `MaxRAMPercentage=75` invariati; contesto di build alla radice; stage Node in FE-01. |
+| `be/Dockerfile` | `Resonance_BE/Dockerfile` | A | F0-03 | Stage JDK/JRE invariati, `MaxRAMPercentage=60` (era 75) e utente non root aggiunto; contesto di build alla radice; stage Node in FE-01. |
 | `be/.dockerignore` | `.dockerignore` (radice) | A | F0-03 | Aggiungere `docs`, `postman`, `**/node_modules`, `**/dist`. |
 | `render.yaml` (radice) | `render.yaml` (radice) | A | F0-03 | Database + un solo servizio web; `dockerContext: .`; via `GEMINI_API_KEY`, `JWT_DURATA`, `ALLOWED_ORIGIN`; aggiunti `ACCESS_TOKEN_TTL`, `REFRESH_TOKEN_TTL`, `SUPERADMIN_*`, `GEOCODING_CONTACT`; tenere i commenti su JWT_SECRET, profilo prod e Brevo. |
 

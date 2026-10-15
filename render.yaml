@@ -12,6 +12,9 @@ databases:
     user: resonance
     plan: free
     region: frankfurt
+    # Allineato al PostgreSQL di sviluppo (postgres:17 in docker-compose.yml); non si puo' modificare
+    # dopo la creazione del database.
+    postgresMajorVersion: "17"
 
 services:
   - type: web
