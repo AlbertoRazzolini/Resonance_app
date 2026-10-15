@@ -17,11 +17,12 @@ import java.util.List;
 /**
  * Base dei test di integrazione: contesto completo con profilo "test" (database resonance_test,
  * progettazione, sezione 11.1), MockMvc con la vera catena di filtri di Spring Security e database
- * svuotato prima di ogni test. Richiede il container Docker acceso (docker compose up -d).
+ * svuotato prima di ogni test; la geocodifica e' sempre lo stub, mai Nominatim. Richiede il container
+ * Docker acceso (docker compose up -d).
  */
 @SpringBootTest
 @ActiveProfiles("test")
-@Import(TestClockConfig.class)
+@Import({TestClockConfig.class, StubGeocodingConfig.class})
 public abstract class IntegrationTest {
 
     @Autowired

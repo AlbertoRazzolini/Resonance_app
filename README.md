@@ -96,7 +96,7 @@ configurazione di avvio di IntelliJ, su Render dal Blueprint o dalla dashboard).
 | `ALLOWED_ORIGIN` | no | Origini esterne ammesse per CORS e WebSocket (solo sviluppo, separate da virgola). |
 | `SUPERADMIN_EMAIL`, `SUPERADMIN_PASSWORD` | per il bootstrap | Credenziali del primo SUPERADMIN, creato all'avvio se non esiste (vedi "Primo SUPERADMIN"). |
 | `BREVO_API_KEY`, `MAIL_FROM` | prod | Invio delle email tramite Brevo; mittente confermato in Brevo. |
-| `GEOCODING_CONTACT` | sì | Contatto inserito nello User-Agent delle richieste a Nominatim. |
+| `GEOCODING_CONTACT` | prod | Contatto (email) inserito nello User-Agent delle richieste a Nominatim, che lo richiede nella sua policy: `Resonance/1.0 (contatto)`. Se è vuoto, lo User-Agent resta `Resonance/1.0`. Il client fa al massimo una richiesta al secondo; nei test Nominatim è sostituito da uno stub. |
 
 ## Postman
 

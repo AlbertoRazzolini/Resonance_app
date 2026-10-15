@@ -34,7 +34,9 @@ public enum ErrorCode {
     INSUFFICIENT_PLATFORM_LEVEL(HttpStatus.FORBIDDEN),
     LAST_SUPERADMIN(HttpStatus.CONFLICT),
     USER_NOT_VERIFIED(HttpStatus.CONFLICT),
-    USER_NOT_ACTIVE(HttpStatus.CONFLICT);
+    USER_NOT_ACTIVE(HttpStatus.CONFLICT),
+    ADDRESS_NOT_FOUND(HttpStatus.BAD_REQUEST),
+    GEOCODING_UNAVAILABLE(HttpStatus.BAD_GATEWAY);
 
     private final HttpStatus httpStatus;
 
