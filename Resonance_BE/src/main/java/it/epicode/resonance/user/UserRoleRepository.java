@@ -4,6 +4,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -18,6 +20,11 @@ public interface UserRoleRepository extends JpaRepository<UserRole, UserRoleId> 
      */
     @Query("select r.id.role from UserRole r where r.id.userId = :userId")
     Set<Role> findRolesByUserId(UUID userId);
+
+    /**
+     * Ruoli di piu' utenti con una sola query (per le liste, senza una query per riga).
+     */
+    List<UserRole> findByIdUserIdIn(Collection<UUID> userIds);
 
     /**
      * Assegna un ruolo solo se l'utente non lo ha gia' (progettazione, sezione 5.3). Un unico INSERT con

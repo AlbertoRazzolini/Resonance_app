@@ -1153,8 +1153,439 @@
     },
     {
       "name": "Admin",
-      "description": "Sospensione, nomina degli ADMIN e moderazione (card F2-02 e F4-03).",
-      "item": []
+      "description": "Sospensione, nomina degli ADMIN e moderazione (card F2-02 e F4-03). Eseguire in ordine, dopo il login come SUPERADMIN (userEmail e userPassword) e la richiesta Me della cartella Users (salva userId). Servono anche fanAccessToken e adminAccessToken, copiati da un login come FAN e come ADMIN.",
+      "item": [
+        {
+          "name": "Elenco utenti (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con la pagina di utenti', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.content).to.be.an('array');",
+                  "    pm.expect(body).to.have.all.keys('content', 'page', 'size', 'totalElements', 'totalPages');",
+                  "    pm.expect(body.content[0]).to.not.have.property('passwordHash');",
+                  "    // Il bersaglio delle richieste seguenti: il primo utente di sola community.",
+                  "    const target = body.content.find(u => !u.roles.includes('ADMIN') && !u.roles.includes('SUPERADMIN'));",
+                  "    pm.expect(target, 'serve almeno un utente di community nel database').to.not.be.undefined;",
+                  "    pm.environment.set('targetUserId', target.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users?size=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "size",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Richiede il login come ADMIN o SUPERADMIN (userEmail e userPassword). Ricerca facoltativa su email e nome (search), filtro status, ordine fisso dal piu' recente. Lo script salva in targetUserId il primo utente di sola community, usato dalle richieste seguenti."
+          },
+          "response": []
+        },
+        {
+          "name": "Elenco utenti con utente FAN (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 ACCESS_DENIED', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('ACCESS_DENIED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users"
+              ]
+            },
+            "description": "Errore significativo. Usa fanAccessToken (access token di un utente FAN, copiato da un login): senza ruolo ADMIN l'area di amministrazione e' vietata.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Elenco utenti con size fuori range (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql('VALIDATION_ERROR');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users?size=1000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "size",
+                  "value": "1000"
+                }
+              ]
+            },
+            "description": "Errore significativo. size puo' andare da 1 a 100: 1000 viene rifiutato."
+          },
+          "response": []
+        },
+        {
+          "name": "Sospendi un utente (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con utente SUSPENDED', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('SUSPENDED');",
+                  "    pm.expect(body.suspensionReason).to.eql('Prova da Postman');",
+                  "    pm.expect(body.suspendedUntil).to.be.a('string');",
+                  "    pm.expect(body).to.not.have.property('passwordHash');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/{{targetUserId}}/suspension",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "{{targetUserId}}",
+                "suspension"
+              ]
+            },
+            "description": "ADMIN o SUPERADMIN. reason obbligatorio (1-500 caratteri); al massimo uno fra suspendedUntil (istante futuro con fuso) e durationDays (1-3650): nessuno dei due = sospensione indeterminata. Revoca tutti i refresh token dell'utente. Su un utente gia' sospeso aggiorna i dettagli.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Prova da Postman\",\n  \"durationDays\": 1\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Sospendi con data e durata insieme (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR su entrambi i campi', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(body.fields).to.have.property('suspendedUntil');",
+                  "    pm.expect(body.fields).to.have.property('durationDays');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/{{targetUserId}}/suspension",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "{{targetUserId}}",
+                "suspension"
+              ]
+            },
+            "description": "Errore significativo. Data di fine e durata non si possono indicare insieme.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Prova da Postman\",\n  \"suspendedUntil\": \"2099-01-01T00:00:00Z\",\n  \"durationDays\": 3\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Sospendi se stessi (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 INSUFFICIENT_PLATFORM_LEVEL', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('INSUFFICIENT_PLATFORM_LEVEL');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/{{userId}}/suspension",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "{{userId}}",
+                "suspension"
+              ]
+            },
+            "description": "Errore significativo della regola dei livelli: nessuno agisce su se stesso (e un ADMIN non agisce su un altro ADMIN). userId e' l'id dell'utente connesso, salvato dalla richiesta Me della cartella Users.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Prova da Postman\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Riattiva un utente (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con utente ACTIVE e campi di sospensione vuoti', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('ACTIVE');",
+                  "    pm.expect(body.suspensionReason).to.be.null;",
+                  "    pm.expect(body.suspendedUntil).to.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/{{targetUserId}}/suspension",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "{{targetUserId}}",
+                "suspension"
+              ]
+            },
+            "description": "Riattivazione manuale anticipata. Idempotente: su un utente attivo non cambia nulla. Le sospensioni a tempo scadono comunque da sole, al primo accesso dopo la scadenza."
+          },
+          "response": []
+        },
+        {
+          "name": "Nomina ADMIN (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con il ruolo ADMIN', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().roles).to.include('ADMIN');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/superadmin/users/{{targetUserId}}/admin",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "superadmin",
+                "users",
+                "{{targetUserId}}",
+                "admin"
+              ]
+            },
+            "description": "Solo SUPERADMIN (login con l'account creato dal bootstrap). L'utente deve avere l'email verificata e non essere sospeso. Idempotente. Vale subito, anche con un access token gia' emesso."
+          },
+          "response": []
+        },
+        {
+          "name": "Nomina ADMIN con utente ADMIN (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 ACCESS_DENIED', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('ACCESS_DENIED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/superadmin/users/{{targetUserId}}/admin",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "superadmin",
+                "users",
+                "{{targetUserId}}",
+                "admin"
+              ]
+            },
+            "description": "Errore significativo. Usa adminAccessToken (access token di un ADMIN, per esempio l'utente appena nominato dopo un nuovo login): un ADMIN non puo' nominare altri ADMIN.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Revoca ADMIN (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 senza il ruolo ADMIN', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().roles).to.not.include('ADMIN');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/superadmin/users/{{targetUserId}}/admin",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "superadmin",
+                "users",
+                "{{targetUserId}}",
+                "admin"
+              ]
+            },
+            "description": "Solo SUPERADMIN. Idempotente. Vale subito: il token dell'ex ADMIN riceve 403 alla richiesta successiva."
+          },
+          "response": []
+        }
+      ]
     },
     {
       "name": "Events",

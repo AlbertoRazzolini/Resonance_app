@@ -1147,3 +1147,44 @@ risponderebbe 409 invece di 200. L'`INSERT` condizionale è atomico e non richie
   che non hanno bisogno di lock e costa una query in più.
 - **Intercettare la `DataIntegrityViolationException` e ignorarla**: dentro una transazione la violazione la
   segna come da annullare, quindi la risposta riuscirebbe ma il commit fallirebbe.
+
+## Decisione 54: controlli della nomina ADMIN e dell'elenco utenti (implementazione)
+
+### Scelta
+
+- **Verifiche solo alla nomina.** `USER_NOT_VERIFIED` e `USER_NOT_ACTIVE` (409) si applicano a
+  `POST /api/superadmin/users/{id}/admin`, non alla revoca: un ADMIN sospeso o non verificato si può sempre
+  revocare. La regola dei livelli vale per entrambe.
+- **"Sospeso" tiene conto della scadenza.** Per `USER_NOT_ACTIVE` un utente con `suspended_until` già passato
+  conta come attivo, anche se la riattivazione pigra non ha ancora chiuso la riga (progettazione, sezione 5.5).
+- **`LAST_SUPERADMIN` è una difesa non raggiungibile via HTTP.** La regola dei livelli rifiuta già la
+  sospensione di qualsiasi SUPERADMIN, quindi il controllo (che viene dopo) non scatta mai da una richiesta
+  reale. Resta nel codice come previsto dal design e si prova con un test unitario di `AdminUserService` in cui
+  la regola dei livelli è sostituita da un finto che lascia passare tutto.
+- **Elenco utenti con `Specification`.** Filtri su email, nome e stato costruiti con i criteri JPA e `LIKE ...
+  ESCAPE '\'`; `%`, `_` e `\` cercati dall'amministratore sono caratteri normali (`escapeLike`, riusata da
+  NoseY). I ruoli della pagina si leggono con una sola query, non una per riga. Il filtro `status` mostra lo
+  stato salvato: una sospensione scaduta ma non ancora chiusa risulta ancora SUSPENDED fino al primo accesso
+  dell'utente.
+
+### Motivazione
+
+- Revocare non può dipendere dallo stato dell'utente: sospendere un ADMIN e non poterlo poi privare del ruolo
+  sarebbe un blocco senza uscita.
+- Chiamare "sospeso" un utente la cui sospensione è finita impedirebbe di nominarlo senza motivo, dato che nel
+  sistema non c'è un job che chiuda le sospensioni scadute.
+- Un controllo irraggiungibile ma senza test sarebbe codice morto non verificato; il test unitario lo tiene
+  vivo senza indebolire la regola dei livelli.
+- Una `Specification` aggiunge solo le condizioni che servono, senza parametri nulli, ed è il modo usato
+  anche da NoseY.
+
+### Alternative scartate
+
+- **Verifiche anche alla revoca**: più simmetrico, ma lascia un ADMIN sospeso con i suoi poteri fino alla fine
+  della sospensione.
+- **Riattivare le sospensioni scadute prima di ogni nomina o elenco**: scritture dentro una lettura e un
+  comportamento diverso dal resto del sistema, dove la riattivazione avviene solo all'accesso dell'utente.
+- **Eliminare il controllo `LAST_SUPERADMIN`**: scelta contraria al design; lo protegge se in futuro la regola
+  dei livelli cambiasse.
+- **Query JPQL con `(:status is null or u.status = :status)`**: non provata: con il tipo enum nominato di
+  PostgreSQL un parametro nullo può non avere un tipo determinabile, e la `Specification` evita il problema.

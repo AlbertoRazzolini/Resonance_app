@@ -2,6 +2,7 @@ package it.epicode.resonance.user;
 
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -12,9 +13,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Accesso agli utenti; le versioni con lock servono alle operazioni che non devono sovrapporsi.
+ * Accesso agli utenti; le versioni con lock servono alle operazioni che non devono sovrapporsi, le
+ * specification all'elenco con filtri degli amministratori.
  */
-public interface UserRepository extends JpaRepository<User, UUID> {
+public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificationExecutor<User> {
 
     /**
      * Cerca un utente per email, che deve essere gia' minuscola e senza spazi.
@@ -35,6 +37,15 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from User u where u.id = :id")
     Optional<User> findWithLockById(UUID id);
+
+    /**
+     * Quanti utenti hanno il ruolo e lo stato indicati, escluso l'utente indicato: serve al controllo "ultimo
+     * SUPERADMIN" (progettazione, sezione 5.5).
+     */
+    @Query("""
+            select count(u) from User u, UserRole r
+            where r.id.userId = u.id and r.id.role = :role and u.status = :status and u.id <> :excludedId""")
+    long countByRoleAndStatusExcluding(Role role, UserStatus status, UUID excludedId);
 
     /**
      * Stato dell'utente e suoi ruoli con una sola query (progettazione, sezione 5.2). Lista vuota se

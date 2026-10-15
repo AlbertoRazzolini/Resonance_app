@@ -30,7 +30,11 @@ public enum ErrorCode {
     ALREADY_VERIFIED(HttpStatus.CONFLICT),
     CODE_INVALID(HttpStatus.BAD_REQUEST),
     CODE_EXPIRED(HttpStatus.BAD_REQUEST),
-    WRONG_PASSWORD(HttpStatus.BAD_REQUEST);
+    WRONG_PASSWORD(HttpStatus.BAD_REQUEST),
+    INSUFFICIENT_PLATFORM_LEVEL(HttpStatus.FORBIDDEN),
+    LAST_SUPERADMIN(HttpStatus.CONFLICT),
+    USER_NOT_VERIFIED(HttpStatus.CONFLICT),
+    USER_NOT_ACTIVE(HttpStatus.CONFLICT);
 
     private final HttpStatus httpStatus;
 
