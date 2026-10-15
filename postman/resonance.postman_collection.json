@@ -623,8 +623,533 @@
     },
     {
       "name": "Users",
-      "description": "Profilo e ruoli self-service (card F2-01).",
-      "item": []
+      "description": "Profilo e ruoli self-service (card F2-01). Eseguire in ordine, dopo il login: Me salva userId.",
+      "item": [
+        {
+          "name": "Me (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con il proprio profilo', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.id).to.be.a('string');",
+                  "    pm.expect(body.email).to.be.a('string');",
+                  "    pm.expect(body.roles).to.include('FAN');",
+                  "    pm.expect(body).to.not.have.property('passwordHash');",
+                  "    pm.environment.set('userId', body.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Autenticato (Bearer {{accessToken}}, salvato dal login). Profilo con id, email, ruoli e coordinate. Lo script salva userId nell'environment per la richiesta del profilo pubblico."
+          },
+          "response": []
+        },
+        {
+          "name": "Me senza token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 UNAUTHENTICATED', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().code).to.eql('UNAUTHENTICATED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Errore significativo. Senza Bearer il profilo proprio non si legge."
+          },
+          "response": []
+        },
+        {
+          "name": "Modifica un campo (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con il solo campo cambiato', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().city).to.eql('Firenze');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"city\": \"Firenze\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "description": "PATCH parziale (progettazione sezione 6.1): cambia solo i campi inviati; assente o null = invariato."
+          },
+          "response": []
+        },
+        {
+          "name": "Svuota la bio (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con bio null', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().bio).to.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bio\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Su un campo di testo facoltativo la stringa vuota svuota il campo (salvato come NULL)."
+          },
+          "response": []
+        },
+        {
+          "name": "Modifica con displayName vuoto (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR con fields.displayName', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(body.fields.displayName).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Errore significativo. Il displayName e' obbligatorio: se presente non puo' essere vuoto."
+          },
+          "response": []
+        },
+        {
+          "name": "Modifica con una sola coordinata (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR con fields.latitude e fields.longitude', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(body.fields.latitude).to.be.a('string');",
+                  "    pm.expect(body.fields.longitude).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 43.77\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Errore significativo. Latitudine e longitudine vanno inviate insieme o non inviate."
+          },
+          "response": []
+        },
+        {
+          "name": "Condividi la posizione (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con le coordinate salvate', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.latitude).to.eql(43.77);",
+                  "    pm.expect(body.longitude).to.eql(11.25);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 43.77,\n  \"longitude\": 11.25\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Entrambe le coordinate presenti: vengono salvate."
+          },
+          "response": []
+        },
+        {
+          "name": "Rimuovi la posizione (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con coordinate null', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.latitude).to.be.null;",
+                  "    pm.expect(body.longitude).to.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me/location",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "location"
+              ]
+            },
+            "description": "Idempotente. Nel PATCH null significa \"invariato\", per questo la posizione si toglie con questo endpoint."
+          },
+          "response": []
+        },
+        {
+          "name": "Profilo pubblico (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 senza email e coordinate', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.displayName).to.be.a('string');",
+                  "    pm.expect(body).to.not.have.property('email');",
+                  "    pm.expect(body).to.not.have.property('latitude');",
+                  "    pm.expect(body.roles).to.not.include('ADMIN');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{userId}}"
+              ]
+            },
+            "description": "Pubblico, senza Bearer. Usa userId salvato dalla richiesta Me. Solo ruoli di community, mai email o coordinate."
+          },
+          "response": []
+        },
+        {
+          "name": "Profilo pubblico inesistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 NOT_FOUND', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql('NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            },
+            "description": "Errore significativo. Un utente inesistente o non verificato risponde 404."
+          },
+          "response": []
+        },
+        {
+          "name": "Attiva MUSICIAN (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con il ruolo MUSICIAN', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().roles).to.include('MUSICIAN');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me/roles/musician",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "roles",
+                "musician"
+              ]
+            },
+            "description": "Idempotente: se il ruolo c'e' gia' non cambia nulla. Vale dalla richiesta successiva, senza nuovo login."
+          },
+          "response": []
+        },
+        {
+          "name": "Attiva HOST (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con il ruolo HOST', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().roles).to.include('HOST');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me/roles/host",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "roles",
+                "host"
+              ]
+            },
+            "description": "Idempotente. HOST e MUSICIAN sono indipendenti: uno non implica l'altro."
+          },
+          "response": []
+        },
+        {
+          "name": "Attiva un ruolo senza token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 UNAUTHENTICATED', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().code).to.eql('UNAUTHENTICATED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me/roles/host",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "roles",
+                "host"
+              ]
+            },
+            "description": "Errore significativo. Senza Bearer nessun ruolo si attiva."
+          },
+          "response": []
+        }
+      ]
     },
     {
       "name": "Admin",

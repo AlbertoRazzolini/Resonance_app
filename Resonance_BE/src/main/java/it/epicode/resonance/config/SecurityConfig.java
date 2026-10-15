@@ -71,6 +71,10 @@ public class SecurityConfig {
                                 "/api/auth/resend-code", "/api/auth/login", "/api/auth/refresh",
                                 "/api/auth/password/forgot", "/api/auth/password/reset").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/auth/refresh").permitAll()
+                        // Profilo pubblico (sezione 6.5). "me" prima, altrimenti {id} renderebbe pubblico
+                        // anche il profilo proprio.
+                        .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/users/{id}").permitAll()
                         // /ws: l'autenticazione avviene al CONNECT (sezione 7.2).
                         // /error: altrimenti l'inoltro interno a /error diventa un 401 e il frontend fa logout.
                         .requestMatchers("/ws/**", "/error").permitAll()

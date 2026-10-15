@@ -9,5 +9,12 @@ public enum Role {
     MUSICIAN,
     HOST,
     ADMIN,
-    SUPERADMIN
+    SUPERADMIN;
+
+    /**
+     * Dice se e' un ruolo di community (FAN, MUSICIAN, HOST), cioe' uno dei ruoli visibili nel profilo pubblico.
+     */
+    public boolean isCommunity() {
+        return this == FAN || this == MUSICIAN || this == HOST;
+    }
 }

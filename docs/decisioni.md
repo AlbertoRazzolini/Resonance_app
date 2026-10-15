@@ -1124,3 +1124,26 @@ Dopo la modifica la stessa prova parte, Flyway applica le tre migrazioni e il SU
   server offre TLS, fragile e non verificabile senza Render.
 - **Variabile d'ambiente dedicata (`DB_SSLMODE`)**: una configurazione in più da tenere allineata quando
   l'URL può già contenere il parametro.
+
+## Decisione 53: attivazione dei ruoli con un solo INSERT idempotente (implementazione)
+
+### Scelta
+
+`POST /api/users/me/roles/musician` e `/host` assegnano il ruolo con un unico `INSERT ... ON CONFLICT DO
+NOTHING` (`UserRoleRepository.addIfAbsent`, query nativa con `cast(:role as user_role)`). L'endpoint risponde 200
+`MeResponse` sia quando il ruolo viene aggiunto sia quando c'era già. Il service accetta solo MUSICIAN e HOST.
+
+### Motivazione
+
+Il design chiede che l'attivazione sia idempotente (sezione 5.3). Un controllo `existsById` seguito da `save`
+non lo è con due richieste concorrenti (ad esempio un doppio clic): la seconda violerebbe `pk_user_roles` e
+risponderebbe 409 invece di 200. L'`INSERT` condizionale è atomico e non richiede lock sull'utente.
+
+### Alternative scartate
+
+- **`existsById` + `save`**: semplice, ma con richieste concorrenti dà un 409 a un'operazione che deve essere
+  idempotente.
+- **Lock pessimistico sull'utente** (`findWithLockById`) prima del controllo: corretto, ma serializza richieste
+  che non hanno bisogno di lock e costa una query in più.
+- **Intercettare la `DataIntegrityViolationException` e ignorarla**: dentro una transazione la violazione la
+  segna come da annullare, quindi la risposta riuscirebbe ma il commit fallirebbe.
