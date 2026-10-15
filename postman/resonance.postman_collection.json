@@ -1589,7 +1589,7 @@
     },
     {
       "name": "Events",
-      "description": "Concerti ufficiali e indie event (card F3). Concerti: eseguire in ordine; servono il login come HOST (accessToken) e fanAccessToken, copiato da un login come FAN. Nominatim e' reale: serve la rete.",
+      "description": "Concerti ufficiali e indie event (card F3). Eseguire in ordine, prima i concerti (login come HOST in accessToken) e poi gli indie event (login come MUSICIAN in accessToken); fanAccessToken e' il token di un login come FAN. Nominatim e' reale: serve la rete.",
       "item": [
         {
           "name": "Crea concerto (201)",
@@ -2023,6 +2023,531 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"reason\": \"Concerto annullato\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crea indie event in bozza (201)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Data dell'evento: tra 30 giorni, in UTC (l'API richiede un fuso orario esplicito).",
+                  "pm.environment.set('indieDate', new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 bozza con coordinate dalla geocodifica e generi normalizzati', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('DRAFT');",
+                  "    pm.expect(body.latitude).to.be.a('number');",
+                  "    pm.expect(body.genreTags).to.eql(['indie', 'rock']);",
+                  "    pm.expect(body.isFree).to.eql(true);",
+                  "    pm.environment.set('indieEventId', body.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/indie-events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "indie-events"
+              ]
+            },
+            "description": "Richiede il login come utente con ruolo MUSICIAN (accessToken). L'indirizzo viene geocodificato con Nominatim. Con status DRAFT l'evento e' una bozza visibile solo a chi l'ha creato; senza status e' subito PUBLISHED. Lo script salva indieEventId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Serata da Postman\",\n  \"description\": \"Serata di prova\",\n  \"venueName\": \"Locale di prova\",\n  \"address\": \"Piazza della Signoria, Firenze\",\n  \"eventDate\": \"{{indieDate}}\",\n  \"genreTags\": [\"Indie\", \"rock\", \"indie\"],\n  \"coverImageUrl\": \"https://example.com/cover.jpg\",\n  \"isFree\": true,\n  \"status\": \"DRAFT\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crea indie event come FAN (403)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Data dell'evento: tra 30 giorni, in UTC (l'API richiede un fuso orario esplicito).",
+                  "pm.environment.set('indieDate', new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 ACCESS_DENIED', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('ACCESS_DENIED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/indie-events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "indie-events"
+              ]
+            },
+            "description": "Errore significativo. Usa fanAccessToken (utente senza ruolo MUSICIAN): solo i MUSICIAN creano indie event.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Serata da Postman\",\n  \"description\": \"Serata di prova\",\n  \"venueName\": \"Locale di prova\",\n  \"address\": \"Piazza della Signoria, Firenze\",\n  \"eventDate\": \"{{indieDate}}\",\n  \"genreTags\": [\"Indie\", \"rock\", \"indie\"],\n  \"coverImageUrl\": \"https://example.com/cover.jpg\",\n  \"isFree\": true\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "I miei indie event (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con la bozza appena creata', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.all.keys('content', 'page', 'size', 'totalElements', 'totalPages');",
+                  "    const ids = body.content.map(function (e) { return e.id; });",
+                  "    pm.expect(ids).to.include(pm.environment.get('indieEventId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/indie-events/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "indie-events",
+                "mine"
+              ]
+            },
+            "description": "Richiede il login (accessToken). Bozze e pubblicati del chiamante, passati compresi, dal piu' recente; i nascosti no. Paginazione con page e size."
+          },
+          "response": []
+        },
+        {
+          "name": "I miei indie event senza token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 UNAUTHENTICATED', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().code).to.eql('UNAUTHENTICATED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/indie-events/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "indie-events",
+                "mine"
+              ]
+            },
+            "description": "Errore significativo. L'elenco personale richiede il login."
+          },
+          "response": []
+        },
+        {
+          "name": "Bozza senza token (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 NOT_FOUND: una bozza non rivela di esistere', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql('NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/indie-events/{{indieEventId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "indie-events",
+                "{{indieEventId}}"
+              ]
+            },
+            "description": "Errore significativo. Una bozza e' visibile solo al proprietario: per tutti gli altri, anonimi compresi, e' un 404. Eseguire dopo Crea indie event in bozza."
+          },
+          "response": []
+        },
+        {
+          "name": "Dettaglio della propria bozza (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con la bozza e l\\'autore pubblico', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.id).to.eql(pm.environment.get('indieEventId'));",
+                  "    pm.expect(body.status).to.eql('DRAFT');",
+                  "    pm.expect(body.musician).to.have.all.keys('id', 'displayName', 'avatarUrl');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/indie-events/{{indieEventId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "indie-events",
+                "{{indieEventId}}"
+              ]
+            },
+            "description": "Il proprietario (accessToken) vede la propria bozza; il dettaglio degli eventi pubblicati e' pubblico."
+          },
+          "response": []
+        },
+        {
+          "name": "Pubblica la bozza (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con l\\'evento pubblicato', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql('PUBLISHED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/indie-events/{{indieEventId}}/publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "indie-events",
+                "{{indieEventId}}",
+                "publish"
+              ]
+            },
+            "description": "Solo il proprietario (accessToken). La data dell'evento deve essere ancora futura, altrimenti 400 EVENT_DATE_PAST."
+          },
+          "response": []
+        },
+        {
+          "name": "Pubblica di nuovo (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 EVENT_ALREADY_PUBLISHED', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql('EVENT_ALREADY_PUBLISHED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/indie-events/{{indieEventId}}/publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "indie-events",
+                "{{indieEventId}}",
+                "publish"
+              ]
+            },
+            "description": "Errore significativo. Un evento gia' pubblicato non si pubblica due volte. Eseguire dopo Pubblica la bozza."
+          },
+          "response": []
+        },
+        {
+          "name": "Indie event vicini (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con la pagina degli indie event piu\\' vicini', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.all.keys('content', 'page', 'size', 'totalElements', 'totalPages');",
+                  "    pm.expect(body.content.length).to.be.above(0);",
+                  "    pm.expect(body.content[0].status).to.eql('PUBLISHED');",
+                  "    pm.expect(body.content[0].distanceKm).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/indie-events/nearby?lat=43.7696&lng=11.2558&radiusKm=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "indie-events",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "43.7696"
+                },
+                {
+                  "key": "lng",
+                  "value": "11.2558"
+                },
+                {
+                  "key": "radiusKm",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Pubblico. Centro e raggio (0,1-200 km) sono obbligatori. Solo eventi PUBLISHED, futuri e non nascosti, dal piu' vicino: le bozze non compaiono mai. Eseguire dopo Pubblica la bozza."
+          },
+          "response": []
+        },
+        {
+          "name": "Indie event vicini senza lat (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql('VALIDATION_ERROR');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/indie-events/nearby?lng=11.2558&radiusKm=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "indie-events",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lng",
+                  "value": "11.2558"
+                },
+                {
+                  "key": "radiusKm",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Errore significativo. Senza lat la ricerca non parte."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancella l'indie event di un altro (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 NOT_OWNER', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('NOT_OWNER');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/indie-events/{{indieEventId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "indie-events",
+                "{{indieEventId}}"
+              ]
+            },
+            "description": "Errore significativo. Usa fanAccessToken: chi non ha creato l'evento (pubblicato) non puo' cancellarlo; gli admin moderano con gli endpoint dedicati."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancella il proprio indie event (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 senza corpo', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/indie-events/{{indieEventId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "indie-events",
+                "{{indieEventId}}"
+              ]
+            },
+            "description": "Richiede il login come il MUSICIAN che ha creato l'evento (accessToken). Il body con il motivo e' facoltativo (massimo 500 caratteri). Cancellazione logica: dopo, l'evento sparisce da dettaglio, ricerca ed elenco personale.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Serata annullata\"\n}"
             }
           },
           "response": []

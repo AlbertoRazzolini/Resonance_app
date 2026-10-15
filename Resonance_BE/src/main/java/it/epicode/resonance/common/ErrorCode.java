@@ -37,7 +37,9 @@ public enum ErrorCode {
     USER_NOT_ACTIVE(HttpStatus.CONFLICT),
     NOT_OWNER(HttpStatus.FORBIDDEN),
     ADDRESS_NOT_FOUND(HttpStatus.BAD_REQUEST),
-    GEOCODING_UNAVAILABLE(HttpStatus.BAD_GATEWAY);
+    GEOCODING_UNAVAILABLE(HttpStatus.BAD_GATEWAY),
+    EVENT_ALREADY_PUBLISHED(HttpStatus.CONFLICT),
+    EVENT_DATE_PAST(HttpStatus.BAD_REQUEST);
 
     private final HttpStatus httpStatus;
 

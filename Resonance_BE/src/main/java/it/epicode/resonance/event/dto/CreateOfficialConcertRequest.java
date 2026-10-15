@@ -7,9 +7,11 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
+
+import static it.epicode.resonance.event.EventInputNormalizer.emptyToNull;
+import static it.epicode.resonance.event.EventInputNormalizer.normalizeTags;
+import static it.epicode.resonance.event.EventInputNormalizer.strip;
 
 /**
  * Creazione di un concerto ufficiale (progettazione, sezione 6.6). Le coordinate non si inviano: le ricava la
@@ -21,7 +23,7 @@ public record CreateOfficialConcertRequest(
         @NotBlank @Size(max = 150) String venueName,
         @NotBlank @Size(max = 255) String address,
         @NotNull @Future Instant eventDate,
-        @Size(max = 10) List<@Size(min = 1, max = 30) String> genreTags,
+        @Size(max = 10) List<@NotNull @Size(min = 1, max = 30) String> genreTags,
         @HttpUrl String coverImageUrl,
         @HttpUrl String externalTicketUrl
 ) {
@@ -36,25 +38,5 @@ public record CreateOfficialConcertRequest(
         genreTags = normalizeTags(genreTags);
         coverImageUrl = emptyToNull(strip(coverImageUrl));
         externalTicketUrl = emptyToNull(strip(externalTicketUrl));
-    }
-
-    private static List<String> normalizeTags(List<String> tags) {
-        if (tags == null) {
-            return List.of();
-        }
-        LinkedHashSet<String> normalized = new LinkedHashSet<>();
-        for (String tag : tags) {
-            // Un elemento null resta tale: lo segnala la validazione, non un NullPointerException.
-            normalized.add(tag == null ? null : tag.strip().toLowerCase(Locale.ROOT));
-        }
-        return List.copyOf(normalized);
-    }
-
-    private static String strip(String value) {
-        return value == null ? null : value.strip();
-    }
-
-    private static String emptyToNull(String value) {
-        return value == null || value.isEmpty() ? null : value;
     }
 }

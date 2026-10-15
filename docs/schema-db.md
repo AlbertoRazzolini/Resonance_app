@@ -13,9 +13,10 @@ creato e si aggiorna a ogni migrazione che modifica lo schema, nello stesso sott
 | `V2__refresh_tokens` | F1-02 | tabella `refresh_tokens` | Applicata |
 | `V3__email_codes` | F1-03 | enum `email_code_purpose`; tabella `email_codes` | Applicata |
 | `V4__official_concerts` | F3-02 | tabella `official_concerts` | Applicata |
+| `V5__indie_events` | F3-03 | enum `indie_event_status`; tabella `indie_events` | Applicata |
 
-Migrazioni ancora da fare (progettazione, sezione 3.6): `V5__indie_events` (F3-03), `V6__collab_posts` (F4-01),
-`V7__feed_and_likes` (F4-02), `V8__chat` (F5-02).
+Migrazioni ancora da fare (progettazione, sezione 3.6): `V6__collab_posts` (F4-01), `V7__feed_and_likes` (F4-02),
+`V8__chat` (F5-02).
 
 ## Convenzioni
 
@@ -33,6 +34,7 @@ Migrazioni ancora da fare (progettazione, sezione 3.6): `V5__indie_events` (F3-0
 | `user_role` | `FAN`, `MUSICIAN`, `HOST`, `ADMIN`, `SUPERADMIN` | `Role` |
 | `user_status` | `ACTIVE`, `SUSPENDED` | `UserStatus` |
 | `email_code_purpose` | `EMAIL_VERIFICATION`, `PASSWORD_RESET` | `EmailCodePurpose` |
+| `indie_event_status` | `DRAFT`, `PUBLISHED` | `IndieEventStatus` |
 
 ## Tabelle
 
@@ -148,6 +150,41 @@ Vincoli di controllo:
 Indici: `ix_official_concerts_host (host_id)`, `ix_official_concerts_coordinates (latitude, longitude)` per il
 prefiltro a bounding box della ricerca nelle vicinanze e `ix_official_concerts_event_date (event_date)`.
 
+### indie_events
+
+Eventi creati dagli utenti con ruolo MUSICIAN, pubblicati subito o salvati come bozza. Come per i concerti, le
+coordinate vengono dalla geocodifica dell'indirizzo, mai dal client. Rispetto a `official_concerts` c'è
+`musician_id` al posto di `host_id`, manca `external_ticket_url` e ci sono `is_free` e `status`.
+
+| Colonna | Tipo | Vincoli |
+|---|---|---|
+| `id` | uuid | PK `pk_indie_events`, default `gen_random_uuid()` |
+| `musician_id` | uuid | NOT NULL, FK `fk_indie_events_musician` → `users(id)` |
+| `title` | varchar(150) | NOT NULL |
+| `description` | varchar(5000) | NULL |
+| `venue_name` | varchar(150) | NOT NULL |
+| `address` | varchar(255) | NOT NULL; indirizzo digitato dal musicista |
+| `latitude` | double precision | NOT NULL; gradi, da geocodifica |
+| `longitude` | double precision | NOT NULL; gradi, da geocodifica |
+| `event_date` | timestamptz | NOT NULL |
+| `genre_tags` | text[] | NOT NULL, default `'{}'`; minuscoli e senza duplicati (li normalizza l'applicazione) |
+| `cover_image_url` | varchar(2048) | NULL; solo http/https (validato dall'applicazione) |
+| `is_free` | boolean | NOT NULL, default `false` |
+| `status` | indie_event_status | NOT NULL, default `'PUBLISHED'`; una bozza (`DRAFT`) la vede solo il proprietario |
+| `created_at` | timestamptz | NOT NULL, default `now()` |
+| `hidden_at` | timestamptz | NULL; valorizzata = evento nascosto (moderazione o cancellazione del proprietario) |
+| `hidden_by` | uuid | NULL, FK `fk_indie_events_hidden_by` → `users(id)` |
+| `hidden_reason` | varchar(500) | NULL |
+
+Vincoli di controllo:
+
+- `ck_indie_events_coordinates`: latitudine fra −90 e 90, longitudine fra −180 e 180.
+- `ck_indie_events_hidden`: stessa regola di `official_concerts` (`hidden_at` e `hidden_by` insieme, motivo solo se
+  nascosto).
+
+Indici: `ix_indie_events_musician (musician_id)`, `ix_indie_events_coordinates (latitude, longitude)` per il
+prefiltro a bounding box della ricerca nelle vicinanze e `ix_indie_events_event_date (event_date)`.
+
 ## Relazioni (diagramma ER)
 
 ```mermaid
@@ -159,6 +196,8 @@ erDiagram
     USERS ||--o{ EMAIL_CODES : "riceve codici"
     USERS ||--o{ OFFICIAL_CONCERTS : "pubblica (HOST)"
     USERS |o--o{ OFFICIAL_CONCERTS : "nasconde (hidden_by)"
+    USERS ||--o{ INDIE_EVENTS : "crea (MUSICIAN)"
+    USERS |o--o{ INDIE_EVENTS : "nasconde (hidden_by)"
 
     USERS {
         uuid id PK

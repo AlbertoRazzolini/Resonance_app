@@ -81,6 +81,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/official-concerts").hasRole("HOST")
                         .requestMatchers(HttpMethod.GET, "/api/official-concerts/nearby",
                                 "/api/official-concerts/{id}").permitAll()
+                        // Indie event (sezione 6.6): creazione solo MUSICIAN; "mine" prima di {id}, che altrimenti
+                        // lo renderebbe pubblico. Il dettaglio e' pubblico ma una bozza la vede solo il
+                        // proprietario (controllo nel service); publish e delete richiedono il login.
+                        .requestMatchers(HttpMethod.POST, "/api/indie-events").hasRole("MUSICIAN")
+                        .requestMatchers(HttpMethod.GET, "/api/indie-events/mine").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/indie-events/nearby",
+                                "/api/indie-events/{id}").permitAll()
                         // /ws: l'autenticazione avviene al CONNECT (sezione 7.2).
                         // /error: altrimenti l'inoltro interno a /error diventa un 401 e il frontend fa logout.
                         .requestMatchers("/ws/**", "/error").permitAll()

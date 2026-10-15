@@ -1259,3 +1259,49 @@ finiscono solo il tipo di eccezione e lo stato HTTP, mai l'indirizzo.
 - **`eventDate` come `String` da convertire a mano**: perde la validazione `@Future` di Bean Validation e
   sposta nel service il controllo del formato.
 - **Raggio di default (per esempio 25 km)**: una scelta di prodotto non prevista dal design.
+
+## Decisione 57: scelte di implementazione degli indie event (implementazione)
+
+### Scelta
+
+- **Bozza altrui = 404, anche per publish e delete.** Una bozza la vede solo il proprietario: per chiunque altro
+  (anonimi e admin compresi) dettaglio, `publish` e `DELETE` rispondono 404 `NOT_FOUND`, non 403. `NOT_OWNER`
+  resta per le azioni su un evento già pubblicato di un altro utente, come per i concerti (decisione 56).
+- **Dettaglio pubblico con autenticazione facoltativa.** `GET /api/indie-events/{id}` è `permitAll`, ma il
+  `JwtFilter` imposta comunque l'utente se il token è valido; il controller riceve `null` per gli anonimi e il
+  service decide se mostrare la bozza. Un token non valido su questo endpoint non lo blocca. In `SecurityConfig`
+  `GET /api/indie-events/mine` (autenticato) precede `{id}`, che altrimenti lo renderebbe pubblico.
+- **`EventInputNormalizer` condiviso dalle richieste.** Trim, "vuoto = assente" e normalizzazione dei generi
+  stanno in una classe del package `event` usata da `CreateOfficialConcertRequest` e `CreateIndieEventRequest`;
+  le due entity restano separate. Nello spostare il codice è emerso un difetto già presente nei concerti: un
+  genere `null` (`"genreTags": [null]`) dava 500, perché `@Size` accetta `null` e `List.copyOf` lancia
+  `NullPointerException`. Ora `normalizeTags` non usa `List.copyOf` e gli elementi hanno `@NotNull` in entrambe le
+  richieste: 400 `VALIDATION_ERROR` su `genreTags`.
+- **Data passata alla pubblicazione decisa dal `Clock`.** `publish` confronta `eventDate` con il `Clock`
+  dell'applicazione (non con `@Future`, che usa l'orologio di sistema), così il caso "bozza diventata passata" si
+  verifica nei test avanzando il `MutableClock`. L'errore è 400 `EVENT_DATE_PAST`, con `fields.eventDate`.
+- **`mine` elenca tutto ciò che non è nascosto,** bozze, pubblicati e passati, dal più recente
+  (`created_at desc, id desc`): il design non fissa l'ordine e questo è quello di collab e feed.
+- **La ricerca nearby non mostra mai le bozze,** nemmeno al proprietario, che le trova in `mine`.
+- **La formula della distanza è quella dei concerti.** `IndieEventRepository` riusa la costante
+  `OfficialConcertRepository.DISTANCE_KM` (alias di tabella `c` in entrambe le query).
+
+### Motivazione
+
+- Rispondere 403 su una bozza altrui rivelerebbe che esiste; il 404 è coerente con il design (sezione 6.6) e con
+  il trattamento dei contenuti nascosti.
+- Non rendere pubblico il dettaglio solo ai proprietari obbligherebbe a due endpoint o a un secondo percorso
+  nel service; leggere l'utente facoltativo è il modo più semplice e non cambia i permessi di nessun altro
+  endpoint.
+- Una sola implementazione della normalizzazione evita che concerti e indie event divergano nelle regole sui
+  generi.
+- Un test con il `Clock` finto è deterministico; con l'orologio di sistema servirebbe attendere o scrivere date
+  nel passato direttamente nel database.
+
+### Alternative scartate
+
+- **403 `NOT_OWNER` sulle bozze altrui:** conferma l'esistenza della bozza.
+- **Unificare `OfficialConcert` e `IndieEvent` in un'unica entity con un tipo:** il design le tiene separate
+  (colonne e permessi diversi) e il piano lo esclude.
+- **Rendere pubblico `mine` o filtrarlo per stato:** non richiesto; il filtro per stato si potrà aggiungere se
+  serve al frontend.

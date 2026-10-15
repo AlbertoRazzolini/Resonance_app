@@ -194,6 +194,8 @@ class OfficialConcertIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.fields.genreTags").exists());
         create(host, bodyWithTags("\"" + "x".repeat(31) + "\"")).andExpect(status().isBadRequest());
         create(host, bodyWithTags("\"  \"")).andExpect(status().isBadRequest());
+        // Un genere null non e' un genere: 400, non un 500 ne' un null salvato nell'array.
+        create(host, bodyWithTags("null")).andExpect(status().isBadRequest());
     }
 
     @Test
