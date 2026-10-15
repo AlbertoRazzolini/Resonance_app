@@ -1358,7 +1358,7 @@ facoltativa.
 ### 12.1 PostgreSQL locale
 
 `docker-compose.yml` nella radice: immagine `postgres:17` (stessa versione maggiore del database
-Render da verificare alla creazione), porta `"127.0.0.1:5433:5432"` (solo sul computer locale; il
+Render, fissata nel Blueprint con `postgresMajorVersion: "17"` e non modificabile dopo la creazione), porta `"127.0.0.1:5433:5432"` (solo sul computer locale; il
 PostgreSQL di Windows occupa la 5432), database `resonance`, utente e password di sviluppo non sensibili, volume persistente
 `resonance-db-data`, script di init `docker/postgres/init/01-create-test-db.sql` che crea
 `resonance_test`. Connessione da pgAdmin su `localhost:5433`.
@@ -1402,8 +1402,9 @@ aggiunge `sslmode`. Stampa solo l'URL JDBC, mai la password.
   2. stage JDK (`eclipse-temurin:25-jdk`, da NoseY): cache delle dipendenze Maven
      (`dependency:go-offline`), copia di `dist/` in `src/main/resources/static/` (quando c'è lo
      stage Node), `mvnw -DskipTests package`.
-  3. stage JRE (`eclipse-temurin:25-jre`, da NoseY): solo il jar, `EXPOSE 8080`,
-     `-XX:MaxRAMPercentage=75` per i 512 MB del piano gratuito.
+  3. stage JRE (`eclipse-temurin:25-jre`, da NoseY): solo il jar, utente non root (`USER app`),
+     `EXPOSE 8080`, `-XX:MaxRAMPercentage=60` per i 512 MB del piano gratuito (la JVM usa memoria
+     anche fuori dall'heap).
 - **`.dockerignore` alla radice del repository** (il contesto è la radice): esclude `.git`, `docs`,
   `postman`, `**/target`, `**/node_modules`, `**/dist`, `.idea`. Le regole di NoseY sono incluse.
 - **Fallback SPA** (`SpaResourceConfig`, package `web`): risorse statiche da `classpath:/static/`;
