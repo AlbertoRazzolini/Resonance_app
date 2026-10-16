@@ -1614,3 +1614,57 @@ Su richiesta dello studente (16 ottobre) la regola del brief "chiunque può scri
 - **Consumare il limite dopo la validazione:** le richieste non valide non sarebbero limitate.
 - **`@Size` su `q` con Bean Validation:** non applica il trim prima del conteggio e valida prima che il limite sia
   consumato.
+
+## Decisione 65: scelte di implementazione del WebSocket e della chiusura delle sessioni (implementazione)
+
+### Scelta
+
+- **Errori senza informazioni inutili (scelta dello studente):** al CONNECT, un token mancante, malformato o scaduto,
+  un utente inesistente e un utente con email non verificata ricevono tutti `TOKEN_INVALID` con lo stesso messaggio
+  generico ("Token mancante, scaduto o non valido"). Solo un utente sospeso con token valido riceve
+  `ACCOUNT_SUSPENDED`, come da design (sezioni 7.2 e 7.8), senza motivo né scadenza della sospensione.
+- **`ACCESS_DENIED` sul WebSocket non ripete la destinazione:** SEND o SUBSCRIBE non ammessi ricevono
+  `ACCESS_DENIED` con il messaggio fisso "Operazione non consentita". Nessun eco di destinazioni o identificativi
+  chiesti dal client.
+- **Eccezioni inattese:** sia `StompErrorHandler` (frame ERROR) sia `WebSocketExceptionHandler` (code degli errori)
+  rispondono `INTERNAL_ERROR` con "Errore interno del server"; il dettaglio resta solo nel log.
+- **Frame prima del CONNECT:** Spring rifiuta un SEND o una SUBSCRIBE di una sessione senza CONNECT con
+  un'`IllegalStateException` ("Unknown session"), prima dell'interceptor. `StompErrorHandler` la traduce in
+  `TOKEN_INVALID` (sezione 7.3) invece di `INTERNAL_ERROR`, e non la scrive nel log come errore. La traduzione
+  riconosce l'inizio del messaggio di Spring: il test `sendBeforeConnect_isRejectedWithTokenInvalid` segnala un
+  cambiamento dopo un aggiornamento. Il controllo sull'utente assente nell'interceptor resta come difesa.
+- **Registro delle sessioni:** `WebSocketSessionRegistry` conserva le `WebSocketSession` con un decorator
+  dell'handler (registrato in `configureWebSocketTransport`) e associa sessione e utente con `SessionConnectedEvent`;
+  `SessionDisconnectEvent` e la chiusura della connessione la tolgono. `closeAll(userId)` chiude con
+  `POLICY_VIOLATION`; una chiusura fallita viene registrata nel log e non ferma le altre.
+- **Chiusura con pausa di 500 ms:** `UserSuspendedSessionCloser` (AFTER_COMMIT) manda `ACCOUNT_SUSPENDED` su
+  `/user/queue/errors` e chiude le sessioni dopo 500 ms (`CompletableFuture.delayedExecutor`). L'invio passa da canali
+  asincroni: una chiusura immediata farebbe perdere l'avviso al client. Se l'utente non ha sessioni aperte non
+  succede nulla.
+- **`ErrorCode.TOKEN_INVALID` senza stato HTTP** (solo WebSocket, come da piano): `httpStatus()` è `null`; nessun
+  endpoint REST lo usa.
+- **Test:** `StompTestClient` (in `support`) apre le connessioni su porta casuale e raccoglie frame ERROR e messaggi
+  in code bloccanti; `StompTestController` (`@TestComponent`, importato solo dai test del WebSocket) espone
+  `/app/test/echo`, `/denied` e `/boom` per provare che un SEND ammesso arriva a un controller e che i suoi errori
+  passano dal gestore. Le classi di test estendono `IntegrationTest` con `RANDOM_PORT`.
+
+### Motivazione
+
+- Chi non ha un token valido non deve poter distinguere "l'account non esiste" da "l'email non è verificata" da
+  "il token è scaduto", né scoprire quali code esistono: meno informazioni, meno superficie per chi esplora il
+  sistema.
+- `ACCOUNT_SUSPENDED` resta distinto perché il frontend deve mostrare "account sospeso" e non "sessione scaduta", e
+  lo vede solo chi ha un token valido di quell'account.
+- Un SEND senza CONNECT fatto dopo un attacco o per errore non deve riempire il log di errori né rispondere "errore
+  interno": è un token mancante.
+
+### Alternative scartate
+
+- **`EMAIL_NOT_VERIFIED` per l'email non verificata:** più preciso per la UI ma rivela lo stato dell'account a chi
+  ha un token; un utente non verificato non può comunque fare il login.
+- **Messaggio di `ACCESS_DENIED` con la destinazione (come NoseY):** fa da eco su code e identificativi.
+- **Chiusura immediata delle sessioni:** l'avviso `ACCOUNT_SUSPENDED` non arriverebbe in modo affidabile.
+- **Scheduler di Spring per il ritardo:** con il WebSocket attivo i `TaskScheduler` sono più d'uno e l'iniezione per
+  tipo è ambigua; `delayedExecutor` non richiede bean.
+- **`@Controller` annidato in una `@TestConfiguration` per il controller di prova:** Spring registra le classi
+  annidate due volte (mapping ambiguo); una classe a sé con `@TestComponent` non viene scansionata dagli altri test.

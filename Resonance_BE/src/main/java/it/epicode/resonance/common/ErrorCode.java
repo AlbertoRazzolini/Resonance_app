@@ -51,7 +51,9 @@ public enum ErrorCode {
     NOT_FRIENDSHIP_ADDRESSEE(HttpStatus.FORBIDDEN),
     NOT_FRIENDSHIP_REQUESTER(HttpStatus.FORBIDDEN),
     FRIEND_REQUEST_NOT_PENDING(HttpStatus.CONFLICT),
-    NOT_FRIENDS(HttpStatus.FORBIDDEN);
+    NOT_FRIENDS(HttpStatus.FORBIDDEN),
+    // Solo WebSocket (sezione 7.2): sulle API il token non valido e' UNAUTHENTICATED.
+    TOKEN_INVALID(null);
 
     private final HttpStatus httpStatus;
 
