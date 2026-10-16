@@ -453,12 +453,13 @@ dominio X").
 
 # F6 — Hardening e rilascio (19 ottobre)
 
-### Card F6-01 · Hardening e test — stima 3 h
+### Card F6-01 · Hardening e test — stima 4,5 h
 
 **Riferimenti:** §8, §11.
 - [ ] **1. Revisione di sicurezza del codice (60 min).** Elenco pubblico di `SecurityConfig` contro §6.3; ricerca di log con dati sensibili (`grep` su `log.` vicino a password/token/codice); query native solo con parametri; `@Valid` su tutti i body; header di risposta di sicurezza predefiniti di Spring attivi. Correzioni puntuali.
 - [ ] **2. Copertura dei casi di §11.2 (60 min).** Tabella §11.2 riga per riga: test mancanti aggiunti.
-- [ ] **3. Build completa e pulizia (60 min).** `./mvnw -q verify` verde; avvio in dev e prod locale; nessun warning di configurazione; `decisioni.md` aggiornato con le eventuali scelte di hardening.
+- [ ] **3. Prove di mutazione e collection Postman (90 min, tagliabile).** Mutazioni a campione sui controlli di accesso di ogni card (ruoli, proprietà, 404 sui contenuti nascosti, sospensione): si rompe il codice di produzione, si ricompila, si rilanciano i test e si ripristina con `cmp`; un controllo che nessun test fa fallire riceve il test mancante. Poi la collection Postman eseguita per intero, in ordine, su istanza reale (environment `local` e `render`), con le correzioni agli script e alle richieste che non passano. Se il 19 sfora si riduce ai soli controlli di accesso.
+- [ ] **4. Build completa e pulizia (60 min).** `./mvnw -q verify` verde; avvio in dev e prod locale; nessun warning di configurazione; `decisioni.md` aggiornato con le eventuali scelte di hardening.
 
 **Commit proposto:** `chore(security): harden configuration and complete test coverage`
 

@@ -1692,9 +1692,10 @@ sera del 13 ottobre (richiesta dello studente) per scaricare il 14.
 | 16 ott | F3-01 · F3-02 · F3-03 | 2,5 h · 3 h · 2,5 h | 8 h | medio |
 | 16 ott (pom.) – 17 ott | F4-01 · F4-02 · F4-03 · F4-04 · F4-05 | 2 h · 3 h · 2,5 h · 4 h · 1,5 h | 13 h | **alto**: F3 chiusa in anticipo, ma il margine del 17 è consumato |
 | 18 ott | F5-01 · F5-02 · F5-03 · F5-04 | 3,5 h · 4,5 h · 3,5 h · 1,5 h | 13 h | **alto**: WebSocket, chiusura sessioni e permesso di scrittura |
-| 19 ott | F6-01 · F6-02 · F6-03 | 3 h · 3 h · 2,5 h | 8,5 h | medio |
+| 19 ott | F6-01 · F6-02 · F6-03 | 4,5 h · 3 h · 2,5 h | 10 h | **alto**: nessun margine, con 1,5 h tagliabili in F6-01 |
 
-Totale backend circa 68,5 ore (60 + 8,5 della decisione 59). Giorni a rischio: 14, 15, 17 e 18. Il
+Totale backend circa 70 ore (60 + 8,5 della decisione 59 + 1,5 delle prove di mutazione e della collection
+Postman in F6-01). Giorni a rischio: 14, 15, 17, 18 e 19. Il
 giorno di anticipo accumulato in F3 assorbe le card aggiunte il 16 ottobre, quindi non resta un giorno
 di margine: se un giorno sfora si applica subito l'ordine dei tagli (brief 1-BIS, aggiornato dalla
 decisione 59): verifica dinamica del report → Swagger → notifiche live → contatto degli eventi (F5-04)
@@ -1757,7 +1758,7 @@ in chat e sblocco, senza notifica).
 
 | Card | Contenuto | Criterio |
 |---|---|---|
-| F6-01 · Hardening e test | Revisione di sicurezza del codice (config, log, errori), test mancanti, build completa | `mvnw verify` verde |
+| F6-01 · Hardening e test | Revisione di sicurezza del codice (config, log, errori), test mancanti, prove di mutazione sui controlli di accesso e collection Postman eseguita per intero (tagliabili), build completa | `mvnw verify` verde |
 | F6-02 · Swagger e report di sicurezza | springdoc + Swagger UI, `report-sicurezza.md` (statica + dinamica, Strix se disponibile) | report con risultati reali |
 | F6-03 · Fallback SPA e deploy finale | `SpaResourceConfig` e regola di sicurezza per i `GET` statici, verifica del cookie in browser sulla stessa origine, preparazione degli account della demo, README finale | test del fallback (index di prova, `/api/...` inesistente → 404 JSON), deploy finale verificato; promemoria merge |
 
