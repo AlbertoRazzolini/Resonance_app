@@ -4111,6 +4111,756 @@
       ]
     },
     {
+      "name": "Friends",
+      "description": "Amicizie con rifiuto silenzioso (card F4-04). Servono due utenti: accessToken (quello del login) e fanAccessToken (un secondo utente, da copiare da un login come negli Admin), piu userId salvato dalla richiesta Me di Users. La sequenza va eseguita in ordine e termina con l amicizia rimossa da accessToken, cosi puo essere rieseguita.",
+      "item": [
+        {
+          "name": "Identifica il secondo utente (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 e salva l id di chi possiede fanAccessToken', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.environment.set('friendUserId', pm.response.json().id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Preparazione. Con fanAccessToken (secondo utente, diverso da quello di accessToken) legge il proprio profilo e salva friendUserId, che le richieste seguenti usano come destinatario. Richiede anche userId, salvato dalla richiesta Me di Users."
+          },
+          "response": []
+        },
+        {
+          "name": "Chiedi amicizia a se stessi (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 CANNOT_FRIEND_SELF', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql('CANNOT_FRIEND_SELF');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships"
+              ]
+            },
+            "description": "Errore significativo. Non si puo chiedere l amicizia a se stessi (userId e l utente di accessToken).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Chiedi amicizia (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 OUTGOING con l altro utente in forma ridotta', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('OUTGOING');",
+                  "    pm.expect(body.otherUser.id).to.eql(pm.environment.get('friendUserId'));",
+                  "    pm.expect(body.otherUser.email).to.be.undefined;",
+                  "    pm.environment.set('friendshipId', body.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships"
+              ]
+            },
+            "description": "Richiede il login (accessToken). Chiede l amicizia a friendUserId e salva friendshipId. Il tentativo conta nel limite di 20 richieste in 24 ore (si azzera al riavvio del server). Se la coppia ha gia una riga, la richiesta riapre quella invece di crearne una nuova.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{friendUserId}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Chiedi amicizia due volte (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 FRIEND_REQUEST_ALREADY_SENT', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql('FRIEND_REQUEST_ALREADY_SENT');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships"
+              ]
+            },
+            "description": "Errore significativo. La richiesta e gia in attesa: il frontend non propone di rifarla.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{friendUserId}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Rimuovi senza essere amici (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 NOT_FRIENDS', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('NOT_FRIENDS');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships/{{friendshipId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships",
+                "{{friendshipId}}"
+              ]
+            },
+            "description": "Errore significativo. Si rimuove solo un amico: la richiesta e ancora in attesa."
+          },
+          "response": []
+        },
+        {
+          "name": "Elenco senza type (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql('VALIDATION_ERROR');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships"
+              ]
+            },
+            "description": "Errore significativo. type e obbligatorio: FRIENDS, INCOMING oppure OUTGOING."
+          },
+          "response": []
+        },
+        {
+          "name": "Elenco richieste inviate (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con la richiesta appena inviata', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.all.keys('content', 'page', 'size', 'totalElements', 'totalPages');",
+                  "    const found = body.content.find(function (f) { return f.id === pm.environment.get('friendshipId'); });",
+                  "    pm.expect(found).to.not.be.undefined;",
+                  "    pm.expect(found.status).to.eql('OUTGOING');",
+                  "    pm.expect(found.otherUser.email).to.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships?type=OUTGOING",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "OUTGOING"
+                }
+              ]
+            },
+            "description": "Richieste inviate dal chiamante, dalla piu recente. Comprende anche quelle rifiutate in silenzio."
+          },
+          "response": []
+        },
+        {
+          "name": "Elenco richieste ricevute dall'altro utente (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con la richiesta ricevuta', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.all.keys('content', 'page', 'size', 'totalElements', 'totalPages');",
+                  "    const found = body.content.find(function (f) { return f.id === pm.environment.get('friendshipId'); });",
+                  "    pm.expect(found).to.not.be.undefined;",
+                  "    pm.expect(found.status).to.eql('INCOMING');",
+                  "    pm.expect(found.otherUser.email).to.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships?type=INCOMING",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "INCOMING"
+                }
+              ]
+            },
+            "description": "Con fanAccessToken: le richieste che il secondo utente ha ricevuto."
+          },
+          "response": []
+        },
+        {
+          "name": "Accetta come richiedente (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 NOT_FRIENDSHIP_ADDRESSEE', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('NOT_FRIENDSHIP_ADDRESSEE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships/{{friendshipId}}/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships",
+                "{{friendshipId}}",
+                "accept"
+              ]
+            },
+            "description": "Errore significativo. Solo il destinatario accetta; accessToken e il richiedente."
+          },
+          "response": []
+        },
+        {
+          "name": "Rifiuta (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 senza corpo', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships/{{friendshipId}}/decline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships",
+                "{{friendshipId}}",
+                "decline"
+              ]
+            },
+            "description": "Con fanAccessToken (il destinatario). Il rifiuto e silenzioso: chi ha chiesto non viene avvisato e continua a vedere la richiesta come inviata."
+          },
+          "response": []
+        },
+        {
+          "name": "Rifiuta di nuovo (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 FRIEND_REQUEST_NOT_PENDING', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql('FRIEND_REQUEST_NOT_PENDING');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships/{{friendshipId}}/decline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships",
+                "{{friendshipId}}",
+                "decline"
+              ]
+            },
+            "description": "Errore significativo. La richiesta non e piu in attesa. Con fanAccessToken."
+          },
+          "response": []
+        },
+        {
+          "name": "Elenco inviate dopo il rifiuto (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200: il rifiuto non si vede, la richiesta e ancora OUTGOING', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.all.keys('content', 'page', 'size', 'totalElements', 'totalPages');",
+                  "    const found = body.content.find(function (f) { return f.id === pm.environment.get('friendshipId'); });",
+                  "    pm.expect(found).to.not.be.undefined;",
+                  "    pm.expect(found.status).to.eql('OUTGOING');",
+                  "    pm.expect(found.otherUser.email).to.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships?type=OUTGOING",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "OUTGOING"
+                }
+              ]
+            },
+            "description": "Rifiuto silenzioso: per chi ha chiesto la richiesta risulta ancora inviata."
+          },
+          "response": []
+        },
+        {
+          "name": "Annulla la richiesta rifiutata (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 senza corpo', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships/{{friendshipId}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships",
+                "{{friendshipId}}",
+                "cancel"
+              ]
+            },
+            "description": "Chi ha chiesto annulla una richiesta che crede in attesa: per lui torna nessuna relazione, il rifiuto resta."
+          },
+          "response": []
+        },
+        {
+          "name": "L'altro utente chiede amicizia (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 sulla stessa riga, ora richiesta da chi aveva rifiutato', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.id).to.eql(pm.environment.get('friendshipId'));",
+                  "    pm.expect(body.status).to.eql('OUTGOING');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships"
+              ]
+            },
+            "description": "Con fanAccessToken. Chi ha chiuso la riga puo chiedere di nuovo: la riga si riapre a parti invertite (il secondo utente e ora il richiedente).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Annulla come destinatario (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 NOT_FRIENDSHIP_REQUESTER', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('NOT_FRIENDSHIP_REQUESTER');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships/{{friendshipId}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships",
+                "{{friendshipId}}",
+                "cancel"
+              ]
+            },
+            "description": "Errore significativo. Solo il richiedente annulla; ora accessToken e il destinatario."
+          },
+          "response": []
+        },
+        {
+          "name": "Accetta (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 FRIENDS con l altro utente', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('FRIENDS');",
+                  "    pm.expect(body.otherUser.id).to.eql(pm.environment.get('friendUserId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships/{{friendshipId}}/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships",
+                "{{friendshipId}}",
+                "accept"
+              ]
+            },
+            "description": "Il destinatario (accessToken) accetta la richiesta."
+          },
+          "response": []
+        },
+        {
+          "name": "Elenco amici (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con l amico appena accettato', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.all.keys('content', 'page', 'size', 'totalElements', 'totalPages');",
+                  "    const found = body.content.find(function (f) { return f.id === pm.environment.get('friendshipId'); });",
+                  "    pm.expect(found).to.not.be.undefined;",
+                  "    pm.expect(found.status).to.eql('FRIENDS');",
+                  "    pm.expect(found.otherUser.email).to.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships?type=FRIENDS",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "FRIENDS"
+                }
+              ]
+            },
+            "description": "Amici del chiamante, dal piu recente."
+          },
+          "response": []
+        },
+        {
+          "name": "Rimuovi (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 senza corpo', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships/{{friendshipId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships",
+                "{{friendshipId}}"
+              ]
+            },
+            "description": "Una delle due parti rimuove l amicizia. Chi rimuove (accessToken) potra chiedere di nuovo, quindi la sequenza si puo ripetere; l altro utente la vede non disponibile."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Chat",
       "description": "Conversazioni e storico dei messaggi, solo la parte REST (card F5).",
       "item": []

@@ -1514,3 +1514,61 @@ Su richiesta dello studente (16 ottobre) la regola del brief "chiunque può scri
 - **Interfaccia `Moderable` implementata dalle quattro entity:** cambierebbe classi già consegnate per risparmiare
   quattro righe in uno `switch`.
 - **Lasciare che un admin moderi i propri contenuti:** la sezione 5.6 vieta di agire su se stessi.
+
+---
+
+## Decisione 63: scelte di implementazione delle amicizie (implementazione)
+
+### Scelta
+
+- **Ordine dei controlli su accetta, rifiuta e annulla (scelta dello studente):** amicizia inesistente o che non
+  riguarda il chiamante = 404; poi il permesso (403 `NOT_FRIENDSHIP_ADDRESSEE` o `NOT_FRIENDSHIP_REQUESTER`); poi lo
+  stato (409 `FRIEND_REQUEST_NOT_PENDING`); per l'accettazione infine il richiedente non più attivo (409
+  `USER_NOT_ACTIVE`). Chi non ha il permesso riceve quindi 403 anche se la richiesta non è più in attesa. Rimuovi:
+  404, poi 403 `NOT_FRIENDS` se lo stato non è `ACCEPTED`.
+- **`relationsFor` tiene conto dello stato dell'altro utente (scelta dello studente, come NoseY):** se l'altro non è
+  verificato e `ACTIVE`, la relazione è `UNAVAILABLE`, tranne se siete già amici (resta `FRIENDS`). Un id che non è
+  un utente è `UNAVAILABLE`; chi chiede, se compare fra gli id, viene ignorato; la mappa ha una voce per ogni altro id.
+  `friendshipId` è valorizzato solo per `OUTGOING`, `INCOMING` e `FRIENDS`, cioè quando serve per accettare,
+  annullare o rimuovere. Una sola query: `User` con `left join` sulle amicizie dell'utente che chiede. `UNAVAILABLE`
+  ha quindi due origini (rimozione subita, altro utente non disponibile) e il frontend le tratta allo stesso modo
+  (niente pulsante "Aggiungi").
+- **Destinatario di una richiesta:** si valuta con `UserAccessService.resolve`, che applica anche la riattivazione
+  pigra delle sospensioni scadute; se non è `ACTIVE` è 404. Lo stesso controllo vale per il richiedente
+  all'accettazione.
+- **`closed_by` come `UUID` nell'entity**, non come relazione verso `User` (come `Moderation.hiddenBy` e
+  `User.suspendedBy`): serve solo a confrontare l'id, senza caricare l'utente.
+- **Stato visto nell'entity (`Friendship.viewFor`):** la tabella della sezione 6.14 sta in un solo metodo, usato da
+  risposte, elenchi e `relationsFor`.
+- **Annullare un rifiuto silenzioso:** la riga resta `DECLINED` e `closed_by` resta, cade solo `request_masked`;
+  `updated_at` si aggiorna.
+- **Elenchi:** ordine fisso `updated_at desc, id desc`; `type` mancante o sconosciuto = 400 `VALIDATION_ERROR` (lo
+  gestisce già il `GlobalExceptionHandler`); i due utenti si caricano con la riga (`EntityGraph`), nessuna query per
+  riga; gli utenti sospesi restano negli elenchi.
+- **Limite `FRIEND_REQUESTS`:** 20 in 24 ore per utente in `application.yml`, consumato per primo, quindi conta anche
+  se la richiesta poi fallisce.
+- **Codici d'errore nuovi:** `CANNOT_FRIEND_SELF` (400), `FRIEND_REQUEST_ALREADY_SENT`,
+  `FRIEND_REQUEST_ALREADY_RECEIVED`, `ALREADY_FRIENDS`, `FRIENDSHIP_UNAVAILABLE`, `FRIEND_REQUEST_NOT_PENDING` (409),
+  `NOT_FRIENDSHIP_ADDRESSEE`, `NOT_FRIENDSHIP_REQUESTER`, `NOT_FRIENDS` (403).
+- **Postman:** la cartella Friends usa `accessToken` e `fanAccessToken` come le due parti, più `userId` di Users;
+  una richiesta di preparazione salva `friendUserId`. La sequenza finisce con l'amicizia rimossa da `accessToken`, che
+  così può chiedere di nuovo: si può rieseguire (entro il limite di richieste).
+
+### Motivazione
+
+- Il permesso è una regola di accesso e si controlla prima dello stato, come nella decisione 62: chi non può agire
+  non impara niente sullo stato della richiesta.
+- Per `relationsFor`, copiare NoseY evita che la ricerca e la chat propongano un'amicizia con chi non può riceverla.
+  L'eccezione per gli amici impedisce che una sospensione cancelli un'amicizia già esistente dalla vista.
+- Il 404 per le amicizie altrui le rende indistinguibili da quelle inesistenti (sezione 6.14).
+- Tenere `viewFor` nell'entity evita di ripetere la tabella degli stati in tre punti.
+
+### Alternative scartate
+
+- **409 prima del 403:** rivelerebbe lo stato della richiesta a chi non ha il permesso.
+- **`relationsFor` solo sulla riga di amicizia:** più semplice, ma ricerca e chat dovrebbero ricontrollare lo stato
+  dell'altro utente a parte.
+- **Stato dell'altro utente in una seconda query:** due query invece di una; il piano chiede una sola query.
+- **`closed_by` come `@ManyToOne` verso `User`:** un proxy in più per un confronto di id.
+- **Rifiutare le richieste incrociate simultanee con un controllo applicativo:** il vincolo `uq_friendships_pair` le
+  rende già un 409 `CONFLICT`, senza codice in più.

@@ -16,8 +16,9 @@ creato e si aggiorna a ogni migrazione che modifica lo schema, nello stesso sott
 | `V5__indie_events` | F3-03 | enum `indie_event_status`; tabella `indie_events` | Applicata |
 | `V6__collab_posts` | F4-01 | tabella `collab_posts` | Applicata |
 | `V7__feed_and_likes` | F4-02 | tabelle `feed_posts`, `post_likes` | Applicata |
+| `V8__friendships` | F4-04 | enum `friendship_status`; tabella `friendships` | Applicata |
 
-Migrazioni ancora da fare (progettazione, sezione 3.6): `V8__friendships` (F4-04), `V9__chat` (F5-02).
+Migrazione ancora da fare (progettazione, sezione 3.6): `V9__chat` (F5-02).
 
 ## Convenzioni
 
@@ -36,6 +37,7 @@ Migrazioni ancora da fare (progettazione, sezione 3.6): `V8__friendships` (F4-04
 | `user_status` | `ACTIVE`, `SUSPENDED` | `UserStatus` |
 | `email_code_purpose` | `EMAIL_VERIFICATION`, `PASSWORD_RESET` | `EmailCodePurpose` |
 | `indie_event_status` | `DRAFT`, `PUBLISHED` | `IndieEventStatus` |
+| `friendship_status` | `PENDING`, `ACCEPTED`, `DECLINED`, `CANCELLED`, `REMOVED` | `FriendshipStatus` |
 
 ## Tabelle
 
@@ -258,6 +260,34 @@ Un like per coppia utente-post: la chiave composta impedisce due like dello stes
 
 Indice: `ix_post_likes_post (post_id)`.
 
+### friendships
+
+Amicizie fra due utenti, con rifiuto silenzioso (decisione 59). Una sola riga per coppia, qualunque dei due abbia
+chiesto: quando una delle parti chiede di nuovo la riga si riapre invece di duplicarsi. Lo stato che vede ciascun
+utente (`NONE`, `OUTGOING`, `INCOMING`, `FRIENDS`, `UNAVAILABLE`) non è una colonna: lo calcola l'applicazione da
+`status`, `closed_by` e `request_masked` (progettazione, sezione 6.14).
+
+| Colonna | Tipo | Vincoli |
+|---|---|---|
+| `id` | uuid | PK `pk_friendships`, default `gen_random_uuid()` |
+| `requester_id` | uuid | NOT NULL, FK `fk_friendships_requester` → `users(id)`; chi ha inviato l'ultima richiesta |
+| `addressee_id` | uuid | NOT NULL, FK `fk_friendships_addressee` → `users(id)` |
+| `status` | friendship_status | NOT NULL |
+| `closed_by` | uuid | NULL, FK `fk_friendships_closed_by` → `users(id)`; chi ha rifiutato o rimosso |
+| `request_masked` | boolean | NOT NULL, default `false`; rifiuto silenzioso: il richiedente continua a vedere la richiesta |
+| `created_at` | timestamptz | NOT NULL, default `now()` |
+| `updated_at` | timestamptz | NOT NULL; valorizzato dall'applicazione a ogni cambiamento di stato, ordina gli elenchi |
+
+Vincoli di controllo:
+
+- `ck_friendships_not_self`: `requester_id <> addressee_id`.
+- `ck_friendships_closed_by`: `closed_by` è valorizzato se e solo se lo stato è `DECLINED` o `REMOVED`.
+- `ck_friendships_masked`: `request_masked` può essere vero solo con lo stato `DECLINED`.
+
+Indici: `uq_friendships_pair` univoco su `(LEAST(requester_id, addressee_id), GREATEST(requester_id,
+addressee_id))`, che impedisce una seconda riga per la coppia anche con i ruoli invertiti; `ix_friendships_requester
+(requester_id)`; `ix_friendships_addressee (addressee_id)`.
+
 ## Relazioni (diagramma ER)
 
 ```mermaid
@@ -277,6 +307,9 @@ erDiagram
     USERS |o--o{ FEED_POSTS : "nasconde (hidden_by)"
     USERS ||--o{ POST_LIKES : "mette like"
     FEED_POSTS ||--o{ POST_LIKES : "riceve like"
+    USERS ||--o{ FRIENDSHIPS : "chiede (requester_id)"
+    USERS ||--o{ FRIENDSHIPS : "riceve (addressee_id)"
+    USERS |o--o{ FRIENDSHIPS : "chiude (closed_by)"
 
     USERS {
         uuid id PK
@@ -398,5 +431,16 @@ erDiagram
         uuid user_id PK, FK
         uuid post_id PK, FK
         timestamptz created_at
+    }
+
+    FRIENDSHIPS {
+        uuid id PK
+        uuid requester_id FK
+        uuid addressee_id FK
+        friendship_status status
+        uuid closed_by FK
+        boolean request_masked
+        timestamptz created_at
+        timestamptz updated_at
     }
 ```

@@ -103,7 +103,7 @@ configurazione di avvio di IntelliJ, su Render dal Blueprint o dalla dashboard).
 La collection e gli environment stanno in `postman/`:
 
 - `resonance.postman_collection.json` (formato v2.1): cartelle Health, Auth, Users, Admin, Events,
-  Collab, Feed e Chat. Per ora contengono richieste Health, Auth (registrazione, verifica, password dimenticata e reset, login, refresh, logout), Users (profilo e ruoli) e Admin (elenco utenti, sospensione, nomina e revoca ADMIN); le altre si
+  Collab, Feed, Friends e Chat. Per ora contengono richieste Health, Auth (registrazione, verifica, password dimenticata e reset, login, refresh, logout), Users (profilo e ruoli), Admin (elenco utenti, sospensione, nomina e revoca ADMIN) e Friends (richiesta, rifiuto silenzioso, annulla, accetta, elenchi, rimozione); le altre si
   riempiono con le card che creano gli endpoint. L'autorizzazione Bearer `{{accessToken}}` è impostata a
   livello di collection.
 - `resonance-local.postman_environment.json` (`baseUrl` = `http://localhost:8080`) e
@@ -115,7 +115,7 @@ cartella Health. Per le richieste di Auth crea nell'environment le variabili `us
 (utente già verificato nel database); per il reset della password servono anche `resetCode` (il codice
 scritto nel log del backend dopo "Forgot password") e `newPassword`: lo script del login salva `accessToken` e le altre richieste lo usano
 come Bearer; il refresh e il logout usano il cookie jar di Postman e inviano a mano `X-Requested-With`.
-Per la cartella Admin servono il login come SUPERADMIN (account creato dal bootstrap), la richiesta Me di Users (salva `userId`) e le variabili `fanAccessToken` e `adminAccessToken`, da copiare da un login come FAN e come ADMIN; l'elenco salva `targetUserId`, usato dalle richieste seguenti. Nei file versionati non c'è nessun segreto: token e credenziali stanno solo nelle variabili locali di Postman. La parte STOMP (chat e notifiche) non è nella collection.
+Per la cartella Admin servono il login come SUPERADMIN (account creato dal bootstrap), la richiesta Me di Users (salva `userId`) e le variabili `fanAccessToken` e `adminAccessToken`, da copiare da un login come FAN e come ADMIN; l'elenco salva `targetUserId`, usato dalle richieste seguenti. La cartella Friends usa `accessToken` e `fanAccessToken` come le due parti (due utenti diversi) più `userId` di Users; si esegue in ordine e finisce con l'amicizia rimossa, così si può rieseguire. Nei file versionati non c'è nessun segreto: token e credenziali stanno solo nelle variabili locali di Postman. La parte STOMP (chat e notifiche) non è nella collection.
 
 ## Deploy
 
