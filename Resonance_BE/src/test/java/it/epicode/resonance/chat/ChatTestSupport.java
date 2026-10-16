@@ -20,9 +20,9 @@ import java.util.UUID;
 
 /**
  * Base dei test della chat: utenti, amicizie e origini degli sblocchi (annunci ed eventi) creati direttamente nel
- * database, perche' candidature e contatti arrivano con F5-03 e F5-04.
+ * database; le candidature di F5-03 passano invece dall'endpoint vero.
  */
-abstract class ChatTestSupport extends IntegrationTest {
+public abstract class ChatTestSupport extends IntegrationTest {
 
     @Autowired
     protected AccessTokenService accessTokens;

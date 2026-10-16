@@ -8,8 +8,13 @@ import it.epicode.resonance.feed.dto.CreateFeedPostRequest;
 import it.epicode.resonance.feed.dto.FeedPostResponse;
 import it.epicode.resonance.feed.dto.LikeStatusResponse;
 import it.epicode.resonance.geo.NearbyQuery;
+import it.epicode.resonance.notification.LiveNotification;
+import it.epicode.resonance.notification.LiveNotificationEvent;
+import it.epicode.resonance.notification.NotificationType;
 import it.epicode.resonance.user.User;
 import it.epicode.resonance.user.UserRepository;
+import it.epicode.resonance.user.dto.AuthorSummary;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Sort;
@@ -36,12 +41,15 @@ public class FeedService {
     private final FeedPostRepository posts;
     private final PostLikeRepository likes;
     private final UserRepository users;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    public FeedService(FeedPostRepository posts, PostLikeRepository likes, UserRepository users, Clock clock) {
+    public FeedService(FeedPostRepository posts, PostLikeRepository likes, UserRepository users,
+                       ApplicationEventPublisher events, Clock clock) {
         this.posts = posts;
         this.likes = likes;
         this.users = users;
+        this.events = events;
         this.clock = clock;
     }
 
@@ -105,13 +113,20 @@ public class FeedService {
     /**
      * Mette like (sezione 3.4): inserisce la riga solo se manca e, solo se l'ha inserita, aumenta il contatore con
      * un UPDATE del database. E' idempotente: un secondo like dello stesso utente non cambia nulla. Un post
-     * nascosto o inesistente e' un 404 (sezione 3.5). La notifica NEW_LIKE arriva in F5-03.
+     * nascosto o inesistente e' un 404 (sezione 3.5). Solo un inserimento effettivo, e non sul proprio post,
+     * notifica NEW_LIKE all'autore dopo il commit (sezioni 6.8 e 7.6).
      */
     @Transactional
     public LikeStatusResponse like(UUID postId, UUID userId) {
-        requireVisible(postId);
+        UUID authorId = findVisible(postId).getAuthor().getId();
         if (likes.insertIfAbsent(userId, postId) == 1) {
             posts.incrementLikes(postId);
+            if (!authorId.equals(userId)) {
+                User actor = users.findById(userId)
+                        .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Utente non trovato"));
+                events.publishEvent(new LiveNotificationEvent(authorId, new LiveNotification(
+                        NotificationType.NEW_LIKE, clock.instant(), AuthorSummary.from(actor), postId, null)));
+            }
         }
         return new LikeStatusResponse(posts.likesCountOf(postId), true);
     }

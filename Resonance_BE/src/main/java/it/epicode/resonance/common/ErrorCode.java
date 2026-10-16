@@ -55,6 +55,8 @@ public enum ErrorCode {
     CANNOT_MESSAGE_SELF(HttpStatus.BAD_REQUEST),
     NOT_CONVERSATION_MEMBER(HttpStatus.FORBIDDEN),
     CHAT_LOCKED(HttpStatus.FORBIDDEN),
+    COLLAB_CLOSED(HttpStatus.CONFLICT),
+    CANNOT_APPLY_OWN_POST(HttpStatus.BAD_REQUEST),
     // Solo WebSocket (sezione 7.2): sulle API il token non valido e' UNAUTHENTICATED.
     TOKEN_INVALID(null);
 

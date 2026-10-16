@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <title>Prova STOMP di Resonance</title>
+  <!--
+    Pagina di prova manuale, fuori dalla build e dal codice di produzione (CLAUDE.md, Postman e WebSocket).
+    Per l'origine ammessa in sviluppo (http://localhost:5173) va servita da quella porta:
+      cd tools/stomp-test && python -m http.server 5173
+    poi aprire http://localhost:5173. Il token si ottiene dal login (Postman, variabile accessToken).
+  -->
+  <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 52rem; margin: 1.5rem auto; padding: 0 1rem; }
+    input, button { font: inherit; padding: .3rem .5rem; }
+    input { width: 100%; box-sizing: border-box; }
+    .row { display: flex; gap: .5rem; margin: .5rem 0; }
+    #log { background: #111; color: #ddd; padding: .75rem; height: 22rem; overflow: auto; white-space: pre-wrap; font: .85rem monospace; }
+    .err { color: #ff8a80; } .msg { color: #80d8ff; } .not { color: #ccff90; }
+  </style>
+</head>
+<body>
+  <h1>Prova STOMP</h1>
+  <label>URL <input id="url" value="ws://localhost:8080/ws"></label>
+  <label>Access token <input id="token" placeholder="incolla l'accessToken del login"></label>
+  <div class="row">
+    <button id="connect">Connetti e iscriviti</button>
+    <button id="disconnect">Disconnetti</button>
+  </div>
+  <label>Id conversazione <input id="conversation" placeholder="conversationId (da POST /api/chats o dalla candidatura)"></label>
+  <div class="row">
+    <input id="body" placeholder="testo del messaggio">
+    <button id="send">Invia</button>
+  </div>
+  <pre id="log"></pre>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let client = null;
+
+    function log(kind, text) {
+      const line = document.createElement('div');
+      line.className = kind;
+      line.textContent = new Date().toLocaleTimeString() + '  ' + text;
+      $('log').appendChild(line);
+      $('log').scrollTop = $('log').scrollHeight;
+    }
+
+    $('connect').onclick = () => {
+      if (client) client.deactivate();
+      client = new StompJs.Client({
+        brokerURL: $('url').value,
+        connectHeaders: { Authorization: 'Bearer ' + $('token').value.trim() },
+        reconnectDelay: 0,
+        onConnect: () => {
+          log('', 'connesso');
+          // Le tre code dell'utente (progettazione, sezione 7.4).
+          client.subscribe('/user/queue/messages', (f) => log('msg', 'messages     ' + f.body));
+          client.subscribe('/user/queue/notifications', (f) => log('not', 'notifications ' + f.body));
+          client.subscribe('/user/queue/errors', (f) => log('err', 'errors       ' + f.body));
+        },
+        onStompError: (f) => log('err', 'ERROR ' + (f.headers.message || '') + ' ' + f.body),
+        onWebSocketClose: () => log('', 'connessione chiusa'),
+      });
+      client.activate();
+    };
+
+    $('disconnect').onclick = () => client && client.deactivate();
+
+    $('send').onclick = () => {
+      if (!client || !client.connected) return log('err', 'non connesso');
+      client.publish({
+        destination: '/app/chats/' + $('conversation').value.trim() + '/send',
+        body: JSON.stringify({ body: $('body').value }),
+      });
+      $('body').value = '';
+    };
+  </script>
+</body>
+</html>

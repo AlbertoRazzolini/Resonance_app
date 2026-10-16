@@ -1727,3 +1727,50 @@ Su richiesta dello studente (16 ottobre) la regola del brief "chiunque può scri
   creazione.
 - **Creare ora una versione minima di `LiveNotificationEvent`:** anticiperebbe lavoro di F5-03.
 - **`UUID.compareTo` per la coppia canonica:** discorde dal confronto di PostgreSQL.
+
+
+## Decisione 67: scelte di implementazione delle notifiche live e delle candidature (implementazione)
+
+### Scelta
+
+- **Messaggio di candidatura da 1 a 1800 caratteri (scelta dello studente, scostamento dalla sezione 6.7):** il
+  testo salvato in chat è `Candidatura per «<titolo>»:` + a capo + messaggio. Il titolo può avere 150 caratteri e
+  `chat_messages.body` ne accetta 2000: con 2000 di messaggio il totale li supererebbe e il database darebbe 500.
+  Con 1800 il totale resta sempre sotto 2000 (150 + circa 22 di prefisso + 1800). Oltre 1800: 400
+  `VALIDATION_ERROR` con il campo `message`.
+- **Autore non attivo = annuncio inesistente (scelta dello studente):** se l'autore dell'annuncio è sospeso o non
+  verificato, la candidatura risponde 404 `NOT_FOUND` "Annuncio non trovato", come per il destinatario di
+  `POST /api/chats` (decisione 66): non si crea nessun messaggio e la sospensione non si rivela.
+- **Ordine dei controlli della candidatura:** annuncio non nascosto (404), autore attivo (404), annuncio aperto (409
+  `COLLAB_CLOSED`), autore diverso dal candidato (400 `CANNOT_APPLY_OWN_POST`) e solo alla fine il limite
+  `COLLAB_APPLICATIONS`: i rifiuti non consumano le 10 candidature al giorno.
+- **Nessun controllo sul ruolo del candidato:** basta essere autenticati, come da sezione 6.7.
+- **Notifiche con `preview` solo per `NEW_MESSAGE`:** `NEW_LIKE` e `COLLAB_APPLICATION` hanno `preview` nullo; il
+  testo della candidatura arriva già come messaggio su `/user/queue/messages`. L'anteprima è tagliata a 100 punti di
+  codice, non a 100 unità UTF-16, così una emoji non viene spezzata.
+- **`createdAt` della notifica dall'orologio dell'applicazione:** per `NEW_MESSAGE` e `COLLAB_APPLICATION` è il
+  `sent_at` del messaggio, per `NEW_LIKE` l'istante del like (`Clock`).
+- **`FeedService.like` carica il post con l'autore** (prima solo `exists`) per conoscere il destinatario; l'utente che
+  mette like si carica solo se l'inserimento è effettivo e l'autore è un altro.
+- **Test del rollback con un listener sincrono:** un bean di prova con `@EventListener` (che gira dentro la
+  transazione) fa fallire `FeedService.like` dopo la pubblicazione dell'evento; il test verifica che nessuna
+  notifica parta entro 2 secondi e che il like non sia stato salvato.
+- **`ChatTestSupport` pubblica:** i test di `collab` e `notification` ne riusano gli helper (utenti, amicizie,
+  annunci inseriti nel database).
+
+### Motivazione
+
+- Il limite a 1800 evita una migrazione solo per le candidature e dà un errore chiaro invece di un 500; 1800
+  caratteri restano più che sufficienti per una presentazione.
+- Trattare l'autore sospeso come un annuncio inesistente è coerente con la chat e non crea messaggi che nessuno può
+  leggere né risolvere (la conversazione avrebbe `canSend` falso).
+- Contare il limite solo a controlli superati evita che i tentativi su annunci chiusi esauriscano le candidature.
+
+### Alternative scartate
+
+- **Migrazione V10 con `body` più lungo:** tocca uno schema già approvato per un caso limite.
+- **Tagliare il titolo nel prefisso:** con messaggio di 2000 non resta spazio e il testo verrebbe tagliato.
+- **Nessun controllo sull'autore sospeso:** la candidatura passerebbe e il messaggio resterebbe in una conversazione
+  bloccata.
+- **`preview` anche per le candidature (titolo dell'annuncio):** non previsto dal design; il frontend ha già
+  `targetId` per aprire l'annuncio.

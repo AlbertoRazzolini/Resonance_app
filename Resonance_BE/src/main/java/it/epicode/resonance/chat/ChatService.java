@@ -17,6 +17,9 @@ import it.epicode.resonance.common.RateLimitService;
 import it.epicode.resonance.friendship.FriendshipRelation;
 import it.epicode.resonance.friendship.FriendshipService;
 import it.epicode.resonance.friendship.FriendshipView;
+import it.epicode.resonance.notification.LiveNotification;
+import it.epicode.resonance.notification.LiveNotificationEvent;
+import it.epicode.resonance.notification.NotificationType;
 import it.epicode.resonance.user.User;
 import it.epicode.resonance.user.UserRepository;
 import it.epicode.resonance.user.UserStatus;
@@ -46,6 +49,7 @@ import java.util.stream.Collectors;
 @Service
 public class ChatService {
 
+    private static final int PREVIEW_LENGTH = 100;
     private static final String TOKEN_MESSAGE = "Token mancante, scaduto o non valido";
 
     private final ChatConversationRepository conversations;
@@ -206,8 +210,11 @@ public class ChatService {
             throw new AppException(ErrorCode.CHAT_LOCKED, "Al momento non puoi inviare messaggi a questo utente");
         }
         ChatMessage message = appendMessage(conversation, user.id(), request.body());
-        events.publishEvent(new ChatMessageEvent(user.id(), conversation.otherThan(user.id()).getId(),
-                ChatMessageResponse.from(message)));
+        User recipient = conversation.otherThan(user.id());
+        events.publishEvent(new ChatMessageEvent(user.id(), recipient.getId(), ChatMessageResponse.from(message)));
+        events.publishEvent(new LiveNotificationEvent(recipient.getId(), new LiveNotification(
+                NotificationType.NEW_MESSAGE, message.getSentAt(), AuthorSummary.from(conversation.otherThan(recipient.getId())),
+                conversation.getId(), preview(message.getBody()))));
     }
 
     /**
@@ -224,6 +231,17 @@ public class ChatService {
     }
 
     // ---- interni ----
+
+    /**
+     * I primi {@value #PREVIEW_LENGTH} caratteri del messaggio (progettazione, sezione 7.4), contati per punti di
+     * codice cosi' una emoji non viene spezzata a meta'.
+     */
+    private static String preview(String body) {
+        if (body.codePointCount(0, body.length()) <= PREVIEW_LENGTH) {
+            return body;
+        }
+        return body.substring(0, body.offsetByCodePoints(0, PREVIEW_LENGTH));
+    }
 
     /**
      * Token ancora valido: scadenza nel futuro e utente ancora attivo nel database (progettazione, sezione 7.7).

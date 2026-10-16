@@ -1,6 +1,8 @@
 package it.epicode.resonance.collab;
 
 import it.epicode.resonance.auth.AuthenticatedUser;
+import it.epicode.resonance.collab.dto.ApplicationResponse;
+import it.epicode.resonance.collab.dto.ApplyRequest;
 import it.epicode.resonance.collab.dto.CollabPostResponse;
 import it.epicode.resonance.collab.dto.CreateCollabPostRequest;
 import it.epicode.resonance.common.PageParams;
@@ -23,7 +25,7 @@ import java.util.UUID;
 
 /**
  * Endpoint degli annunci di collaborazione (progettazione, sezione 6.7). La creazione e' riservata ai MUSICIAN
- * da {@code SecurityConfig}; lista e dettaglio sono pubblici; chiusura e cancellazione spettano al proprietario.
+ * da {@code SecurityConfig}; lista e dettaglio sono pubblici; chiusura e cancellazione spettano al proprietario, la candidatura a qualunque utente autenticato.
  */
 @RestController
 @RequestMapping("/api/collab-posts")
@@ -67,6 +69,16 @@ public class CollabController {
     @PatchMapping("/{id}/close")
     public CollabPostResponse close(@PathVariable UUID id, @AuthenticationPrincipal AuthenticatedUser user) {
         return collabService.close(id, user.id());
+    }
+
+    /**
+     * Candidatura del chiamante all'annuncio: messaggio in chat all'autore e sblocco della conversazione.
+     */
+    @PostMapping("/{id}/applications")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApplicationResponse apply(@PathVariable UUID id, @AuthenticationPrincipal AuthenticatedUser user,
+                                     @Valid @RequestBody ApplyRequest request) {
+        return collabService.apply(id, user.id(), request.message());
     }
 
     /**

@@ -3147,7 +3147,7 @@
     },
     {
       "name": "Collab",
-      "description": "Annunci di collaborazione (card F4-01).",
+      "description": "Annunci di collaborazione (card F4-01) e candidature (card F5-03).",
       "item": [
         {
           "name": "Crea annuncio (201)",
@@ -3447,6 +3447,106 @@
           "response": []
         },
         {
+          "name": "Candidatura all'annuncio (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 con conversazione e messaggio', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.conversationId).to.be.a('string');",
+                  "    pm.expect(body.messageId).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/collab-posts/{{collabPostId}}/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "collab-posts",
+                "{{collabPostId}}",
+                "applications"
+              ]
+            },
+            "description": "Richiede il login come utente diverso dall'autore (fanAccessToken), non serve essere amici. Crea la conversazione con l'autore, lo sblocco e il messaggio 'Candidatura per «titolo»:'. L'autore connesso su STOMP riceve il messaggio e la notifica COLLAB_APPLICATION. Messaggio da 1 a 1800 caratteri.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Suono la batteria da dieci anni, ho una sala prove a Firenze.\"\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Candidatura al proprio annuncio (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 CANNOT_APPLY_OWN_POST', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql('CANNOT_APPLY_OWN_POST');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/collab-posts/{{collabPostId}}/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "collab-posts",
+                "{{collabPostId}}",
+                "applications"
+              ]
+            },
+            "description": "Errore significativo. Usa accessToken dell'autore: non ci si puo' candidare al proprio annuncio.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Suono la batteria da dieci anni, ho una sala prove a Firenze.\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Chiudi l'annuncio di un altro (403)",
           "event": [
             {
@@ -3523,6 +3623,60 @@
               ]
             },
             "description": "Richiede il login come il MUSICIAN che ha creato l'annuncio (accessToken). Idempotente: chiuderlo di nuovo risponde ancora 200. Dopo la chiusura l'annuncio esce dalla lista ma resta nel dettaglio."
+          },
+          "response": []
+        },
+        {
+          "name": "Candidatura a un annuncio chiuso (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 COLLAB_CLOSED', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql('COLLAB_CLOSED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/collab-posts/{{collabPostId}}/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "collab-posts",
+                "{{collabPostId}}",
+                "applications"
+              ]
+            },
+            "description": "Errore significativo. Da eseguire dopo 'Chiudi il proprio annuncio': un annuncio chiuso non accetta candidature.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Suono la batteria da dieci anni, ho una sala prove a Firenze.\"\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },

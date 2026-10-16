@@ -1,13 +1,29 @@
 package it.epicode.resonance.collab;
 
+import it.epicode.resonance.auth.AccessStatus;
+import it.epicode.resonance.auth.UserAccessService;
+import it.epicode.resonance.chat.ChatConversation;
+import it.epicode.resonance.chat.ChatMessage;
+import it.epicode.resonance.chat.ChatMessageEvent;
+import it.epicode.resonance.chat.ChatService;
+import it.epicode.resonance.chat.ChatUnlockSource;
+import it.epicode.resonance.chat.dto.ChatMessageResponse;
+import it.epicode.resonance.collab.dto.ApplicationResponse;
 import it.epicode.resonance.collab.dto.CollabPostResponse;
 import it.epicode.resonance.collab.dto.CreateCollabPostRequest;
 import it.epicode.resonance.common.AppException;
 import it.epicode.resonance.common.ErrorCode;
 import it.epicode.resonance.common.PageParams;
 import it.epicode.resonance.common.PageResponse;
+import it.epicode.resonance.common.RateLimit;
+import it.epicode.resonance.common.RateLimitService;
+import it.epicode.resonance.notification.LiveNotification;
+import it.epicode.resonance.notification.LiveNotificationEvent;
+import it.epicode.resonance.notification.NotificationType;
 import it.epicode.resonance.user.User;
 import it.epicode.resonance.user.UserRepository;
+import it.epicode.resonance.user.dto.AuthorSummary;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -18,18 +34,28 @@ import java.util.UUID;
 
 /**
  * Annunci di collaborazione (progettazione, sezioni 5.7 e 6.7): creazione, lista pubblica, chiusura e
- * cancellazione del proprietario. Le candidature sono in F5-03.
+ * cancellazione del proprietario e candidature.
  */
 @Service
 public class CollabService {
 
     private final CollabPostRepository posts;
     private final UserRepository users;
+    private final UserAccessService userAccess;
+    private final ChatService chat;
+    private final RateLimitService rateLimits;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    public CollabService(CollabPostRepository posts, UserRepository users, Clock clock) {
+    public CollabService(CollabPostRepository posts, UserRepository users, UserAccessService userAccess,
+                         ChatService chat, RateLimitService rateLimits, ApplicationEventPublisher events,
+                         Clock clock) {
         this.posts = posts;
         this.users = users;
+        this.userAccess = userAccess;
+        this.chat = chat;
+        this.rateLimits = rateLimits;
+        this.events = events;
         this.clock = clock;
     }
 
@@ -87,6 +113,42 @@ public class CollabService {
         CollabPost post = findVisible(id);
         requireOwner(post, userId);
         post.getModeration().hide(userId, reason, clock.instant());
+    }
+
+    /**
+     * Candidatura a un annuncio (sezione 6.7), controlli nell'ordine: annuncio non nascosto con autore attivo
+     * (404), aperto (409 {@code COLLAB_CLOSED}), autore diverso dal candidato (400 {@code CANNOT_APPLY_OWN_POST}),
+     * limite {@code COLLAB_APPLICATIONS} per ultimo, cosi' i rifiuti non lo consumano. Poi, nella stessa
+     * transazione: conversazione senza controllo di amicizia, sblocco {@code COLLAB_POST} (una sola riga per
+     * annuncio, anche con piu' candidature) e messaggio con il titolo. Dopo il commit arrivano il messaggio a
+     * entrambi e la notifica {@code COLLAB_APPLICATION} all'autore, non anche NEW_MESSAGE (sezione 7.6).
+     */
+    @Transactional
+    public ApplicationResponse apply(UUID postId, UUID applicantId, String message) {
+        CollabPost post = findVisible(postId);
+        User author = post.getMusician();
+        // Un autore sospeso o non verificato non esiste per gli altri, come il destinatario di POST /api/chats
+        // (decisioni 66 e 67).
+        if (userAccess.resolve(author.getId()).status() != AccessStatus.ACTIVE) {
+            throw new AppException(ErrorCode.NOT_FOUND, "Annuncio non trovato");
+        }
+        if (!post.isOpen()) {
+            throw new AppException(ErrorCode.COLLAB_CLOSED, "L'annuncio e' chiuso");
+        }
+        if (author.getId().equals(applicantId)) {
+            throw new AppException(ErrorCode.CANNOT_APPLY_OWN_POST, "Non puoi candidarti al tuo annuncio");
+        }
+        rateLimits.consume(RateLimit.COLLAB_APPLICATIONS, applicantId.toString());
+
+        ChatConversation conversation = chat.findOrCreateConversation(applicantId, author.getId());
+        chat.unlock(conversation, ChatUnlockSource.COLLAB_POST, postId);
+        ChatMessage saved = chat.appendMessage(conversation, applicantId,
+                "Candidatura per \u00ab" + post.getTitle() + "\u00bb:\n" + message);
+        User applicant = conversation.otherThan(author.getId());
+        events.publishEvent(new ChatMessageEvent(applicantId, author.getId(), ChatMessageResponse.from(saved)));
+        events.publishEvent(new LiveNotificationEvent(author.getId(), new LiveNotification(
+                NotificationType.COLLAB_APPLICATION, saved.getSentAt(), AuthorSummary.from(applicant), postId, null)));
+        return new ApplicationResponse(conversation.getId(), saved.getId());
     }
 
     /**
