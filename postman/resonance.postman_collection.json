@@ -1039,6 +1039,137 @@
           "response": []
         },
         {
+          "name": "Ricerca utenti (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con pagina di risultati senza email', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.content).to.be.an('array');",
+                  "    body.content.forEach(function (r) {",
+                  "        pm.expect(r.friendship.status).to.be.oneOf(['NONE', 'OUTGOING', 'INCOMING', 'FRIENDS', 'UNAVAILABLE']);",
+                  "        pm.expect(r).to.not.have.property('email');",
+                  "        pm.expect(r.id).to.not.eql(pm.environment.get('userId'));",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/search?q=ar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "ar"
+                }
+              ]
+            },
+            "description": "Cerca per sottostringa del nome, senza distinguere le maiuscole. Mai l'utente che cerca, mai email o coordinate. friendshipId c'e' solo per OUTGOING, INCOMING e FRIENDS."
+          },
+          "response": []
+        },
+        {
+          "name": "Ricerca utenti con q troppo corto (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR con fields.q', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(body.fields.q).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/search?q=a",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "a"
+                }
+              ]
+            },
+            "description": "Errore significativo. q deve avere da 2 a 50 caratteri dopo il trim. Anche le richieste non valide contano nel limite di 30 al minuto."
+          },
+          "response": []
+        },
+        {
+          "name": "Ricerca utenti senza token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 UNAUTHENTICATED', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().code).to.eql('UNAUTHENTICATED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/search?q=ar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "ar"
+                }
+              ]
+            },
+            "description": "Errore significativo. La ricerca richiede il login, a differenza del profilo pubblico GET /api/users/{id}."
+          },
+          "response": []
+        },
+        {
           "name": "Attiva MUSICIAN (200)",
           "event": [
             {

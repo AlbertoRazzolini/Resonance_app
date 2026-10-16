@@ -39,6 +39,8 @@ class ApplicationConfigTest {
             assertLimit(binder, "chat-messages", 30, Duration.ofMinutes(1));
             assertLimit(binder, "conversations-created", 20, Duration.ofHours(24));
             assertLimit(binder, "collab-applications", 10, Duration.ofHours(24));
+            assertLimit(binder, "friend-requests", 20, Duration.ofHours(24));
+            assertLimit(binder, "user-search", 30, Duration.ofMinutes(1));
         });
     }
 

@@ -10,7 +10,8 @@ public enum RateLimit {
     CHAT_MESSAGES,
     CONVERSATIONS_CREATED,
     COLLAB_APPLICATIONS,
-    FRIEND_REQUESTS;
+    FRIEND_REQUESTS,
+    USER_SEARCH;
 
     /**
      * Nome della chiave di configurazione sotto app.rate-limits.

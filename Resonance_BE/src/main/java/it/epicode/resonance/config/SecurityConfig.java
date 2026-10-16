@@ -71,9 +71,9 @@ public class SecurityConfig {
                                 "/api/auth/resend-code", "/api/auth/login", "/api/auth/refresh",
                                 "/api/auth/password/forgot", "/api/auth/password/reset").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/auth/refresh").permitAll()
-                        // Profilo pubblico (sezione 6.5). "me" prima, altrimenti {id} renderebbe pubblico
-                        // anche il profilo proprio.
-                        .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated()
+                        // Profilo pubblico (sezione 6.5). "me" e "search" prima, altrimenti {id} li renderebbe
+                        // pubblici (la ricerca utenti richiede il login).
+                        .requestMatchers(HttpMethod.GET, "/api/users/me", "/api/users/search").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/users/{id}").permitAll()
                         // Concerti ufficiali (sezione 6.6): lettura pubblica, creazione solo HOST. La
                         // cancellazione del proprietario richiede il login (anyRequest) e il controllo

@@ -63,6 +63,9 @@ app:
     friend-requests:
       max: 20
       window: 24h
+    user-search:
+      max: 30
+      window: 1m
   # Nominatim (progettazione, sezione 10.1): una richiesta al secondo, User-Agent identificativo.
   geocoding:
     url: https://nominatim.openstreetmap.org

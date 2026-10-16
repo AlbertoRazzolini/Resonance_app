@@ -76,7 +76,7 @@ alla card corrente, senza rileggere l'intero progetto.
 | `user/AdminUtenteController` | `admin.AdminUserController`, `admin.SuperadminController` | A | F2-02 | Endpoint di Resonance (progettazione, sezione 6.10). |
 | `user/CambiaStatoUtenteRequest` | `admin.SuspendUserRequest` | A | F2-02 | `reason`, `suspendedUntil?`, `durationDays?`. |
 | `user/CambiaRuoloRequest` | — | non portato | — | Sostituito da endpoint dedicati di nomina/revoca ADMIN. |
-| `user/AdminUtenteService` (`escapeLike`) | `friendship.UserSearchService` | A | F4-05 | Stesso escape di `%`, `_` e `\` già portato nell'elenco admin; ricerca solo su `displayName`. |
+| `user/AdminUtenteService` (`escapeLike`) | `friendship.UserSearchService` | A | F4-05 | Stesso escape di `%`, `_` e `\` già portato nell'elenco admin, ora in `common.LikePattern` (decisione 64); ricerca solo su `displayName`. |
 
 ## Amicizie (decisione 59)
 

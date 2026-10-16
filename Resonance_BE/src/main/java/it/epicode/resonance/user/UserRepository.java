@@ -1,6 +1,8 @@
 package it.epicode.resonance.user;
 
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
@@ -37,6 +39,23 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from User u where u.id = :id")
     Optional<User> findWithLockById(UUID id);
+
+    /**
+     * Ricerca utenti per nome (progettazione, sezione 6.5): {@code pattern} e' gia' un LIKE con i jolly di
+     * {@code LikePattern.escape}, il backslash e' il carattere di escape. Solo utenti con email verificata e nello
+     * stato indicato, escluso {@code me}; ordine fisso per nome senza maiuscole e poi id. Lo stato e' un parametro
+     * perche' un letterale enum nella JPQL non si converte nel tipo user_status di PostgreSQL.
+     */
+    @Query(value = """
+            select u from User u
+            where u.emailVerified = true and u.status = :status and u.id <> :me
+              and lower(u.displayName) like lower(:pattern) escape '\\'
+            order by lower(u.displayName), u.id""",
+            countQuery = """
+            select count(u) from User u
+            where u.emailVerified = true and u.status = :status and u.id <> :me
+              and lower(u.displayName) like lower(:pattern) escape '\\'""")
+    Page<User> searchByDisplayName(String pattern, UserStatus status, UUID me, Pageable pageable);
 
     /**
      * Quanti utenti hanno il ruolo e lo stato indicati, escluso l'utente indicato: serve al controllo "ultimo

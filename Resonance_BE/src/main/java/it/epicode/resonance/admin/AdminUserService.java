@@ -6,6 +6,7 @@ import it.epicode.resonance.auth.AuthenticatedUser;
 import it.epicode.resonance.auth.RefreshTokenService;
 import it.epicode.resonance.common.AppException;
 import it.epicode.resonance.common.ErrorCode;
+import it.epicode.resonance.common.LikePattern;
 import it.epicode.resonance.common.PageParams;
 import it.epicode.resonance.common.PageResponse;
 import it.epicode.resonance.user.PlatformLevelPolicy;
@@ -69,7 +70,7 @@ public class AdminUserService {
         Specification<User> filters = (root, query, cb) -> {
             List<Predicate> conditions = new ArrayList<>();
             if (search != null && !search.isBlank()) {
-                String pattern = "%" + escapeLike(search.strip().toLowerCase(Locale.ROOT)) + "%";
+                String pattern = "%" + LikePattern.escape(search.strip().toLowerCase(Locale.ROOT)) + "%";
                 conditions.add(cb.or(
                         cb.like(cb.lower(root.get("email")), pattern, '\\'),
                         cb.like(cb.lower(root.get("displayName")), pattern, '\\')));
@@ -89,14 +90,6 @@ public class AdminUserService {
                         Collectors.mapping(r -> r.getId().getRole(), Collectors.toList())));
         return PageResponse.from(page.map(user ->
                 AdminUserResponse.from(user, rolesByUser.getOrDefault(user.getId(), List.of()))));
-    }
-
-    /**
-     * Rende letterali i caratteri speciali del LIKE (\, % e _), cosi' la ricerca non puo' usarli come jolly.
-     * Non e' una difesa dalla SQL injection, che i parametri gia' garantiscono (progettazione, sezione 8.6).
-     */
-    static String escapeLike(String text) {
-        return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
     /**

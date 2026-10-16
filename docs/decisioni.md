@@ -1572,3 +1572,45 @@ Su richiesta dello studente (16 ottobre) la regola del brief "chiunque può scri
 - **`closed_by` come `@ManyToOne` verso `User`:** un proxy in più per un confronto di id.
 - **Rifiutare le richieste incrociate simultanee con un controllo applicativo:** il vincolo `uq_friendships_pair` le
   rende già un 409 `CONFLICT`, senza codice in più.
+
+## Decisione 64: scelte di implementazione della ricerca utenti (implementazione)
+
+### Scelta
+
+- **`escapeLike` diventa `common.LikePattern.escape` (scelta dello studente):** la regola che rende letterali `\`, `%`
+  e `_` sta in una classe condivisa; `AdminUserService` la usa al posto del suo metodo, la ricerca utenti la usa per
+  `q`. Il comportamento dell'elenco admin non cambia.
+- **Limite `USER_SEARCH` consumato prima di validare `q` (scelta dello studente):** 30 al minuto per utente, chiave
+  l'id di chi cerca. Come `FRIEND_REQUESTS`, conta anche una richiesta che poi risulta non valida (400): il 31º
+  tentativo in un minuto è un 429 anche se `q` è sbagliato.
+- **Validazione di `q` nel service:** dopo il trim deve avere 2-50 caratteri, altrimenti 400 `VALIDATION_ERROR` con
+  `fields.q`; `q` assente è un 400 dello stesso codice (parametro obbligatorio). Non usa le annotazioni di Bean
+  Validation perché il trim va fatto prima del conteggio e il limite va consumato prima di tutto.
+- **Query nel repository degli utenti:** `UserRepository.searchByDisplayName` in JPQL con `lower(displayName) like
+  lower(:pattern) escape '\'`, email verificata, stato passato come parametro (`ACTIVE`; un letterale enum non si
+  converte nel tipo di PostgreSQL), esclusi `me`, ordine `lower(displayName), id` scritto nella query (il `Pageable`
+  porta solo pagina e dimensione), con `countQuery` esplicita. L'utente con sospensione scaduta compare solo dopo la
+  riattivazione pigra, come da design.
+- **Stato dell'amicizia:** una sola chiamata a `FriendshipService.relationsFor` per pagina. `UserSearchResult` =
+  `{id, displayName, avatarUrl, city, friendship: {status, friendshipId}}` (`FriendshipSummary`); nessun altro campo,
+  quindi mai email, coordinate o ruoli. Un risultato `UNAVAILABLE` (amicizia rimossa dall'altro) compare comunque
+  nell'elenco, senza `friendshipId`.
+- **Sicurezza:** `GET /api/users/search` è `authenticated()` in `SecurityConfig`, nella stessa regola di `/api/users/me`
+  e prima di quella pubblica di `GET /api/users/{id}`, che resta pubblico.
+
+### Motivazione
+
+- Una sola copia dell'escape evita che la correzione di un buco in una ricerca lasci aperta l'altra.
+- Contare anche le richieste non valide impedisce di aggirare il limite con richieste che costano poco ma restano
+  richieste; il costo (budget consumato da un frontend che cerca con una lettera) si evita con un'attesa prima di
+  cercare.
+- Ordine e paginazione nella query evitano che un `Sort` su un'espressione (`lower(...)`) debba passare dal
+  `Pageable`.
+
+### Alternative scartate
+
+- **Copia di `escapeLike` in `friendship`:** due copie della stessa regola di sicurezza da tenere allineate.
+- **Rendere pubblico `escapeLike` di `AdminUserService`:** `friendship` dipenderebbe dal package `admin`.
+- **Consumare il limite dopo la validazione:** le richieste non valide non sarebbero limitate.
+- **`@Size` su `q` con Bean Validation:** non applica il trim prima del conteggio e valida prima che il limite sia
+  consumato.
