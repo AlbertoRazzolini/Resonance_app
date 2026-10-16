@@ -1774,3 +1774,52 @@ Su richiesta dello studente (16 ottobre) la regola del brief "chiunque può scri
   bloccata.
 - **`preview` anche per le candidature (titolo dell'annuncio):** non previsto dal design; il frontend ha già
   `targetId` per aprire l'annuncio.
+
+## Decisione 68: scalabilità predisposta, non realizzata (progettazione, sezioni 12.8 e 15)
+
+### Scelta
+
+L'applicazione è **predisposta alla scalabilità, ma non scalata**: l'MVP gira su una sola istanza e regge i volumi
+della demo; le scelte di design non chiudono la strada a una crescita, ma nessun componente per il carico elevato
+viene costruito ora.
+
+Già predisposto:
+
+- **API REST stateless** (JWT, nessuna sessione sul server): più istanze dietro un load balancer funzionerebbero.
+- **Database:** indici mirati sulle query frequenti (parziali per i contenuti visibili, `(created_at DESC, id DESC)`
+  per l'ordinamento senza sort in memoria, bounding box su `(latitude, longitude)`, cursore della chat).
+- **Query controllate:** paginazione uniforme (default 20, massimo 100), filtro per raggio e paginazione nel database,
+  ruoli letti con una query per pagina.
+- **Chat:** storico a cursore, perché è la tabella che cresce di più.
+- **Email:** `@Async` dopo il commit, l'invio a Brevo non rallenta le richieste.
+- **Portabilità:** configurazione solo da variabili d'ambiente e immagine Docker unica (sezione 12.8).
+
+Rimandato (fuori dall'MVP, da progettare solo se serve):
+
+- broker STOMP esterno e limiti di frequenza condivisi: sessioni WebSocket, simple broker e rate limit stanno in
+  memoria di una sola istanza;
+- paginazione a cursore sul feed (oggi a offset, con il limite noto dello spostamento dei post);
+- indice `pg_trgm` per la ricerca utenti (oggi `ILIKE` senza indice);
+- coda persistente per le email (le `@Async` in corso si perdono se l'app si riavvia).
+
+Limiti dei servizi esterni, che nessuna scelta di codice rimuove:
+
+- **Render (piano gratuito):** il servizio si sospende dopo l'inattività e la prima richiesta è lenta (con il servizio
+  unico si sospende anche il frontend); il database gratuito ha una scadenza dopo la creazione.
+- **Brevo (piano gratuito):** quota giornaliera di email; oltre la quota l'invio fallisce senza bloccare l'azione
+  dell'utente.
+
+### Motivazione
+
+- Il brief non chiede un carico elevato e il tempo disponibile è fissato: costruire broker esterno, cache o code
+  porterebbe complessità senza essere verificabile sul piano gratuito.
+- Le scelte a basso costo (stateless, indici, paginazione, configurazione da ambiente) sono già state prese e
+  rendono la crescita possibile senza riscrivere il codice.
+- Dichiarare i limiti rende onesta la documentazione: l'MVP non viene presentato come scalabile oltre ciò che è.
+
+### Alternative scartate
+
+- **Broker esterno (RabbitMQ o Redis) subito:** non esiste sul piano gratuito di Render e la demo gira su una sola
+  istanza.
+- **Cache applicativa:** i volumi dell'MVP non la giustificano e introdurrebbe problemi di invalidazione.
+- **Nessuna dichiarazione:** la domanda sulla scalabilità resterebbe senza risposta documentata.
