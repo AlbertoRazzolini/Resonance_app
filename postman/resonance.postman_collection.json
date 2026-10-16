@@ -2708,7 +2708,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 con l'annuncio appena creato, dal piu' recente', function () {",
+                  "pm.test('200 con l\\'annuncio appena creato, dal piu\\' recente', function () {",
                   "    pm.response.to.have.status(200);",
                   "    const body = pm.response.json();",
                   "    pm.expect(body).to.have.all.keys('content', 'page', 'size', 'totalElements', 'totalPages');",
@@ -2789,7 +2789,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 con l'annuncio richiesto', function () {",
+                  "pm.test('200 con l\\'annuncio richiesto', function () {",
                   "    pm.response.to.have.status(200);",
                   "    pm.expect(pm.response.json().id).to.eql(pm.environment.get('collabPostId'));",
                   "});"
@@ -3026,7 +3026,629 @@
     {
       "name": "Feed",
       "description": "Post e like (card F4-02).",
-      "item": []
+      "item": [
+        {
+          "name": "Crea post (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 con autore pubblico, nessun like e coordinate', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.likesCount).to.eql(0);",
+                  "    pm.expect(body.likedByMe).to.eql(false);",
+                  "    pm.expect(body.latitude).to.eql(43.7696);",
+                  "    pm.expect(body.author.email).to.be.undefined;",
+                  "    pm.environment.set('feedPostId', body.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/feed-posts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feed-posts"
+              ]
+            },
+            "description": "Richiede il login (accessToken): qualunque utente puo pubblicare. Immagine e coordinate sono facoltative, ma le coordinate vanno insieme. Lo script salva feedPostId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"Serata fantastica al Teatro Verdi\",\n  \"imageUrl\": \"https://example.com/foto-serata.jpg\",\n  \"latitude\": 43.7696,\n  \"longitude\": 11.2558\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crea post senza login (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 UNAUTHENTICATED', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().code).to.eql('UNAUTHENTICATED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/feed-posts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feed-posts"
+              ]
+            },
+            "description": "Errore significativo. Senza token la creazione e rifiutata.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"Post senza login\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crea post con una sola coordinata (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR con latitude e longitude', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(body.fields).to.have.property('latitude');",
+                  "    pm.expect(body.fields).to.have.property('longitude');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/feed-posts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feed-posts"
+              ]
+            },
+            "description": "Errore significativo. Latitudine e longitudine vanno insieme: l errore e su entrambi i campi.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"Solo la latitudine\",\n  \"latitude\": 43.7696\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Lista feed (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con il post appena creato', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.all.keys('content', 'page', 'size', 'totalElements', 'totalPages');",
+                  "    const ids = body.content.map(function (p) { return p.id; });",
+                  "    pm.expect(ids).to.include(pm.environment.get('feedPostId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/feed-posts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feed-posts"
+              ]
+            },
+            "description": "Pubblica (nessun login). Tutti i post non nascosti, dal piu recente; likedByMe e sempre false senza token. Paginazione con page e size."
+          },
+          "response": []
+        },
+        {
+          "name": "Lista feed con likedByMe (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con likedByMe booleano su ogni post', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.response.json().content.forEach(function (p) {",
+                  "        pm.expect(p.likedByMe).to.be.a('boolean');",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/feed-posts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feed-posts"
+              ]
+            },
+            "description": "Con il login (accessToken) likedByMe dice se il chiamante ha messo like a ciascun post. Usa la richiesta Like prima per vederlo a true."
+          },
+          "response": []
+        },
+        {
+          "name": "Lista feed entro il raggio (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 solo post con coordinate e distanza', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const content = pm.response.json().content;",
+                  "    pm.expect(content.length).to.be.above(0);",
+                  "    content.forEach(function (p) {",
+                  "        pm.expect(p.latitude).to.be.a('number');",
+                  "        pm.expect(p.distanceKm).to.be.within(0, 50);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/feed-posts?lat=43.7696&lng=11.2558&radiusKm=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feed-posts"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "43.7696"
+                },
+                {
+                  "key": "lng",
+                  "value": "11.2558"
+                },
+                {
+                  "key": "radiusKm",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Filtro facoltativo: lat, lng e radiusKm vanno indicati tutti e tre (raggio 0,1-200 km). Restano i post con coordinate nel raggio, dal piu recente, con distanceKm."
+          },
+          "response": []
+        },
+        {
+          "name": "Lista feed con filtro incompleto (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR con lng e radiusKm', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(body.fields).to.have.property('lng');",
+                  "    pm.expect(body.fields).to.have.property('radiusKm');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/feed-posts?lat=43.7696",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feed-posts"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "43.7696"
+                }
+              ]
+            },
+            "description": "Errore significativo. Con solo lat mancano lng e radiusKm: 400 con i campi mancanti."
+          },
+          "response": []
+        },
+        {
+          "name": "Dettaglio post (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con il post richiesto', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().id).to.eql(pm.environment.get('feedPostId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/feed-posts/{{feedPostId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feed-posts",
+                "{{feedPostId}}"
+              ]
+            },
+            "description": "Pubblico (nessun login). Un post nascosto o inesistente e un 404."
+          },
+          "response": []
+        },
+        {
+          "name": "Dettaglio post inesistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 NOT_FOUND', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql('NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/feed-posts/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feed-posts",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            },
+            "description": "Errore significativo. Lo stesso 404 vale per un post nascosto."
+          },
+          "response": []
+        },
+        {
+          "name": "Metti like (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con likesCount 1 e likedByMe true', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.likesCount).to.eql(1);",
+                  "    pm.expect(body.likedByMe).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/feed-posts/{{feedPostId}}/like",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feed-posts",
+                "{{feedPostId}}",
+                "like"
+              ]
+            },
+            "description": "Richiede il login (accessToken). Idempotente: ripetuta, il contatore non cambia."
+          },
+          "response": []
+        },
+        {
+          "name": "Metti like senza login (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 UNAUTHENTICATED', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().code).to.eql('UNAUTHENTICATED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/feed-posts/{{feedPostId}}/like",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feed-posts",
+                "{{feedPostId}}",
+                "like"
+              ]
+            },
+            "description": "Errore significativo. Il like richiede il login."
+          },
+          "response": []
+        },
+        {
+          "name": "Togli like (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con likesCount 0 e likedByMe false', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.likesCount).to.eql(0);",
+                  "    pm.expect(body.likedByMe).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/feed-posts/{{feedPostId}}/like",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feed-posts",
+                "{{feedPostId}}",
+                "like"
+              ]
+            },
+            "description": "Richiede il login (accessToken). Idempotente: il contatore non scende mai sotto zero."
+          },
+          "response": []
+        },
+        {
+          "name": "Togli like senza login (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 UNAUTHENTICATED', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().code).to.eql('UNAUTHENTICATED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/feed-posts/{{feedPostId}}/like",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feed-posts",
+                "{{feedPostId}}",
+                "like"
+              ]
+            },
+            "description": "Errore significativo. L unlike richiede il login."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancella il post di un altro (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 NOT_OWNER', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('NOT_OWNER');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/feed-posts/{{feedPostId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feed-posts",
+                "{{feedPostId}}"
+              ]
+            },
+            "description": "Errore significativo. Usa fanAccessToken (utente diverso dall autore): solo il proprietario cancella; gli admin moderano con gli endpoint dedicati."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancella il proprio post (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 senza corpo', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/feed-posts/{{feedPostId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feed-posts",
+                "{{feedPostId}}"
+              ]
+            },
+            "description": "Richiede il login come autore del post (accessToken). Il body con il motivo e facoltativo (massimo 500 caratteri). Cancellazione logica: dopo, il post sparisce da dettaglio e lista.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Post pubblicato per errore\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
     },
     {
       "name": "Chat",

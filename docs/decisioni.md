@@ -1430,3 +1430,47 @@ Su richiesta dello studente (16 ottobre) la regola del brief "chiunque può scri
 - **204 senza body su `close`:** vale, ma obbliga il client a rileggere l'annuncio.
 - **403 invece di 404 su un annuncio nascosto altrui:** rivelerebbe l'esistenza di un contenuto ritirato.
 - **Indice completo su `(created_at, id)`:** più grande e include annunci chiusi o nascosti che la lista non mostra mai.
+
+## Decisione 61: scelte di implementazione del feed e dei like (implementazione)
+
+### Scelta
+
+- **Filtro per raggio incompleto = 400 `VALIDATION_ERROR`** con in `fields` solo i parametri mancanti (`lat`, `lng`,
+  `radiusKm`); i valori fuori range li rifiuta `NearbyQuery`, come per gli eventi. Il design (sezione 6.8) dice
+  "tutti e tre i parametri o nessuno" senza fissare l'errore.
+- **Con il filtro l'ordine resta `created_at desc, id desc`**, non per distanza (sezione 10.2). `distanceKm` è solo
+  un campo della risposta: valorizzato nella lista filtrata, `null` senza filtro e nel dettaglio.
+- **`@CoordinatesTogether` generalizzato con l'interfaccia `HasCoordinates`** (package `user.dto`): la regola
+  "coordinate insieme o nessuna" vale per `UpdateProfileRequest` e `CreateFeedPostRequest`, con l'errore su
+  `latitude` e `longitude`.
+- **`likes_count` è in sola lettura nell'entity** (`insertable=false`, `updatable=false`, senza setter). Lo cambiano
+  solo gli UPDATE nativi `likes_count + 1` e `- 1` (sezione 3.4); dopo like e unlike il valore si rilegge con una
+  query scalare, perché l'entity in cache sarebbe vecchia.
+- **`PUT` e `DELETE /{id}/like` rispondono 200 con `LikeStatusResponse {likesCount, likedByMe}`**, come nella sezione
+  6.8. Su post nascosto o inesistente rispondono 404; il like dell'autore al proprio post è ammesso.
+- **Come per annunci ed eventi (decisioni 57 e 60):** post nascosto o inesistente = 404 per tutti, post altrui (admin
+  compresi) = 403 `NOT_OWNER` sulla cancellazione, che nasconde il post con motivo facoltativo.
+- **Lista e dettaglio pubblici calcolano `likedByMe` se c'è un utente autenticato.** Un token non valido su questi
+  endpoint si tratta come anonimo (sezione 8.2): `likedByMe = false`, non 401.
+- **Indici della V7:** `ix_feed_posts_created (created_at DESC, id DESC) WHERE hidden_at IS NULL` e
+  `ix_feed_posts_coordinates (latitude, longitude) WHERE latitude IS NOT NULL`, più `ix_feed_posts_author`; il
+  design (sezione 3.2) non elenca indici per `feed_posts`.
+
+### Motivazione
+
+- Nominare i parametri mancanti permette al frontend di evidenziare il campo giusto, come per le altre validazioni.
+- L'ordine per data mantiene il feed uguale con e senza filtro: il raggio restringe i post, non cambia l'ordine.
+- Riusare la regola delle coordinate evita un secondo validatore identico.
+- Tenere il contatore fuori dalle scritture dell'entity impedisce per costruzione l'aggiornamento "leggi, somma,
+  salva" che perde like simultanei.
+- Gli indici parziali coprono solo i post visibili (e quelli con coordinate) e le due query frequenti.
+
+### Alternative scartate
+
+- **Ignorare un filtro incompleto e restituire il feed intero:** nasconderebbe l'errore del client.
+- **Ordinare per distanza con il filtro:** il feed cambierebbe ordine solo quando si indica il raggio; il design lo
+  vuole per data.
+- **Duplicare il validatore delle coordinate nel package `feed`:** stessa regola in due punti da tenere allineati.
+- **`likes_count` modificabile dall'entity con `@Version` o lock:** più codice e contesa sulla riga, per un risultato
+  che l'UPDATE atomico dà già.
+- **Indice completo su `(created_at, id)`:** include i post nascosti, che la lista non mostra mai.

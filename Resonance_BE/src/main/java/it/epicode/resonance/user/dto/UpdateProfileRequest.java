@@ -19,7 +19,7 @@ public record UpdateProfileRequest(
         @Size(max = 100) String city,
         @DecimalMin("-90") @DecimalMax("90") Double latitude,
         @DecimalMin("-180") @DecimalMax("180") Double longitude
-) {
+) implements HasCoordinates {
 
     // Trim qui, prima della validazione: "  " diventa "" e viene trattato come vuoto, non come testo.
     public UpdateProfileRequest {

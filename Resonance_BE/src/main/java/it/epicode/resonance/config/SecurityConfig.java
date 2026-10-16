@@ -93,6 +93,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/collab-posts").hasRole("MUSICIAN")
                         .requestMatchers(HttpMethod.GET, "/api/collab-posts",
                                 "/api/collab-posts/{id}").permitAll()
+                        // Feed (sezione 6.8): lista e dettaglio pubblici (likedByMe solo se autenticato); creazione,
+                        // like e delete richiedono il login (anyRequest) e la proprieta' si controlla nel service.
+                        .requestMatchers(HttpMethod.GET, "/api/feed-posts",
+                                "/api/feed-posts/{id}").permitAll()
                         // /ws: l'autenticazione avviene al CONNECT (sezione 7.2).
                         // /error: altrimenti l'inoltro interno a /error diventa un 401 e il frontend fa logout.
                         .requestMatchers("/ws/**", "/error").permitAll()

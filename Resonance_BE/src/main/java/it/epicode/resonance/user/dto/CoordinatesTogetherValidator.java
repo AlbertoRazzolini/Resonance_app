@@ -6,10 +6,10 @@ import jakarta.validation.ConstraintValidatorContext;
 /**
  * Validatore di {@link CoordinatesTogether}: le due coordinate sono entrambe presenti o entrambe assenti.
  */
-public class CoordinatesTogetherValidator implements ConstraintValidator<CoordinatesTogether, UpdateProfileRequest> {
+public class CoordinatesTogetherValidator implements ConstraintValidator<CoordinatesTogether, HasCoordinates> {
 
     @Override
-    public boolean isValid(UpdateProfileRequest request, ConstraintValidatorContext context) {
+    public boolean isValid(HasCoordinates request, ConstraintValidatorContext context) {
         if (request == null || (request.latitude() == null) == (request.longitude() == null)) {
             return true;
         }

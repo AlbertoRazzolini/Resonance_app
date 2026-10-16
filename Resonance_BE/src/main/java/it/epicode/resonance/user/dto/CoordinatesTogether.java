@@ -10,8 +10,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Latitudine e longitudine si inviano insieme o non si inviano affatto (progettazione, sezione 6.5): una
- * sola coordinata non ha senso. L'errore e' riportato su entrambi i campi.
+ * Latitudine e longitudine si inviano insieme o non si inviano affatto (progettazione, sezioni 6.5 e 6.8): una
+ * sola coordinata non ha senso. L'errore e' riportato su entrambi i campi. Vale per ogni {@link HasCoordinates}.
  */
 @Documented
 @Target(ElementType.TYPE)

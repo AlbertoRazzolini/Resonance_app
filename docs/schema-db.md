@@ -15,8 +15,9 @@ creato e si aggiorna a ogni migrazione che modifica lo schema, nello stesso sott
 | `V4__official_concerts` | F3-02 | tabella `official_concerts` | Applicata |
 | `V5__indie_events` | F3-03 | enum `indie_event_status`; tabella `indie_events` | Applicata |
 | `V6__collab_posts` | F4-01 | tabella `collab_posts` | Applicata |
+| `V7__feed_and_likes` | F4-02 | tabelle `feed_posts`, `post_likes` | Applicata |
 
-Migrazioni ancora da fare (progettazione, sezione 3.6): `V7__feed_and_likes` (F4-02), `V8__friendships` (F4-04), `V9__chat` (F5-02).
+Migrazioni ancora da fare (progettazione, sezione 3.6): `V8__friendships` (F4-04), `V9__chat` (F5-02).
 
 ## Convenzioni
 
@@ -213,6 +214,50 @@ Vincoli di controllo:
 Indici: `ix_collab_posts_musician (musician_id)` e `ix_collab_posts_open_created (created_at DESC, id DESC)`
 parziale su `is_open AND hidden_at IS NULL`, per la lista pubblica.
 
+### feed_posts
+
+Post del feed, scritti da qualunque utente autenticato. Le coordinate sono facoltative ma vanno insieme; la
+cancellazione è logica.
+
+| Colonna | Tipo | Vincoli |
+|---|---|---|
+| `id` | uuid | PK `pk_feed_posts`, default `gen_random_uuid()` |
+| `author_id` | uuid | NOT NULL, FK `fk_feed_posts_author` → `users(id)` |
+| `body` | varchar(2000) | NOT NULL |
+| `image_url` | varchar(2048) | NULL; solo http/https, validato dall'applicazione |
+| `latitude` | double precision | NULL; gradi |
+| `longitude` | double precision | NULL; gradi |
+| `likes_count` | integer | NOT NULL, default `0`; denormalizzato, lo aggiorna solo un UPDATE atomico del database |
+| `created_at` | timestamptz | NOT NULL, default `now()` |
+| `hidden_at` | timestamptz | NULL; valorizzata = post nascosto (moderazione o cancellazione del proprietario) |
+| `hidden_by` | uuid | NULL, FK `fk_feed_posts_hidden_by` → `users(id)` |
+| `hidden_reason` | varchar(500) | NULL |
+
+Vincoli di controllo:
+
+- `ck_feed_posts_coordinates`: `latitude` e `longitude` entrambe nulle o entrambe valorizzate, latitudine fra -90 e 90,
+  longitudine fra -180 e 180.
+- `ck_feed_posts_likes`: `likes_count >= 0` (rete di sicurezza contro i decrementi di troppo).
+- `ck_feed_posts_hidden`: stessa regola di `official_concerts` (`hidden_at` e `hidden_by` insieme, motivo solo se
+  nascosto).
+
+Indici: `ix_feed_posts_author (author_id)`; `ix_feed_posts_created (created_at DESC, id DESC)` parziale su
+`hidden_at IS NULL`, per la lista pubblica; `ix_feed_posts_coordinates (latitude, longitude)` parziale su
+`latitude IS NOT NULL`, prefiltro a bounding box del filtro per raggio.
+
+### post_likes
+
+Un like per coppia utente-post: la chiave composta impedisce due like dello stesso utente. Like e unlike cambiano
+`feed_posts.likes_count` nella stessa transazione, solo se hanno inserito o cancellato davvero una riga.
+
+| Colonna | Tipo | Vincoli |
+|---|---|---|
+| `user_id` | uuid | NOT NULL, PK `pk_post_likes` (con `post_id`), FK `fk_post_likes_user` → `users(id)` |
+| `post_id` | uuid | NOT NULL, PK `pk_post_likes` (con `user_id`), FK `fk_post_likes_post` → `feed_posts(id)` |
+| `created_at` | timestamptz | NOT NULL, default `now()` |
+
+Indice: `ix_post_likes_post (post_id)`.
+
 ## Relazioni (diagramma ER)
 
 ```mermaid
@@ -228,6 +273,10 @@ erDiagram
     USERS |o--o{ INDIE_EVENTS : "nasconde (hidden_by)"
     USERS ||--o{ COLLAB_POSTS : "pubblica (MUSICIAN)"
     USERS |o--o{ COLLAB_POSTS : "nasconde (hidden_by)"
+    USERS ||--o{ FEED_POSTS : "scrive"
+    USERS |o--o{ FEED_POSTS : "nasconde (hidden_by)"
+    USERS ||--o{ POST_LIKES : "mette like"
+    FEED_POSTS ||--o{ POST_LIKES : "riceve like"
 
     USERS {
         uuid id PK
@@ -329,5 +378,25 @@ erDiagram
         timestamptz hidden_at
         uuid hidden_by FK
         varchar hidden_reason
+    }
+
+    FEED_POSTS {
+        uuid id PK
+        uuid author_id FK
+        varchar body
+        varchar image_url
+        double latitude
+        double longitude
+        int likes_count
+        timestamptz created_at
+        timestamptz hidden_at
+        uuid hidden_by FK
+        varchar hidden_reason
+    }
+
+    POST_LIKES {
+        uuid user_id PK, FK
+        uuid post_id PK, FK
+        timestamptz created_at
     }
 ```
