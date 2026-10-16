@@ -1398,3 +1398,35 @@ Su richiesta dello studente (16 ottobre) la regola del brief "chiunque può scri
 - Circa +8,5 h di lavoro (calendario nella progettazione, sezione 14): il giorno di anticipo serve tutto.
 - `chat_unlocks.source_id` non ha una FK vera (punta a tre tabelle): l'integrità è garantita dal service, che
   crea lo sblocco solo dopo aver letto l'origine.
+
+## Decisione 60: scelte di implementazione degli annunci collab (implementazione)
+
+### Scelta
+
+- **`PATCH /{id}/close` risponde 200 con l'annuncio aggiornato** (`CollabPostResponse`, `isOpen: false`), non con
+  un body vuoto: il design fissa solo "idempotente → 200" e il frontend può aggiornare la scheda senza una seconda
+  chiamata. Chiuderlo di nuovo dà lo stesso 200.
+- **Stesse regole di accesso degli indie event (decisione 57).** Annuncio nascosto o inesistente = 404 per tutti,
+  anche su `close` e `DELETE`; annuncio altrui, admin compresi, = 403 `NOT_OWNER`. Gli admin moderano con gli
+  endpoint dedicati (F4-03). Un annuncio chiuso si può comunque cancellare.
+- **`CollabPostResponse`** = `{id, musician: AuthorSummary, title, description, roleNeeded, genreTags, location,
+  isOpen, createdAt}`: il design (sezione 6.7) non la definisce; ricalca `IndieEventResponse`, senza l'email
+  dell'autore.
+- **Generi e testi normalizzati con `EventInputNormalizer`** (package `event`, decisione 57), così annunci ed eventi
+  seguono le stesse regole sui generi; `location` è testo libero e non viene geocodificato.
+- **Indice parziale `ix_collab_posts_open_created (created_at DESC, id DESC) WHERE is_open AND hidden_at IS NULL`**
+  nella V6, per la lista pubblica; il design (sezione 3.2) non elenca indici per `collab_posts`. Con un solo
+  indice parziale la lista usa l'ordinamento voluto (`created_at desc, id desc`) senza ordinare in memoria.
+
+### Motivazione
+
+- Restituire l'annuncio evita una GET subito dopo la chiusura e non cambia il contratto del design (200).
+- Un'unica regola per 404/403 su tutti i contenuti del proprietario rende il comportamento prevedibile e testabile
+  allo stesso modo.
+- L'indice parziale ha dimensione minima (solo gli annunci visibili) e copre la sola query frequente.
+
+### Alternative scartate
+
+- **204 senza body su `close`:** vale, ma obbliga il client a rileggere l'annuncio.
+- **403 invece di 404 su un annuncio nascosto altrui:** rivelerebbe l'esistenza di un contenuto ritirato.
+- **Indice completo su `(created_at, id)`:** più grande e include annunci chiusi o nascosti che la lista non mostra mai.

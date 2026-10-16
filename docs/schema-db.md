@@ -14,9 +14,9 @@ creato e si aggiorna a ogni migrazione che modifica lo schema, nello stesso sott
 | `V3__email_codes` | F1-03 | enum `email_code_purpose`; tabella `email_codes` | Applicata |
 | `V4__official_concerts` | F3-02 | tabella `official_concerts` | Applicata |
 | `V5__indie_events` | F3-03 | enum `indie_event_status`; tabella `indie_events` | Applicata |
+| `V6__collab_posts` | F4-01 | tabella `collab_posts` | Applicata |
 
-Migrazioni ancora da fare (progettazione, sezione 3.6): `V6__collab_posts` (F4-01), `V7__feed_and_likes` (F4-02),
-`V8__chat` (F5-02).
+Migrazioni ancora da fare (progettazione, sezione 3.6): `V7__feed_and_likes` (F4-02), `V8__friendships` (F4-04), `V9__chat` (F5-02).
 
 ## Convenzioni
 
@@ -185,6 +185,34 @@ Vincoli di controllo:
 Indici: `ix_indie_events_musician (musician_id)`, `ix_indie_events_coordinates (latitude, longitude)` per il
 prefiltro a bounding box della ricerca nelle vicinanze e `ix_indie_events_event_date (event_date)`.
 
+### collab_posts
+
+Annunci con cui un MUSICIAN cerca un collaboratore. Un annuncio chiuso (`is_open = false`) resta consultabile ma non
+compare nella lista pubblica; la cancellazione è logica.
+
+| Colonna | Tipo | Vincoli |
+|---|---|---|
+| `id` | uuid | PK `pk_collab_posts`, default `gen_random_uuid()` |
+| `musician_id` | uuid | NOT NULL, FK `fk_collab_posts_musician` → `users(id)` |
+| `title` | varchar(150) | NOT NULL |
+| `description` | varchar(5000) | NOT NULL |
+| `role_needed` | varchar(100) | NOT NULL; ruolo cercato, testo libero |
+| `genre_tags` | text[] | NOT NULL, default `'{}'`; minuscoli e senza duplicati (li normalizza l'applicazione) |
+| `location` | varchar(150) | NULL; testo libero, non geocodificato |
+| `is_open` | boolean | NOT NULL, default `true`; `false` dopo la chiusura da parte dell'autore |
+| `created_at` | timestamptz | NOT NULL, default `now()` |
+| `hidden_at` | timestamptz | NULL; valorizzata = annuncio nascosto (moderazione o cancellazione del proprietario) |
+| `hidden_by` | uuid | NULL, FK `fk_collab_posts_hidden_by` → `users(id)` |
+| `hidden_reason` | varchar(500) | NULL |
+
+Vincoli di controllo:
+
+- `ck_collab_posts_hidden`: stessa regola di `official_concerts` (`hidden_at` e `hidden_by` insieme, motivo solo se
+  nascosto).
+
+Indici: `ix_collab_posts_musician (musician_id)` e `ix_collab_posts_open_created (created_at DESC, id DESC)`
+parziale su `is_open AND hidden_at IS NULL`, per la lista pubblica.
+
 ## Relazioni (diagramma ER)
 
 ```mermaid
@@ -198,6 +226,8 @@ erDiagram
     USERS |o--o{ OFFICIAL_CONCERTS : "nasconde (hidden_by)"
     USERS ||--o{ INDIE_EVENTS : "crea (MUSICIAN)"
     USERS |o--o{ INDIE_EVENTS : "nasconde (hidden_by)"
+    USERS ||--o{ COLLAB_POSTS : "pubblica (MUSICIAN)"
+    USERS |o--o{ COLLAB_POSTS : "nasconde (hidden_by)"
 
     USERS {
         uuid id PK
@@ -260,6 +290,41 @@ erDiagram
         text_array genre_tags
         varchar cover_image_url
         varchar external_ticket_url
+        timestamptz created_at
+        timestamptz hidden_at
+        uuid hidden_by FK
+        varchar hidden_reason
+    }
+
+    INDIE_EVENTS {
+        uuid id PK
+        uuid musician_id FK
+        varchar title
+        varchar description
+        varchar venue_name
+        varchar address
+        double latitude
+        double longitude
+        timestamptz event_date
+        text_array genre_tags
+        varchar cover_image_url
+        boolean is_free
+        indie_event_status status
+        timestamptz created_at
+        timestamptz hidden_at
+        uuid hidden_by FK
+        varchar hidden_reason
+    }
+
+    COLLAB_POSTS {
+        uuid id PK
+        uuid musician_id FK
+        varchar title
+        varchar description
+        varchar role_needed
+        text_array genre_tags
+        varchar location
+        boolean is_open
         timestamptz created_at
         timestamptz hidden_at
         uuid hidden_by FK

@@ -2557,7 +2557,471 @@
     {
       "name": "Collab",
       "description": "Annunci di collaborazione (card F4-01).",
-      "item": []
+      "item": [
+        {
+          "name": "Crea annuncio (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 con generi normalizzati, aperto e autore pubblico', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.genreTags).to.eql(['indie', 'rock']);",
+                  "    pm.expect(body.isOpen).to.eql(true);",
+                  "    pm.expect(body.musician.email).to.be.undefined;",
+                  "    pm.environment.set('collabPostId', body.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/collab-posts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "collab-posts"
+              ]
+            },
+            "description": "Richiede il login come utente con ruolo MUSICIAN (accessToken). Generi in minuscolo e senza duplicati. Lo script salva collabPostId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Cerco batterista\",\n  \"description\": \"Band indie in zona Firenze cerca batterista per concerti e sala prove\",\n  \"roleNeeded\": \"Batterista\",\n  \"genreTags\": [\n    \"Indie\",\n    \"rock\",\n    \"indie\"\n  ],\n  \"location\": \"Firenze\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crea annuncio come FAN (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 ACCESS_DENIED', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('ACCESS_DENIED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/collab-posts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "collab-posts"
+              ]
+            },
+            "description": "Errore significativo. Usa fanAccessToken (utente senza ruolo MUSICIAN): solo i MUSICIAN creano annunci.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Cerco batterista\",\n  \"description\": \"Band indie in zona Firenze cerca batterista per concerti e sala prove\",\n  \"roleNeeded\": \"Batterista\",\n  \"genreTags\": [\n    \"Indie\",\n    \"rock\",\n    \"indie\"\n  ],\n  \"location\": \"Firenze\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crea annuncio senza ruolo cercato (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR con il campo roleNeeded', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(body.fields).to.have.property('roleNeeded');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/collab-posts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "collab-posts"
+              ]
+            },
+            "description": "Errore significativo. roleNeeded e' obbligatorio.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Cerco batterista\",\n  \"description\": \"Band indie\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Lista annunci aperti (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con l'annuncio appena creato, dal piu' recente', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.all.keys('content', 'page', 'size', 'totalElements', 'totalPages');",
+                  "    const ids = body.content.map(function (p) { return p.id; });",
+                  "    pm.expect(ids).to.include(pm.environment.get('collabPostId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/collab-posts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "collab-posts"
+              ]
+            },
+            "description": "Pubblica (nessun login). Solo annunci aperti e non nascosti, dal piu' recente. Paginazione con page e size."
+          },
+          "response": []
+        },
+        {
+          "name": "Lista con size fuori range (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql('VALIDATION_ERROR');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/collab-posts?size=1000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "collab-posts"
+              ],
+              "query": [
+                {
+                  "key": "size",
+                  "value": "1000"
+                }
+              ]
+            },
+            "description": "Errore significativo. size massimo 100."
+          },
+          "response": []
+        },
+        {
+          "name": "Dettaglio annuncio (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con l'annuncio richiesto', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().id).to.eql(pm.environment.get('collabPostId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/collab-posts/{{collabPostId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "collab-posts",
+                "{{collabPostId}}"
+              ]
+            },
+            "description": "Pubblico. Vale anche per un annuncio chiuso; un annuncio nascosto e' un 404."
+          },
+          "response": []
+        },
+        {
+          "name": "Dettaglio annuncio inesistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 NOT_FOUND', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql('NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/collab-posts/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "collab-posts",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            },
+            "description": "Errore significativo. Un id sconosciuto (o di un annuncio nascosto) risponde 404."
+          },
+          "response": []
+        },
+        {
+          "name": "Chiudi l'annuncio di un altro (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 NOT_OWNER', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('NOT_OWNER');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/collab-posts/{{collabPostId}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "collab-posts",
+                "{{collabPostId}}",
+                "close"
+              ]
+            },
+            "description": "Errore significativo. Usa fanAccessToken: solo chi ha creato l'annuncio puo' chiuderlo."
+          },
+          "response": []
+        },
+        {
+          "name": "Chiudi il proprio annuncio (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con isOpen false', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().isOpen).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/collab-posts/{{collabPostId}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "collab-posts",
+                "{{collabPostId}}",
+                "close"
+              ]
+            },
+            "description": "Richiede il login come il MUSICIAN che ha creato l'annuncio (accessToken). Idempotente: chiuderlo di nuovo risponde ancora 200. Dopo la chiusura l'annuncio esce dalla lista ma resta nel dettaglio."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancella l'annuncio di un altro (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 NOT_OWNER', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('NOT_OWNER');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/collab-posts/{{collabPostId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "collab-posts",
+                "{{collabPostId}}"
+              ]
+            },
+            "description": "Errore significativo. Usa fanAccessToken: gli admin moderano con gli endpoint dedicati."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancella il proprio annuncio (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 senza corpo', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/collab-posts/{{collabPostId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "collab-posts",
+                "{{collabPostId}}"
+              ]
+            },
+            "description": "Richiede il login come il MUSICIAN che ha creato l'annuncio (accessToken). Il body con il motivo e' facoltativo (massimo 500 caratteri). Cancellazione logica: dopo, l'annuncio sparisce da dettaglio e lista.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Collaboratore trovato\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
     },
     {
       "name": "Feed",

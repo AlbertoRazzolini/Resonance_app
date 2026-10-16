@@ -88,6 +88,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/indie-events/mine").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/indie-events/nearby",
                                 "/api/indie-events/{id}").permitAll()
+                        // Annunci collab (sezione 6.7): creazione solo MUSICIAN, lista e dettaglio pubblici;
+                        // close e delete richiedono il login (anyRequest) e la proprieta' si controlla nel service.
+                        .requestMatchers(HttpMethod.POST, "/api/collab-posts").hasRole("MUSICIAN")
+                        .requestMatchers(HttpMethod.GET, "/api/collab-posts",
+                                "/api/collab-posts/{id}").permitAll()
                         // /ws: l'autenticazione avviene al CONNECT (sezione 7.2).
                         // /error: altrimenti l'inoltro interno a /error diventa un 401 e il frontend fa logout.
                         .requestMatchers("/ws/**", "/error").permitAll()
