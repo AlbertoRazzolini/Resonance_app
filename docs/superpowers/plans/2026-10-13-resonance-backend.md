@@ -26,7 +26,10 @@ quel documento. Il piano è la fonte di verità; Trello (board `Sviluppo_Resonan
   documentazione in italiano; commenti sulle scelte non ovvie con "progettazione, sezione N"; una riga
   di Javadoc su ogni classe e metodo non banale, e una riga per classe di test (decisione 42).
 - Chiavi primarie ed esterne `uuid`, `GenerationType.UUID`; `ddl-auto: validate`, mai `update`.
-- Migrazioni Flyway `V1`…`V8` come §3.6; mai modificare una migrazione già applicata.
+- Migrazioni Flyway `V1`…`V9` come §3.6 (`V8` amicizie, `V9` chat: decisione 59); mai modificare una
+  migrazione già applicata.
+- Chat solo fra amici o con uno sblocco aperto (decisione 59, §6.9): la chat libera del brief è
+  sostituita.
 - Ruoli e stato sempre dal database, mai dai claim del JWT (§5.2).
 - Access token 15 min (`ACCESS_TOKEN_TTL`), refresh 10 giorni (`REFRESH_TOKEN_TTL`), finestra
   di tolleranza 10 s (`app.auth.refresh-grace`).
@@ -89,12 +92,13 @@ Resonance_app/
         ├── event/       OfficialConcert, IndieEvent, IndieEventStatus, repository, service, controller, dto/
         ├── collab/      CollabPost, CollabPostRepository, CollabService, CollabController, dto/
         ├── feed/        FeedPost, PostLike, PostLikeId, repository, FeedService, FeedController, dto/
-        ├── chat/        ChatConversation, ChatMessage, repository, ChatService, ChatController, ChatWebSocketController, ChatMessageEvent, ChatMessageListener, dto/
+        ├── friendship/  Friendship, FriendshipStatus, FriendshipView, FriendshipRelation, FriendshipRepository, FriendshipService, FriendshipController, UserSearchService, UserSearchController, dto/
+        ├── chat/        ChatConversation, ChatMessage, ChatUnlock, ChatUnlockId, ChatUnlockSource, repository, ChatService, ChatController, ChatWebSocketController, ChatMessageEvent, ChatMessageListener, dto/
         ├── notification/ LiveNotification, NotificationType, LiveNotificationEvent, LiveNotificationListener
         ├── websocket/   WebSocketSessionRegistry, UserSuspendedSessionCloser
         ├── mail/        EmailService, HtmlEmailService, LogEmailService, BrevoEmailService, EmailEventListener, eventi
         └── web/         HealthController, SpaResourceConfig
-    └── src/main/resources/ application.yml, application-{dev,prod,test}.yml, db/migration/V1..V8, templates/mail/*.html
+    └── src/main/resources/ application.yml, application-{dev,prod,test}.yml, db/migration/V1..V9, templates/mail/*.html
     └── src/test/java/it/epicode/resonance/ support/ (IntegrationTest, MutableClock, TestClockConfig, StubGeocodingConfig) + test per package
 ```
 
@@ -126,7 +130,8 @@ dominio X").
 | `NearbyQuery` | `record(double lat, double lng, double radiusKm)`; `minLat()`, `maxLat()`, `minLng()`, `maxLng()` | F3-01 |
 | `Moderation` | `@Embeddable` (`hiddenAt`, `hiddenBy`, `hiddenReason`); `boolean isHidden()`; `void hide(UUID by, String reason, Instant at)`; `void restore()`; `boolean hiddenByAuthor(UUID authorId)`. La cancellazione del proprietario la fa il service di ogni dominio (`delete(UUID id, String reason, UUID userId)`) con `hide` | F3-02 |
 | `ModerationService` | `void hide(ModeratedContentType, UUID id, String reason, AuthenticatedUser admin)`; `void restore(ModeratedContentType, UUID id, AuthenticatedUser admin)`; `PageResponse<HiddenContentResponse> listHidden(ModeratedContentType, PageParams)` | F4-03 |
-| `ChatService` | `ConversationResponse findOrCreate(UUID me, UUID recipientId)`; `ChatMessage appendMessage(ChatConversation c, UUID senderId, String body)`; `void send(UUID conversationId, SendMessageRequest req, AuthenticatedUser user)` | F5-02 |
+| `FriendshipService` | `boolean areFriends(UUID a, UUID b)`; `Map<UUID, FriendshipRelation> relationsFor(UUID me, Collection<UUID> otherIds)`; record `FriendshipRelation(FriendshipView status, UUID friendshipId)`; enum `FriendshipView { NONE, OUTGOING, INCOMING, FRIENDS, UNAVAILABLE }` | F4-04 |
+| `ChatService` | `ConversationResponse findOrCreate(UUID me, UUID recipientId)` (conversazione nuova solo fra amici); `ChatConversation findOrCreateConversation(UUID a, UUID b)` (interno: senza amicizia né `CONVERSATIONS_CREATED`, per candidature e contatti); `void unlock(ChatConversation c, ChatUnlockSource source, UUID sourceId)`; `boolean canSend(ChatConversation c)`; `ChatMessage appendMessage(ChatConversation c, UUID senderId, String body)`; `void send(UUID conversationId, SendMessageRequest req, AuthenticatedUser user)` | F5-02 |
 | `LiveNotificationEvent` | `record(UUID recipientId, LiveNotification notification)`; `LiveNotification(NotificationType type, Instant createdAt, AuthorSummary actor, UUID targetId, String preview)` | F5-03 |
 | `AuthorSummary` | `record(UUID id, String displayName, String avatarUrl)` in `user.dto` | F2-01 |
 
@@ -324,7 +329,7 @@ dominio X").
 
 ---
 
-# F4 — Collaborazioni, feed e moderazione (17 ottobre)
+# F4 — Collaborazioni, feed, moderazione e amicizie (16 pomeriggio – 17 ottobre)
 
 ### Card F4-01 · Annunci collab — stima 2 h
 
@@ -359,8 +364,34 @@ dominio X").
 - [ ] **2. Elenco dei nascosti (40 min).** `GET /api/admin/moderation/{type}/hidden` paginato per `hidden_at desc`, con `deletedByOwner`. Test: include nascosti da admin e cancellati dal proprietario con il flag corretto; FAN → 403.
 - [ ] **3. Postman (30 min).** Admin/Moderation: hide (204; 400 senza motivo; 403 come FAN), restore (204; 409 cancellato dal proprietario), elenco (200; 403).
 
-**Criterio:** fase F4 chiusa; promemoria merge e controlli Render.
 **Commit proposto:** `feat(moderation): add admin hide and restore for moderated content`
+
+### Card F4-04 · Amicizie — stima 4 h
+
+**Riferimenti:** §3.2 (friendships), §6.14, §8.8, decisione 59; riuso: `AmiciziaService`, `Amicizia`, `StatoAmiciziaVista`, `AmiciziaRepository`, casi di `AmiciziaServiceTest`.
+**Sicurezza: sì**
+**File:** `db/migration/V8__friendships.sql`; `friendship/Friendship`, `FriendshipStatus`, `FriendshipView`, `FriendshipRelation`, `FriendshipRepository`, `FriendshipService`, `FriendshipController`, `dto/FriendRequest`, `FriendshipResponse`, `FriendshipListType`, `package-info` (anche di `dto`); `common/ErrorCode`, `RateLimit`; `application.yml` (`FRIEND_REQUESTS`); test `FriendshipIntegrationTest`; `schema-db.md`; Postman Friends.
+
+- [ ] **1. V8 ed entity (40 min).** V8 come §3.2 (enum `friendship_status`, vincoli `ck_friendships_*`, indice univoco `uq_friendships_pair` su `LEAST`/`GREATEST`, indici). Entity `Friendship` (costruttore con richiedente, destinatario, stato, `updatedAt`), repository con `findForUpdateByPair(a, b)` e `findForUpdateById(id)` (`@Lock(PESSIMISTIC_WRITE)`). Test: contesto avviato con `ddl-auto: validate`; inserimento diretto della coppia invertita → violazione di `uq_friendships_pair`.
+- [ ] **2. Richiesta e stato visto (75 min).** `POST /api/friendships {userId}` con l'ordine di §6.14 (limite → se stessi → destinatario → riga sotto lock, `saveAndFlush`); `FriendshipView` calcolata come `statoVisto` di NoseY; codici nuovi in `ErrorCode`; limite `FRIEND_REQUESTS`. Test: richiesta → 201 `OUTGOING`; ripetuta → 409 `FRIEND_REQUEST_ALREADY_SENT`; inversa → 409 `FRIEND_REQUEST_ALREADY_RECEIVED`; fra amici → 409 `ALREADY_FRIENDS`; se stessi → 400; destinatario non verificato o sospeso → 404; 21ª in 24 h → 429; senza token → 401.
+- [ ] **3. Accetta, rifiuta, annulla, rimuovi (60 min).** Endpoint di §6.14 con i permessi e 404 per chi non è coinvolto. Test: accetta → `FRIENDS` per entrambi; accetta dal richiedente → 403; accetta due volte → 409; **rifiuto silenzioso**: dopo `decline` il richiedente vede ancora `OUTGOING` e una nuova richiesta → 409 `FRIEND_REQUEST_ALREADY_SENT`, mentre il destinatario vede `NONE` e può chiedere lui (riga riaperta); annullare una richiesta rifiutata → per il richiedente `NONE`; una sua nuova richiesta → `OUTGOING` ma non compare fra le `INCOMING` dell'altro; rimozione → chi ha rimosso vede `NONE` e può chiedere, l'altro vede `UNAVAILABLE` e riceve 409 `FRIENDSHIP_UNAVAILABLE`; rimuovere chi non è amico → 403 `NOT_FRIENDS`; un terzo utente → 404 su tutti gli endpoint.
+- [ ] **4. Elenchi e metodi condivisi (35 min).** `GET /api/friendships?type` paginato (`updated_at desc, id desc`); `areFriends(a, b)` e `relationsFor(me, others)` con una sola query (servono a F4-05 e F5-02). Test: `INCOMING`, `OUTGOING` (compresa la rifiutata mascherata) e `FRIENDS` corretti; `type` mancante o sconosciuto → 400; `relationsFor` su tre utenti con stati diversi.
+- [ ] **5. Documentazione e Postman (30 min).** `schema-db.md` (V8 ed ER). Postman, cartella Friends: richiesta (201; 400 se stessi), elenco (200; 400 senza `type`), accetta (200; 403 dal richiedente), rifiuta (204; 409 già gestita), annulla (204; 403 dal destinatario), rimuovi (204; 403 non amici).
+
+**Commit proposto:** `feat(friendship): add friendships with silent decline`
+
+### Card F4-05 · Ricerca utenti — stima 1,5 h
+
+**Riferimenti:** §6.5 (ricerca), §6.14 (stato visto), §8.8, decisione 59; riuso: `escapeLike` dell'elenco admin (F2-02).
+**Sicurezza: sì**
+**File:** `friendship/UserSearchService`, `UserSearchController`, `dto/UserSearchResult`, `FriendshipSummary`; `user/UserRepository` (query di ricerca); `config/SecurityConfig`; `common/RateLimit`, `application.yml` (`USER_SEARCH`); test `UserSearchIntegrationTest`; Postman Users.
+
+- [ ] **1. Query e service (40 min).** Query su `display_name` con `lower(...) like lower(:pattern) escape '\'` (escape di `%`, `_`, `\`), email verificata, stato `ACTIVE`, `id <> :me`, ordine `lower(display_name), id`, paginata con `PageParams`; stato dell'amicizia con `relationsFor` (una query per pagina). `q` dopo il trim 2–50 caratteri, altrimenti 400.
+- [ ] **2. Controller, sicurezza e test (35 min).** `GET /api/users/search` autenticato, con la regola prima di quella pubblica di `GET /api/users/{id}`; limite `USER_SEARCH`. Test: trova per sottostringa senza distinguere maiuscole; esclude non verificati, sospesi e se stessi; nessuna email nel JSON; `q="a"` → 400; `q="50%"` cerca il carattere letteralmente; stati `NONE`, `OUTGOING`, `INCOMING`, `FRIENDS` con `friendshipId` solo dove serve; senza token → 401; 31ª ricerca in un minuto → 429; `GET /api/users/{id}` resta pubblico.
+- [ ] **3. Postman (15 min).** Users: ricerca (200; 400 `q` troppo corto; 401 senza token).
+
+**Criterio:** fase F4 chiusa; promemoria merge e controlli Render.
+**Commit proposto:** `feat(friendship): add user search with friendship status`
 
 ---
 
@@ -378,32 +409,45 @@ dominio X").
 
 **Commit proposto:** `feat(realtime): add authenticated stomp websocket and session closing on suspension`
 
-### Card F5-02 · Chat — stima 3,5 h
+### Card F5-02 · Chat — stima 4,5 h
 
-**Riferimenti:** §3.2 (chat), §6.9, §7.4–7.7; riuso: cursore di `MessaggioRepository`, `ChatService.invia`, `MessaggioLiveListener`.
+**Riferimenti:** §3.2 (chat, chat_unlocks), §6.9, §7.4–7.7, decisione 59; riuso: cursore di `MessaggioRepository`, `ChatService.invia`, `MessaggioLiveListener`.
 **Sicurezza: sì**
-**File:** `db/migration/V8__chat.sql`; `chat/ChatConversation`, `ChatMessage`, `ChatConversationRepository`, `ChatMessageRepository`, `ChatService`, `ChatController`, `ChatWebSocketController`, `ChatMessageEvent`, `ChatMessageListener`, `dto/ConversationResponse`, `ChatMessageResponse`, `MessagePageResponse`, `SendMessageRequest`, `CreateConversationRequest`, `package-info`; test `ChatRestIntegrationTest`, `ChatStompIntegrationTest`; `schema-db.md`; Postman Chat.
+**File:** `db/migration/V9__chat.sql`; `chat/ChatConversation`, `ChatMessage`, `ChatUnlock`, `ChatUnlockId`, `ChatUnlockSource`, `ChatConversationRepository`, `ChatMessageRepository`, `ChatUnlockRepository`, `ChatService`, `ChatController`, `ChatWebSocketController`, `ChatMessageEvent`, `ChatMessageListener`, `dto/ConversationResponse`, `ChatMessageResponse`, `MessagePageResponse`, `SendMessageRequest`, `CreateConversationRequest`, `package-info`; `common/ErrorCode` (`NOT_FRIENDS`, `CHAT_LOCKED`); test `ChatRestIntegrationTest`, `ChatPermissionIntegrationTest`, `ChatStompIntegrationTest`; `schema-db.md`; Postman Chat.
 
-- [ ] **1. V8 e conversazioni (50 min).** V8 come §3.2 (coppia canonica, `uq_chat_conversations_pair`, indice del cursore). `POST /api/chats {recipientId}`: find-or-create con `INSERT ... ON CONFLICT DO NOTHING` + rilettura; limite `CONVERSATIONS_CREATED`; `CANNOT_MESSAGE_SELF`; destinatario non verificato → 404. `GET /api/chats` con ultimo messaggio e `unreadCount`. Test: A→B e B→A danno la stessa conversazione; se stessi → 400; 21ª conversazione nuova in 24 h → 429.
-- [ ] **2. Storico a cursore e lettura (40 min).** `GET /api/chats/{id}/messages?before&size` (query di NoseY su `(sent_at, id)`), `PATCH /{id}/read`. Test: 35 messaggi, `size=30` → 30 + `hasMore=true`, pagina successiva con `before` → 5 + `hasMore=false`; messaggi con stesso `sent_at` non persi né duplicati; `before` di un'altra chat → 404; non membro → 403; read → `unreadCount=0` per chi legge, invariato per l'altro.
-- [ ] **3. Invio STOMP (60 min).** `@MessageMapping("/chats/{conversationId}/send")` → `ChatService.send` con l'ordine di §7.5; `appendMessage` aggiorna `last_message_at`; `ChatMessageEvent` → listener `AFTER_COMMIT` che invia a mittente e destinatario su `/queue/messages`. Test STOMP: messaggio ricevuto da entrambi; body vuoto → `VALIDATION_ERROR` su errors; 31° messaggio in un minuto → `TOO_MANY_REQUESTS`; token scaduto (`advance(16 min)`) con body vuoto → `TOKEN_INVALID` (prova che il token è controllato **prima** di limite e body); non membro → `NOT_CONVERSATION_MEMBER`.
-- [ ] **4. Documentazione e Postman (30 min).** `schema-db.md` (V8, ER completo). Postman Chat (solo REST): crea conversazione (200; 400 se stessi), lista (200; 401), messaggi (200; 403 non membro), read (204; 403).
+- [ ] **1. V9 e conversazioni (60 min).** V9 come §3.2 (enum `chat_unlock_source`; coppia canonica, `uq_chat_conversations_pair`, indice del cursore; `chat_unlocks` con PK composta e `source_id` senza FK). `POST /api/chats {recipientId}`: conversazione già esistente → restituita; nuova solo se `areFriends` (altrimenti 403 `NOT_FRIENDS`), con `INSERT ... ON CONFLICT DO NOTHING` + rilettura; limite `CONVERSATIONS_CREATED`; `CANNOT_MESSAGE_SELF`; destinatario non verificato → 404. Metodo interno `findOrCreateConversation(a, b)` senza amicizia né limite (per F5-03 e F5-04). `GET /api/chats` con ultimo messaggio e `unreadCount`. Test: fra amici A→B e B→A danno la stessa conversazione; non amici → 403 `NOT_FRIENDS`; se stessi → 400; 21ª conversazione nuova in 24 h → 429.
+- [ ] **2. Permesso di scrittura (45 min).** `canSend(conversation)`: `areFriends` oppure query nativa con tre `EXISTS` (§6.9, `now` dal `Clock`); `canSend` nella lista calcolato per pagina con due query; `unlock(conversation, source, sourceId)` con `ON CONFLICT DO NOTHING`. Test (sblocchi inseriti direttamente nel database: candidature e contatti arrivano in F5-03 e F5-04): amici → `canSend` vero; dopo la rimozione → falso, con lista e storico ancora leggibili; sblocco `COLLAB_POST` con annuncio aperto → vero, chiuso o nascosto → falso; sblocco `OFFICIAL_CONCERT` con evento futuro → vero, dopo `advance` oltre `event_date` → falso; `INDIE_EVENT` in bozza → falso.
+- [ ] **3. Storico a cursore e lettura (40 min).** `GET /api/chats/{id}/messages?before&size` (query di NoseY su `(sent_at, id)`), `PATCH /{id}/read`. Test: 35 messaggi, `size=30` → 30 + `hasMore=true`, pagina successiva con `before` → 5 + `hasMore=false`; messaggi con stesso `sent_at` non persi né duplicati; `before` di un'altra chat → 404; non membro → 403; read → `unreadCount=0` per chi legge, invariato per l'altro.
+- [ ] **4. Invio STOMP (60 min).** `@MessageMapping("/chats/{conversationId}/send")` → `ChatService.send` con l'ordine di §7.5 (permesso di scrittura al passo 5, dopo l'appartenenza); `appendMessage` aggiorna `last_message_at`; `ChatMessageEvent` → listener `AFTER_COMMIT` che invia a mittente e destinatario su `/queue/messages`. Test STOMP: messaggio fra amici ricevuto da entrambi; body vuoto → `VALIDATION_ERROR` su errors; 31° messaggio in un minuto → `TOO_MANY_REQUESTS`; token scaduto (`advance(16 min)`) con body vuoto → `TOKEN_INVALID` (prova che il token è controllato **prima** di limite e body); non membro → `NOT_CONVERSATION_MEMBER`; amicizia rimossa → `CHAT_LOCKED`, connessione aperta.
+- [ ] **5. Documentazione e Postman (30 min).** `schema-db.md` (V9, ER completo). Postman Chat (solo REST): crea conversazione (200; 400 se stessi; 403 non amici), lista (200 con `canSend`; 401), messaggi (200; 403 non membro), read (204; 403).
 
 **Commit proposto:** `feat(chat): add private conversations with cursor history and stomp messaging`
 
-### Card F5-03 · Notifiche live e candidature — stima 3 h
+### Card F5-03 · Notifiche live e candidature — stima 3,5 h
 
-**Riferimenti:** §6.7 (candidature), §7.4, §7.6; riuso: `NotificaLiveEvent`, `NotificaLiveListener`.
+**Riferimenti:** §6.7 (candidature), §6.9 (sblocchi), §7.4, §7.6, decisione 59; riuso: `NotificaLiveEvent`, `NotificaLiveListener`.
 **Sicurezza: sì (facoltativa, se resta budget)**
 **File:** `notification/LiveNotification`, `NotificationType`, `LiveNotificationEvent`, `LiveNotificationListener`, `package-info`; modifiche a `FeedService` (like), `ChatService` (messaggio); `collab/CollabService.apply`, `dto/ApplyRequest`, `ApplicationResponse`; test `LiveNotificationIntegrationTest`, `CollabApplicationIntegrationTest`; `tools/stomp-test/index.html` (facoltativo); Postman Collab.
 
 - [ ] **1. Pattern delle notifiche (40 min).** Record ed evento come in tabella; listener `AFTER_COMMIT` → `convertAndSendToUser(recipientId, "/queue/notifications", notification)`. Pubblicazione da like (solo inserimento effettivo, autore ≠ chi mette like) e da messaggio (`NEW_MESSAGE` al destinatario, `preview` 100 caratteri).
-- [ ] **2. Candidature (50 min).** `POST /api/collab-posts/{id}/applications {message}` come §6.7: controlli, limite `COLLAB_APPLICATIONS`, conversazione find-or-create, messaggio `Candidatura per «<titolo>»:\n<message>` con `appendMessage`, `ChatMessageEvent` + notifica `COLLAB_APPLICATION` (non anche `NEW_MESSAGE`). Codici `COLLAB_CLOSED`, `CANNOT_APPLY_OWN_POST`.
-- [ ] **3. Test (50 min).** Like → l'autore connesso riceve `NEW_LIKE`; like proprio → niente; secondo like (idempotente) → niente; messaggio → `NEW_MESSAGE` al solo destinatario; candidatura → messaggio ad entrambi e `COLLAB_APPLICATION` all'autore; annuncio chiuso → 409; proprio annuncio → 400; **rollback**: un'eccezione forzata dopo la pubblicazione dell'evento (bean di test) → nessuna notifica ricevuta entro 2 s.
+- [ ] **2. Candidature (55 min).** `POST /api/collab-posts/{id}/applications {message}` come §6.7: controlli, limite `COLLAB_APPLICATIONS`, conversazione con `findOrCreateConversation` (senza amicizia), `unlock(COLLAB_POST, postId)`, messaggio `Candidatura per «<titolo>»:\n<message>` con `appendMessage`, `ChatMessageEvent` + notifica `COLLAB_APPLICATION` (non anche `NEW_MESSAGE`). Codici `COLLAB_CLOSED`, `CANNOT_APPLY_OWN_POST`.
+- [ ] **3. Test (65 min).** Like → l'autore connesso riceve `NEW_LIKE`; like proprio → niente; secondo like (idempotente) → niente; messaggio → `NEW_MESSAGE` al solo destinatario; candidatura → messaggio ad entrambi e `COLLAB_APPLICATION` all'autore; annuncio chiuso → 409; proprio annuncio → 400; **sblocco**: candidato non amico → dopo la candidatura candidato e autore si scrivono via STOMP; annuncio chiuso (o cancellato) dopo la candidatura → `CHAT_LOCKED`; seconda candidatura allo stesso annuncio → una sola riga in `chat_unlocks`; **rollback**: un'eccezione forzata dopo la pubblicazione dell'evento (bean di test) → nessuna notifica ricevuta entro 2 s.
 - [ ] **4. Pagina STOMP facoltativa e Postman (40 min).** `tools/stomp-test/index.html` con `@stomp/stompjs` da CDN: campo token, connect, subscribe alle tre code, invio messaggio (non fa parte della build). Postman Collab: candidatura (201; 409 annuncio chiuso).
 
-**Criterio:** fase F5 chiusa; promemoria merge e controlli Render (WebSocket verificato con la pagina di prova).
 **Commit proposto:** `feat(notifications): add live notifications and collab applications`
+
+### Card F5-04 · Contatto degli eventi — stima 1,5 h
+
+**Riferimenti:** §6.6 (contatto), §6.9, §8.8, decisione 59. Taglio n. 4 se in ritardo (prima della bacheca collab).
+**Sicurezza: sì**
+**File:** `event/OfficialConcertService`, `IndieEventService`, `OfficialConcertController`, `IndieEventController`, `dto/ContactRequest`, `ContactResponse`; `common/ErrorCode` (`EVENT_CLOSED`, `CANNOT_CONTACT_OWN_EVENT`), `RateLimit`; `application.yml` (`EVENT_CONTACTS`); test `EventContactIntegrationTest`; Postman Events.
+
+- [ ] **1. Endpoint (40 min).** `POST /api/official-concerts/{id}/contact` e `POST /api/indie-events/{id}/contact` (`{message}` 1–2000) con i controlli di §6.6 (404 → 409 `EVENT_CLOSED` → 400 `CANNOT_CONTACT_OWN_EVENT` → limite `EVENT_CONTACTS`); nella stessa transazione `findOrCreateConversation`, `unlock(OFFICIAL_CONCERT | INDIE_EVENT, id)`, `appendMessage` con `Contatto per «<titolo>»:\n<message>`; `ChatMessageEvent` e, se le notifiche live esistono, `NEW_MESSAGE` all'organizzatore. Risposta 201 `{conversationId, messageId}`.
+- [ ] **2. Test (35 min).** Non amico contatta un concerto futuro → 201 e i due si scrivono via STOMP; `advance` oltre `event_date` → `CHAT_LOCKED`; evento già iniziato → 409; proprio evento → 400; indie in bozza o evento nascosto → 404; 11° contatto in 24 h → 429; contatto ripetuto → stessa conversazione e un solo sblocco.
+- [ ] **3. Postman e chiusura (15 min).** Events: contatto concerto (201; 400 proprio evento), contatto indie (201; 404 bozza altrui).
+
+**Criterio:** fase F5 chiusa; promemoria merge e controlli Render (WebSocket verificato con la pagina di prova).
+**Commit proposto:** `feat(events): add organizer contact that unlocks the chat until the event starts`
 
 ---
 
@@ -433,7 +477,7 @@ dominio X").
 **File:** `web/SpaResourceConfig`; `SecurityConfig`; test `SpaFallbackTest` (con `src/test/resources/static/index.html` e `assets/app.js` di prova); README.
 - [ ] **1. Fallback SPA (60 min).** Resource handler `/**` su `classpath:/static/` con `PathResourceResolver` che restituisce `index.html` per percorsi senza estensione fuori da `api/` e `ws`; `Cache-Control` §12.5; regola `GET` statici in `SecurityConfig` con un `RequestMatcher` che esclude `/api/**` e `/ws/**`. Test: `/eventi/123` → `index.html`; `/assets/app.js` → file; `/api/inesistente` → 404 JSON; `POST /qualcosa` → 401.
 - [ ] **2. Deploy finale e verifica (45 min).** Promemoria merge `develop → main`; su Render: log, health, Postman `render` completo; in un browser sulla stessa origine (console o pagina di prova) login → cookie salvato, refresh → 200; WebSocket con la pagina STOMP.
-- [ ] **3. Demo e README (45 min).** Preparazione dei tre account (SUPERADMIN da variabili, due utenti registrati con il flusso normale); checklist della demo (§14) nel README; README finale (avvio, variabili, Postman, link, spin-down).
+- [ ] **3. Demo e README (45 min).** Preparazione dei tre account (SUPERADMIN da variabili, due utenti registrati con il flusso normale e resi amici con richiesta e accettazione, decisione 59); checklist della demo (§14) nel README; README finale (avvio, variabili, Postman, link, spin-down).
 
 **Criterio:** fase F6 chiusa, deploy finale verificato.
 **Commit proposto:** `feat(web): add spa fallback and finalize release`
@@ -452,6 +496,6 @@ Checklist sintetiche, da dettagliare in un piano del frontend dal 20 ottobre.
 - **FE-06 · Pubblicazione eventi:** form con indirizzo, errori `ADDRESS_NOT_FOUND`/`GEOCODING_UNAVAILABLE`, bozze e pubblicazione.
 - **FE-07 · Feed e like:** lista, filtro per raggio, like ottimistico, DOMPurify sul testo.
 - **FE-08 · Collab e candidature:** lista, dettaglio, chiusura, candidatura.
-- **FE-09 · Chat e notifiche STOMP:** stompjs con `beforeConnect` e riconnessione automatica, code messaggi/notifiche/errori, cursore dello storico.
+- **FE-09 · Chat e notifiche STOMP:** stompjs con `beforeConnect` e riconnessione automatica, code messaggi/notifiche/errori, cursore dello storico; ricerca utenti e amicizie (richieste, accetta/rifiuta/annulla/rimuovi), casella di testo disattivata quando `canSend` è falso, contatto dell'organizzatore dalla pagina dell'evento (decisione 59).
 - **FE-10 · Area di moderazione:** visibile solo ad ADMIN/SUPERADMIN; sospensione, nomina ADMIN, hide/restore.
 - **FE-11 · Deploy integrato e prova della demo:** build nell'immagine unica, verifica su Render, prova completa della demo (24 ottobre).

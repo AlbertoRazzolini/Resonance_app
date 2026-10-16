@@ -18,7 +18,9 @@ legge solo ciò che serve alla card corrente:
    (`C:\Users\VGit\OneDrive\Desktop\Appunti e coding\UPLOADxGIT\Back-end\BW5\NoseY`, mai modificarlo).
 5. `docs/brief.md` solo se un requisito o un vincolo non è chiaro dal design. **La D1 del brief è
    sostituita** (servizio Render unico per API e frontend, nessun dominio personalizzato): vedi
-   `docs/decisioni.md`, decisione 1.
+   `docs/decisioni.md`, decisione 1. **Anche la chat libera del brief è sostituita** (§7.1, §8.3-E,
+   §8.4): messaggi solo fra amici o con uno sblocco aperto da candidatura o contatto di un evento;
+   amicizie e ricerca utenti fanno parte dell'MVP. Vedi `docs/decisioni.md`, decisione 59.
 
 Se è attivo uno stile di risposta sintetico, le spiegazioni delle scelte tecniche e le richieste di
 decisione restano complete e comprensibili: l'utente è uno studente.
@@ -29,9 +31,10 @@ decisione restano complete e comprensibili: l'utente è uno studente.
   frontend dal 20.
 - Se una card o una fase rischia di sforare, avvisare subito e proporre un taglio in quest'ordine:
   1. report di sicurezza solo con analisi statica; 2. Swagger; 3. notifiche live (la chat resta);
-  4. bacheca collab.
+  4. contatto degli eventi (F5-04); 5. bacheca collab.
 - Mai tagliati: autenticazione a due token, ruoli e admin, eventi con geolocalizzazione, feed con
-  like, chat, demo di promozione e sospensione, documentazione essenziale.
+  like, chat con amicizie e ricerca utenti, demo di promozione e sospensione, documentazione
+  essenziale.
 
 ## Ciclo per card (senza eccezioni, un commit per card)
 
@@ -109,7 +112,7 @@ verifiche non eseguiti.
 ## Postman e WebSocket
 
 - Collection v2.1 versionata in `postman/resonance.postman_collection.json`; cartelle Auth, Users,
-  Admin, Events, Collab, Feed, Chat; environment `local` e `render` con `baseUrl`.
+  Admin, Events, Collab, Feed, Friends, Chat; environment `local` e `render` con `baseUrl`.
 - Per ogni endpoint REST nuovo o modificato: una richiesta di successo e almeno un errore
   significativo (401, 403 o 400, secondo il comportamento reale).
 - Il login salva l'access token in una variabile d'ambiente (script di test); le altre richieste lo

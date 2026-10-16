@@ -44,7 +44,7 @@ alla card corrente, senza rileggere l'intero progetto.
 | `common/ErroreWebSocket` | `common.WsError` | R | F5-01 | |
 | `common/PaginaResponse` | `common.PageResponse` | R | F0-03 | Campi `content, page, size, totalElements, totalPages`. |
 | `common/NonVuoto` | `common.NotBlankIfPresent` | R | F0-03 | Usato dal `PATCH` del profilo. |
-| `common/Limite`, `common/LimitiService` | `common.RateLimit`, `common.RateLimitService` | R | F0-03 | Limiti: `LOGIN_FAILED`, `CHAT_MESSAGES`, `CONVERSATIONS_CREATED`, `COLLAB_APPLICATIONS`. |
+| `common/Limite`, `common/LimitiService` | `common.RateLimit`, `common.RateLimitService` | R | F0-03 | Limiti: `LOGIN_FAILED`, `CHAT_MESSAGES`, `CONVERSATIONS_CREATED`, `COLLAB_APPLICATIONS`; dalla decisione 59 anche `FRIEND_REQUESTS` (F4-04), `USER_SEARCH` (F4-05), `EVENT_CONTACTS` (F5-04). |
 | `common/Haversine` | `geo.Haversine` | R | F3-01 | Oracolo dei test della query SQL. |
 
 ## Autenticazione
@@ -76,13 +76,25 @@ alla card corrente, senza rileggere l'intero progetto.
 | `user/AdminUtenteController` | `admin.AdminUserController`, `admin.SuperadminController` | A | F2-02 | Endpoint di Resonance (progettazione, sezione 6.10). |
 | `user/CambiaStatoUtenteRequest` | `admin.SuspendUserRequest` | A | F2-02 | `reason`, `suspendedUntil?`, `durationDays?`. |
 | `user/CambiaRuoloRequest` | — | non portato | — | Sostituito da endpoint dedicati di nomina/revoca ADMIN. |
+| `user/AdminUtenteService` (`escapeLike`) | `friendship.UserSearchService` | A | F4-05 | Stesso escape di `%`, `_` e `\` già portato nell'elenco admin; ricerca solo su `displayName`. |
+
+## Amicizie (decisione 59)
+
+| NoseY | Resonance | Cat. | Card | Note |
+|---|---|---|---|---|
+| `friendship/AmiciziaService` | `friendship.FriendshipService` | A | F4-04 | Si tengono: stati persistenti, lock della coppia (`findConLockByCoppia`), `saveAndFlush` per le richieste incrociate, riapertura della riga, rifiuto silenzioso (`richiestaMascherata` → `request_masked`), regole di `statoVisto`. Si tolgono: evento e ticket come prerequisito, chat creata all'accettazione, notifiche persistenti e il loro segnare lette. `RITIRATA` → `CANCELLED`, `RIMOSSA` → `REMOVED`. |
+| `friendship/Amicizia`, `StatoAmicizia` | `friendship.Friendship`, `FriendshipStatus` | A | F4-04 | Senza `evento`; costruttore con i campi obbligatori (decisione 41). |
+| `friendship/StatoAmiciziaVista`, `RelazioneAmicizia` | `friendship.FriendshipView`, `FriendshipRelation` | A | F4-04 | `NONE`, `OUTGOING`, `INCOMING`, `FRIENDS`, `UNAVAILABLE`; senza `chatId`. |
+| `friendship/AmiciziaRepository` | `friendship.FriendshipRepository` | A | F4-04 | Coppia canonica con `LEAST`/`GREATEST` invece dell'ordine nelle colonne. |
+| `friendship/AmiciziaController` | `friendship.FriendshipController` | A | F4-04 | Endpoint della progettazione, sezione 6.14. |
+| `be/src/test/.../friendship/AmiciziaServiceTest` | casi di `FriendshipIntegrationTest` | A | F4-04 | Solo come elenco dei casi da coprire. |
 
 ## Real-time e notifiche
 
 | NoseY | Resonance | Cat. | Card | Note |
 |---|---|---|---|---|
 | `chat/ChatWebSocketController` | `chat.ChatWebSocketController` | A | F5-02 | Ordine dei controlli token → limite → body nel service; nessuna risposta diretta. |
-| `chat/ChatService.invia` | `chat.ChatService.send` | A | F5-02 | Senza amicizie; controllo token = scadenza + stato dal DB. |
+| `chat/ChatService.invia` | `chat.ChatService.send` | A | F5-02 | Controllo token = scadenza + stato dal DB; al posto dell'amicizia obbligatoria di NoseY, il permesso di scrittura (amici o sblocco aperto, decisione 59). |
 | `chat/MessaggioRepository.trovaPiuRecenti`, `trovaPrimaDi` | `chat.ChatMessageRepository` | R | F5-02 | Cursore su `(sent_at, id)`. |
 | `chat/MessaggiResponse` | `chat.MessagePageResponse` (`messages`, `hasMore`) | R | F5-02 | |
 | `chat/MessaggioLiveEvent`, `MessaggioLiveListener` | `chat.ChatMessageEvent`, `chat.ChatMessageListener` | R | F5-02 | |
@@ -113,7 +125,7 @@ alla card corrente, senza rileggere l'intero progetto.
 
 ## Non portato
 
-AI/Gemini (`ai/*`), amicizie (`friendship/*`), ticket e partecipanti (`ticket/*`, riferimento per
+AI/Gemini (`ai/*`), `friendship/AmiciziaConChat` (la chat non è legata all'amicizia), ticket e partecipanti (`ticket/*`, riferimento per
 Post-V1), anonimizzazione (`AnonimizzazioneService`, `AnonimizzazioneEventiService*`), artisti, POI,
 foto ed eventi di NoseY (`event/*`), notifiche persistenti (`notification/Notifica*`,
 `NotificheService*`), storage e immagini (`StorageService*`, `VersioneContenuto`,

@@ -50,6 +50,12 @@ Safari/iOS e, con `SameSite=Lax`, non inviato da nessun browser). Le parti del b
 `app.`, `api.` e il dominio personalizzato (§4.4, §4.8, §8.2-O, §10.7, F6) vanno lette alla luce di
 questa sostituzione.
 
+**Chat libera sostituita dallo studente (16 ottobre, decisione 59).** La regola del brief "chiunque può
+scrivere a chiunque" (§7.1, §8.3-E, §8.4) è sostituita: i messaggi fra utenti richiedono un'amicizia
+accettata (sezione 6.14) oppure uno sblocco aperto da una candidatura collab o dal contatto di un evento
+(sezione 6.9); gli utenti si trovano con la ricerca (sezione 6.5). Le parti del brief sulla chat libera e
+sul divieto delle amicizie vanno lette alla luce di questa sostituzione.
+
 ### 1.2 Punti chiusi durante il brainstorming
 
 | # | Scelta |
@@ -59,7 +65,7 @@ questa sostituzione.
 | P3 | Logout con `DELETE /api/auth/refresh`: revoca il refresh token del dispositivo e cancella il cookie. |
 | P4 | Finestra di tolleranza di 10 s per refresh concorrenti: colonne `revoked_at` e `replaced_by` in `refresh_tokens`. |
 | P5 | Colonna `address` in `official_concerts` e `indie_events`, geocodificata e mostrata dal frontend. |
-| P6 | Candidatura collab: `POST /api/collab-posts/{id}/applications`, senza tabella nuova: messaggio in chat all'autore + notifica live. |
+| P6 | Candidatura collab: `POST /api/collab-posts/{id}/applications`, senza tabella nuova: messaggio in chat all'autore + notifica live. Dal 16 ottobre sblocca la chat candidato–autore finché l'annuncio è aperto (decisione 59). |
 | P7 | Bozze degli indie event e chiusura degli annunci collab; `DELETE` del proprietario come soft delete (`hidden_at`/`hidden_by`); nessuna modifica dei contenuti nell'MVP. |
 | P8 | Regola di NoseY: si agisce solo su utenti con livello di piattaforma inferiore, mai su se stessi. Il SUPERADMIN non è sospendibile via API. |
 | P9 | A ogni SEND STOMP si controllano scadenza dell'access token del CONNECT e stato ACTIVE; token scaduto → errore e riconnessione del client. |
@@ -105,7 +111,8 @@ Proposte nel documento di design e approvate insieme al documento (13 ottobre).
    Security le richieste `GET` fuori da `/api/**` e `/ws/**` sono pubbliche (sono file statici, non
    dati). L'elenco esplicito senza wildcard resta valido per tutti gli endpoint `/api/**` (sezione 8.4).
 7. Chat avviata con `POST /api/chats` (trova o crea la conversazione), invio via STOMP su
-   `/app/chats/{conversationId}/send` come in NoseY.
+   `/app/chats/{conversationId}/send` come in NoseY. Dal 16 ottobre una conversazione nuova si crea solo
+   fra amici e ogni invio richiede l'amicizia o uno sblocco aperto (sezione 6.9, decisione 59).
 8. Il nuovo messaggio genera sia il messaggio su `/user/queue/messages` (mittente e destinatario) sia
    una notifica `NEW_MESSAGE` su `/user/queue/notifications` (solo destinatario).
 9. Il ripristino da parte di un admin vale solo per contenuti nascosti da un admin, non per quelli
@@ -123,6 +130,9 @@ Proposte nel documento di design e approvate insieme al documento (13 ottobre).
 - **Rischio di tempo**: il brief assegna F0 e F1 allo stesso giorno (14 ottobre). Il calendario
   della sezione 14 anticipa F0 alla sera del 13 ottobre e riporta una stima per ogni card; gli
   sforamenti si segnalano subito, come previsto dalla sezione 1-BIS del brief.
+- **Rischio di tempo (16 ottobre)**: amicizie, ricerca utenti, sblocchi della chat e contatto degli eventi
+  (decisione 59) aggiungono circa 8,5 ore a F4 e F5; il giorno di anticipo accumulato in F3 le assorbe senza
+  margine residuo (sezione 14).
 
 ---
 
@@ -163,7 +173,8 @@ Base: `it.epicode.resonance`. Ogni package ha il suo `package-info.java` con una
 | `event` | Concerti ufficiali (HOST) e indie event (MUSICIAN). | `OfficialConcert`, `IndieEvent`, `IndieEventStatus`, repository, service, controller, DTO. |
 | `collab` | Annunci di collaborazione e candidature. | `CollabPost`, `CollabPostRepository`, `CollabService`, `CollabController`, DTO. |
 | `feed` | Post del feed e like. | `FeedPost`, `PostLike`, `PostLikeId`, repository, `FeedService`, `FeedController`, DTO. |
-| `chat` | Conversazioni e messaggi privati 1:1 (REST e STOMP). | `ChatConversation`, `ChatMessage`, repository, `ChatService`, `ChatController`, `ChatWebSocketController`, `ChatMessageEvent`, `ChatMessageListener`, DTO. |
+| `friendship` | Amicizie fra utenti e ricerca degli utenti con lo stato della relazione. | `Friendship`, `FriendshipStatus`, `FriendshipView`, `FriendshipRelation`, `FriendshipRepository`, `FriendshipService`, `FriendshipController`, `UserSearchService`, `UserSearchController`, DTO. |
+| `chat` | Conversazioni e messaggi privati 1:1 (REST e STOMP) e permesso di scrittura. | `ChatConversation`, `ChatMessage`, `ChatUnlock`, `ChatUnlockId`, `ChatUnlockSource`, repository, `ChatService`, `ChatController`, `ChatWebSocketController`, `ChatMessageEvent`, `ChatMessageListener`, DTO. |
 | `notification` | Notifiche live non persistenti. | `LiveNotification`, `NotificationType`, `LiveNotificationEvent`, `LiveNotificationListener`. |
 | `websocket` | Registro delle sessioni WebSocket e chiusura alla sospensione. | `WebSocketSessionRegistry`, `UserSuspendedSessionCloser`. |
 | `mail` | Email a eventi con template Thymeleaf. | `EmailService`, `HtmlEmailService`, `LogEmailService`, `BrevoEmailService`, `EmailEventListener`, eventi email. |
@@ -172,7 +183,10 @@ Base: `it.epicode.resonance`. Ogni package ha il suo `package-info.java` con una
 Dipendenze ammesse: i domini (`event`, `collab`, `feed`, `chat`) dipendono da `user`, `common`,
 `geo`, `moderation`, `notification`; `moderation` dipende da `user` (regola dei livelli) e
 `common`; `auth` dipende da `user`, `mail`, `common`; nessun package dipende da `admin` (è `admin`
-a dipendere da `user` e `auth`).
+a dipendere da `user` e `auth`). `friendship` dipende da `user` e `common` (la ricerca utenti sta qui,
+non in `user`, per evitare il ciclo `user` ↔ `friendship`); `chat` dipende da `friendship`; `collab`
+(candidature) ed `event` (contatto) dipendono da `chat`. Il permesso di scrittura legge le tabelle delle
+origini (annunci ed eventi) con una query nativa, senza dipendere dai loro package (sezione 6.9).
 
 ### 2.3 Configurazione e profili
 
@@ -201,10 +215,12 @@ Sintesi:
 - **Da adattare**: `TokenService` → `AccessTokenService` + nuovo `RefreshTokenService`; `JwtFilter` e
   `JwtChannelInterceptor` (ruoli/stato dal DB); `SecurityConfig` (gerarchia solo
   SUPERADMIN > ADMIN); `CorsConfig` (credenziali, header espliciti); `AdminUtenteService`
-  (ruoli multipli, sospensione estesa); `ChatWebSocketController` (senza amicizie); cursore della
-  chat; Dockerfile (contesto di build alla radice del repository, stage Node per il frontend);
-  `render.yaml` (un solo servizio web).
-- **Non portato**: AI/Gemini, amicizie, ticket/partecipanti, anonimizzazione, artisti, POI, foto,
+  (ruoli multipli, sospensione estesa); `ChatWebSocketController` (permesso di scrittura invece
+  dell'amicizia obbligatoria di NoseY); regole di `AmiciziaService` (stati, lock della coppia, rifiuto
+  silenzioso) senza evento, ticket, chat creata all'accettazione e notifiche persistenti (decisione 59);
+  cursore della chat; Dockerfile (contesto di build alla radice del repository, stage Node per il
+  frontend); `render.yaml` (un solo servizio web).
+- **Non portato**: AI/Gemini, ticket/partecipanti, anonimizzazione, artisti, POI, foto,
   storage delle immagini, notifiche persistenti, `SmtpEmailService`, plugin di enhancement di
   Hibernate, Actuator, blacklist `TOKEN_JWT`.
 
@@ -231,6 +247,8 @@ inserimenti SQL diretti. Timestamp sempre `timestamptz` (UTC). Nomi dei vincoli 
 | `user_status` | `ACTIVE`, `SUSPENDED` | `UserStatus` |
 | `email_code_purpose` | `EMAIL_VERIFICATION`, `PASSWORD_RESET` | `EmailCodePurpose` (Post-V2: `+ TWO_FACTOR` con `ALTER TYPE ... ADD VALUE`) |
 | `indie_event_status` | `DRAFT`, `PUBLISHED` | `IndieEventStatus` |
+| `friendship_status` | `PENDING`, `ACCEPTED`, `DECLINED`, `CANCELLED`, `REMOVED` | `FriendshipStatus` |
+| `chat_unlock_source` | `COLLAB_POST`, `OFFICIAL_CONCERT`, `INDIE_EVENT` | `ChatUnlockSource` |
 
 In JPA: `@Enumerated(EnumType.STRING)` + `@JdbcTypeCode(SqlTypes.NAMED_ENUM)`, come in NoseY.
 `text[]` con `@JdbcTypeCode(SqlTypes.ARRAY)` su `List<String>`.
@@ -381,6 +399,28 @@ Come `official_concerts`, con `musician_id` (NOT NULL, FK → users) al posto di
 
 PK composta `pk_post_likes (user_id, post_id)`; indice `ix_post_likes_post (post_id)`.
 
+#### friendships
+
+Decisione 59; regole nella sezione 6.14.
+
+| Colonna | Tipo | Vincoli |
+|---|---|---|
+| id | uuid | PK |
+| requester_id | uuid | NOT NULL, FK → users (chi ha inviato l'ultima richiesta) |
+| addressee_id | uuid | NOT NULL, FK → users |
+| status | friendship_status | NOT NULL |
+| closed_by | uuid | NULL, FK → users (chi ha rifiutato o rimosso) |
+| request_masked | boolean | NOT NULL DEFAULT false (rifiuto silenzioso) |
+| created_at | timestamptz | NOT NULL DEFAULT now() |
+| updated_at | timestamptz | NOT NULL |
+
+Vincoli: `ck_friendships_not_self (requester_id <> addressee_id)`; `ck_friendships_closed_by`
+(`closed_by` valorizzato se e solo se lo stato è `DECLINED` o `REMOVED`); `ck_friendships_masked`
+(`request_masked` vero solo con `DECLINED`). Una riga per coppia, qualunque dei due abbia chiesto:
+indice univoco `uq_friendships_pair` su `(LEAST(requester_id, addressee_id), GREATEST(requester_id,
+addressee_id))`. Indici `ix_friendships_requester (requester_id)` e `ix_friendships_addressee
+(addressee_id)`.
+
 #### chat_conversations
 
 | Colonna | Tipo | Vincoli |
@@ -409,6 +449,22 @@ dei due la apra. Indice `ix_chat_conversations_user_b (user_b_id)`.
 Indice `ix_chat_messages_cursor (conversation_id, sent_at DESC, id DESC)`: serve la paginazione a
 cursore.
 
+#### chat_unlocks
+
+Origini che permettono di scrivere senza amicizia (decisione 59, sezione 6.9).
+
+| Colonna | Tipo | Vincoli |
+|---|---|---|
+| conversation_id | uuid | NOT NULL, FK → chat_conversations |
+| source_type | chat_unlock_source | NOT NULL |
+| source_id | uuid | NOT NULL, **senza FK** (id dell'annuncio o dell'evento) |
+| created_at | timestamptz | NOT NULL DEFAULT now() |
+
+PK composta `pk_chat_unlocks (conversation_id, source_type, source_id)`: una seconda candidatura allo
+stesso annuncio non crea un'altra riga (`INSERT ... ON CONFLICT DO NOTHING`). `source_id` punta a tre
+tabelle diverse, quindi non può avere una FK: lo sblocco si crea solo dopo aver letto l'origine nella
+stessa transazione.
+
 #### Vincoli comuni di moderazione (4 tabelle moderabili)
 
 `ck_<tabella>_hidden`: `(hidden_at IS NULL) = (hidden_by IS NULL)` e `hidden_reason` nullo se
@@ -434,8 +490,11 @@ erDiagram
     USERS ||--o{ FEED_POSTS : "scrive"
     USERS ||--o{ POST_LIKES : "mette like"
     FEED_POSTS ||--o{ POST_LIKES : "riceve"
+    USERS ||--o{ FRIENDSHIPS : "richiede / riceve"
+    USERS |o--o{ FRIENDSHIPS : "chiude (closed_by)"
     USERS ||--o{ CHAT_CONVERSATIONS : "utente A / utente B"
     CHAT_CONVERSATIONS ||--o{ CHAT_MESSAGES : "contiene"
+    CHAT_CONVERSATIONS ||--o{ CHAT_UNLOCKS : "sbloccata da (annuncio o evento, senza FK)"
     USERS ||--o{ CHAT_MESSAGES : "invia"
     USERS |o--o{ OFFICIAL_CONCERTS : "nasconde (hidden_by)"
     USERS |o--o{ INDIE_EVENTS : "nasconde (hidden_by)"
@@ -478,10 +537,12 @@ correzioni vanno in una nuova `V`); nessuna credenziale nelle migrazioni.
 | `V5__indie_events.sql` | F3-03 | enum `indie_event_status`; tabella `indie_events`. |
 | `V6__collab_posts.sql` | F4-01 | tabella `collab_posts`. |
 | `V7__feed_and_likes.sql` | F4-02 | tabelle `feed_posts`, `post_likes`. |
-| `V8__chat.sql` | F5-02 | tabelle `chat_conversations`, `chat_messages`. |
+| `V8__friendships.sql` | F4-04 | enum `friendship_status`; tabella `friendships`. |
+| `V9__chat.sql` | F5-02 | enum `chat_unlock_source`; tabelle `chat_conversations`, `chat_messages`, `chat_unlocks`. |
 
-Ogni migrazione dipende solo da `users` (V1) e, per `post_likes`/`chat_messages`, dalle tabelle
-create nella stessa migrazione. Nessuna tabella Post-V1/Post-V2 viene creata.
+Ogni migrazione dipende solo da `users` (V1) e, per `post_likes`/`chat_messages`/`chat_unlocks`, dalle
+tabelle create nella stessa migrazione. Nessuna tabella Post-V1/Post-V2 viene creata. (La chat era `V8`
+prima della decisione 59; le amicizie la precedono, quindi diventa `V9`.)
 
 ### 3.7 Allineamento di docs/schema-db.md
 
@@ -834,6 +895,16 @@ nascosto → 404. Nessuna cancellazione fisica.
 | `CANNOT_APPLY_OWN_POST` | 400 | Candidatura al proprio annuncio |
 | `CANNOT_MESSAGE_SELF` | 400 | Conversazione con se stessi |
 | `NOT_CONVERSATION_MEMBER` | 403 | Chat |
+| `NOT_FRIENDS` | 403 | Nuova conversazione fra non amici; rimozione di un'amicizia non accettata (decisione 59) |
+| `CHAT_LOCKED` | 403 | Invio senza amicizia né sblocco aperto (sezione 6.9) |
+| `CANNOT_FRIEND_SELF` | 400 | Richiesta di amicizia a se stessi |
+| `FRIEND_REQUEST_ALREADY_SENT` / `FRIEND_REQUEST_ALREADY_RECEIVED` | 409 | Richiesta già in attesa (inviata da me / dall'altro) |
+| `ALREADY_FRIENDS` | 409 | Richiesta fra amici |
+| `FRIENDSHIP_UNAVAILABLE` | 409 | Richiesta dopo una rimozione fatta dall'altro (sezione 6.14) |
+| `FRIEND_REQUEST_NOT_PENDING` | 409 | Accetta, rifiuta o annulla una richiesta non più in attesa |
+| `NOT_FRIENDSHIP_ADDRESSEE` / `NOT_FRIENDSHIP_REQUESTER` | 403 | Accetta/rifiuta da chi l'ha inviata; annulla da chi l'ha ricevuta |
+| `EVENT_CLOSED` | 409 | Contatto di un evento già iniziato |
+| `CANNOT_CONTACT_OWN_EVENT` | 400 | Contatto del proprio evento |
 | `TOKEN_INVALID` | — | Solo WebSocket |
 
 ### 6.3 Accesso
@@ -880,6 +951,17 @@ Validazioni: email `@Email` max 255; password 8–72 caratteri e 72 byte; `displ
 | `POST /api/users/me/roles/musician` | autenticato | — | `MeResponse` |
 | `POST /api/users/me/roles/host` | autenticato | — | `MeResponse` |
 | `GET /api/users/{id}` | pubblico | — | `PublicUserResponse {id, displayName, avatarUrl, bio, city, roles (solo community)}` |
+| `GET /api/users/search?q&page&size` | autenticato | — | `PageResponse<UserSearchResult>` (decisione 59) |
+
+**Ricerca utenti** (package `friendship`, decisione 59): `q` obbligatorio, 2–50 caratteri dopo il trim,
+cercato con `ILIKE '%q%'` solo su `display_name` (con l'escape di `%`, `_` e `\` già usato dall'elenco
+admin); solo utenti con email verificata e stato `ACTIVE` (un utente con sospensione scaduta ricompare
+dopo la riattivazione pigra), escluso chi cerca; ordine `lower(display_name)`, poi `id`; limite
+`USER_SEARCH`. `UserSearchResult` = `{id, displayName, avatarUrl, city, friendship: {status,
+friendshipId}}`: `status` è lo stato visto da chi cerca (sezione 6.14), `friendshipId` è valorizzato
+solo per `OUTGOING`, `INCOMING` e `FRIENDS` (serve ad annullare, accettare o rimuovere). Mai email,
+coordinate o ruoli. In `SecurityConfig` la regola autenticata di `/api/users/search` precede quella
+pubblica di `GET /api/users/{id}`.
 
 Regole di `PATCH /api/users/me` (sezione 6.1):
 
@@ -910,6 +992,17 @@ mai nel profilo pubblico.
 | `GET /api/indie-events/{id}` | pubblico | una bozza è visibile solo al proprietario (altrimenti 404) |
 | `PATCH /api/indie-events/{id}/publish` | proprietario | 200; già pubblicato → 409; data passata → 400 |
 | `DELETE /api/indie-events/{id}` | proprietario | soft delete |
+| `POST /api/official-concerts/{id}/contact` | autenticato | `{message (1–2000)}` → 201 `{conversationId, messageId}` (decisione 59) |
+| `POST /api/indie-events/{id}/contact` | autenticato | come sopra, solo indie event `PUBLISHED` |
+
+**Contatto dell'organizzatore** (card F5-04, decisione 59), sul modello della candidatura (6.7):
+evento esistente, non nascosto e, se indie, pubblicato (altrimenti 404); non ancora iniziato
+(`event_date` nel futuro secondo il `Clock`, altrimenti 409 `EVENT_CLOSED`); organizzatore ≠ chiamante
+(400 `CANNOT_CONTACT_OWN_EVENT`); limite `EVENT_CONTACTS`. Nella stessa transazione: trova o crea la
+conversazione chiamante–organizzatore (senza controllo di amicizia), crea lo sblocco
+(`OFFICIAL_CONCERT` o `INDIE_EVENT`, id dell'evento) e salva il messaggio `Contatto per «<titolo>»:`
+seguito dal testo. Dopo il commit: messaggio su `/user/queue/messages` a entrambi e, se le notifiche live
+esistono, `NEW_MESSAGE` all'organizzatore. Lo sblocco resta aperto fino all'inizio dell'evento.
 
 Request di creazione: `{title (3–150), description? (≤5000), venueName (≤150), address (≤255),
 eventDate (futuro), genreTags (≤10 tag, ciascuno 1–30, normalizzati in minuscolo e senza
@@ -935,8 +1028,10 @@ Parametri nearby: `lat` −90..90, `lng` −180..180 (obbligatori), `radiusKm` 0
 
 Candidatura (P6): annuncio esistente e non nascosto (404), aperto (409 `COLLAB_CLOSED`), autore ≠
 candidato (400 `CANNOT_APPLY_OWN_POST`), limite `COLLAB_APPLICATIONS`. Nella stessa transazione:
-trova o crea la conversazione candidato–autore e salva un messaggio con testo
-`Candidatura per «<titolo>»:` seguito dal messaggio. Dopo il commit: messaggio su
+trova o crea la conversazione candidato–autore (senza controllo di amicizia), crea lo sblocco
+`COLLAB_POST` con l'id dell'annuncio (decisione 59) e salva un messaggio con testo
+`Candidatura per «<titolo>»:` seguito dal messaggio. Lo sblocco permette a entrambi di scriversi finché
+l'annuncio è aperto, non cancellato e non nascosto (sezione 6.9). Dopo il commit: messaggio su
 `/user/queue/messages` a entrambi e notifica `COLLAB_APPLICATION` all'autore (non anche
 `NEW_MESSAGE`, per non contarla due volte).
 
@@ -961,16 +1056,34 @@ post nuovi pubblicati durante lo scorrimento possono spostare gli elementi fra l
 | Metodo e percorso | Accesso | Note |
 |---|---|---|
 | `GET /api/chats?page&size` | autenticato | `PageResponse<ConversationResponse>` per `last_message_at` desc (nulli in fondo) |
-| `POST /api/chats` | autenticato | `{recipientId}` → 200 `ConversationResponse` (trova o crea); destinatario inesistente o non verificato → 404; se stessi → 400 |
+| `POST /api/chats` | autenticato | `{recipientId}` → 200 `ConversationResponse` (trova o crea); destinatario inesistente o non verificato → 404; se stessi → 400; conversazione nuova fra non amici → 403 `NOT_FRIENDS` |
 | `GET /api/chats/{id}/messages?before&size` | membro | cursore: `{messages: [...], hasMore}` dal più recente; `before` = id del messaggio più vecchio già caricato; `size` 1–100, default 30 |
 | `PATCH /api/chats/{id}/read` | membro | 204: `read_at = now` sui messaggi dell'altro non letti |
 
 `ConversationResponse` = `{id, otherUser: AuthorSummary, lastMessage: {body, senderId, sentAt} | null,
-unreadCount, lastMessageAt}`. Non membro → 403 `NOT_CONVERSATION_MEMBER`; `before` di un'altra
+unreadCount, lastMessageAt, canSend}`. Non membro → 403 `NOT_CONVERSATION_MEMBER`; `before` di un'altra
 conversazione → 404. Creazione concorrente della stessa coppia gestita con
 `INSERT ... ON CONFLICT DO NOTHING` sulla coppia canonica e rilettura. Il cursore riusa la query di
 NoseY: confronto su `(sent_at, id)` letto dal database nella stessa query. Limite
 `CONVERSATIONS_CREATED` sulle nuove conversazioni.
+
+**Permesso di scrittura** (decisione 59). In una conversazione si scrive se i due membri sono amici
+(`friendships.status = ACCEPTED`) **oppure** se esiste in `chat_unlocks` almeno uno sblocco con l'origine
+ancora aperta:
+
+| `source_type` | Origine aperta se |
+|---|---|
+| `COLLAB_POST` | `collab_posts.is_open` e `hidden_at IS NULL` |
+| `OFFICIAL_CONCERT` | `event_date > now` e `hidden_at IS NULL` |
+| `INDIE_EVENT` | `status = PUBLISHED`, `event_date > now` e `hidden_at IS NULL` |
+
+Il controllo è una query nativa con tre `EXISTS` (uno per tipo) e `now` dal `Clock`. Si applica a ogni
+invio (sezione 7.5, errore `CHAT_LOCKED`). `POST /api/chats` restituisce sempre una conversazione già
+esistente (anche se `canSend` è falso: lo storico resta leggibile) e ne crea una nuova solo fra amici.
+`canSend` si calcola per la pagina intera con due query (amici fra le coppie, sblocchi aperti per gli id
+delle conversazioni), non una per riga. Lista, storico e `read` non dipendono dal permesso. Candidature
+e contatti creano la conversazione con un metodo interno senza controllo di amicizia e senza il limite
+`CONVERSATIONS_CREATED` (hanno i propri limiti).
 
 ### 6.10 Amministrazione
 
@@ -1012,7 +1125,63 @@ l'handshake WebSocket; le richieste della stessa origine sono sempre ammesse.
 
 Tutti gli endpoint di questa sezione sono MVP. Non esistono nell'MVP: modifica dei contenuti,
 rimozione dei ruoli MUSICIAN/HOST, upload di immagini, follow, recensioni, ticket, storico delle
-notifiche, appeal delle sospensioni (sezione 15).
+notifiche, appeal delle sospensioni, notifiche live delle richieste di amicizia (sezione 15).
+
+### 6.14 Amicizie
+
+Decisione 59; regole riprese da `AmiciziaService` di NoseY senza evento, ticket e notifiche persistenti.
+
+| Metodo e percorso | Accesso | Note |
+|---|---|---|
+| `POST /api/friendships` | autenticato | `{userId}` → 201 `FriendshipResponse` |
+| `GET /api/friendships?type&page&size` | autenticato | `type` obbligatorio: `FRIENDS`, `INCOMING`, `OUTGOING`; per `updated_at desc, id desc` |
+| `POST /api/friendships/{id}/accept` | destinatario | 200 `FriendshipResponse` |
+| `POST /api/friendships/{id}/decline` | destinatario | 204 |
+| `POST /api/friendships/{id}/cancel` | richiedente | 204 |
+| `DELETE /api/friendships/{id}` | uno dei due | 204 (rimozione dell'amicizia) |
+
+`FriendshipResponse` = `{id, otherUser: AuthorSummary, status (vista), updatedAt}`. Un'amicizia che non
+riguarda il chiamante → 404 su ogni endpoint. Tutte le modifiche leggono la riga con un lock
+(`SELECT ... FOR UPDATE`), come NoseY.
+
+**Stato visto da X verso Y** (`FriendshipView`), usato da elenchi e ricerca:
+
+| Riga | Vista di X |
+|---|---|
+| nessuna, `CANCELLED` | `NONE` |
+| `PENDING` | `OUTGOING` se X ha chiesto, `INCOMING` se X ha ricevuto |
+| `ACCEPTED` | `FRIENDS` |
+| `DECLINED` | chiusa da X → `NONE`; chiusa da Y con `request_masked` → `OUTGOING` (rifiuto silenzioso); chiusa da Y senza → `NONE` |
+| `REMOVED` | chiusa da X → `NONE`; chiusa da Y → `UNAVAILABLE` |
+
+**Richiesta** (`POST`): limite `FRIEND_REQUESTS` consumato per primo (conta anche se fallisce); se
+stessi → 400 `CANNOT_FRIEND_SELF`; destinatario inesistente, non verificato o non `ACTIVE` → 404. Poi,
+con la riga della coppia sotto lock:
+
+- nessuna riga → nuova riga `PENDING` (`saveAndFlush`: due richieste incrociate simultanee violano
+  `uq_friendships_pair` → 409 `CONFLICT`);
+- `PENDING` → 409 `FRIEND_REQUEST_ALREADY_SENT` se X aveva chiesto, `FRIEND_REQUEST_ALREADY_RECEIVED`
+  altrimenti (il frontend propone "accetta");
+- `ACCEPTED` → 409 `ALREADY_FRIENDS`;
+- `CANCELLED`, oppure `DECLINED`/`REMOVED` chiuse da X → la riga si riapre: X diventa richiedente, stato
+  `PENDING`, `closed_by` e `request_masked` azzerati;
+- `DECLINED` chiusa da Y: con `request_masked` → 409 `FRIEND_REQUEST_ALREADY_SENT` (coerente con ciò che X
+  vede); senza (X aveva annullato la richiesta rifiutata) → `request_masked` torna vero e la risposta è
+  `OUTGOING`, senza avvisare Y (rifiuto silenzioso);
+- `REMOVED` chiusa da Y → 409 `FRIENDSHIP_UNAVAILABLE`.
+
+**Accetta**: solo il destinatario (403 `NOT_FRIENDSHIP_ADDRESSEE`), solo `PENDING` (409
+`FRIEND_REQUEST_NOT_PENDING`), richiedente ancora `ACTIVE` (409 `USER_NOT_ACTIVE`) → `ACCEPTED`.
+**Rifiuta**: solo il destinatario, solo `PENDING` → `DECLINED`, `closed_by` = destinatario,
+`request_masked` vero. **Annulla**: solo il richiedente (403 `NOT_FRIENDSHIP_REQUESTER`); `PENDING` →
+`CANCELLED`; `DECLINED` mascherata → `request_masked` falso (per X la richiesta è annullata, il rifiuto
+resta); altrimenti 409 `FRIEND_REQUEST_NOT_PENDING`. **Rimuovi**: solo `ACCEPTED` (altrimenti 403
+`NOT_FRIENDS`) → `REMOVED`, `closed_by` = chi rimuove; la conversazione resta leggibile, i nuovi
+messaggi seguono il permesso di scrittura (6.9).
+
+Elenchi: `FRIENDS` = righe `ACCEPTED` di X; `INCOMING` = `PENDING` ricevute da X; `OUTGOING` = `PENDING`
+inviate da X più le `DECLINED` mascherate inviate da X. Gli utenti sospesi restano negli elenchi (non
+possono comunque connettersi). Nessuna notifica live delle richieste (sezione 15).
 
 ---
 
@@ -1068,8 +1237,13 @@ senza `@Valid`) delega a `ChatService.send`, che esegue i controlli **in questo 
 2. **Rate limit** `CHAT_MESSAGES` (30 al minuto per utente) → `TOO_MANY_REQUESTS`.
 3. **Validazione del body** (`body` 1–2000, non vuoto) con il `Validator` → `VALIDATION_ERROR`.
 4. Conversazione esistente (`NOT_FOUND`) e chiamante membro (`NOT_CONVERSATION_MEMBER`).
-5. Salvataggio del messaggio, aggiornamento di `last_message_at`, pubblicazione di
+5. **Permesso di scrittura** (sezione 6.9, decisione 59): amici o sblocco aperto → altrimenti
+   `CHAT_LOCKED`.
+6. Salvataggio del messaggio, aggiornamento di `last_message_at`, pubblicazione di
    `ChatMessageEvent` e `LiveNotificationEvent(NEW_MESSAGE)`.
+
+L'ordine token → limite → body del brief resta invariato; il permesso segue il controllo di
+appartenenza, perché a un non membro non si rivela nulla sulla relazione.
 
 Il controller non risponde mai direttamente: gli errori passano dal `WebSocketExceptionHandler`
 (`@MessageExceptionHandler` + `@SendToUser("/queue/errors", broadcast = false)`), solo alla sessione
@@ -1206,6 +1380,9 @@ riavvio: accettabile con una sola istanza). Valori in `application.yml` (`app.ra
 | `CHAT_MESSAGES` | 30 al minuto | utente |
 | `CONVERSATIONS_CREATED` | 20 in 24 ore | utente |
 | `COLLAB_APPLICATIONS` | 10 in 24 ore | utente |
+| `FRIEND_REQUESTS` | 20 in 24 ore | utente |
+| `USER_SEARCH` | 30 al minuto | utente |
+| `EVENT_CONTACTS` | 10 in 24 ore | utente |
 
 I limiti sui codici email sono nel database (sezione 4.6), quindi sopravvivono ai riavvii.
 
@@ -1333,7 +1510,10 @@ calcolate dalla query SQL coincidano con quelle calcolate in Java.
 | Eventi | indirizzo non trovato, Nominatim non disponibile, bozza invisibile agli altri, pubblicazione |
 | Haversine | distanze note (es. Firenze–Roma), raggio, paginazione, SQL ≈ Java |
 | Feed | like idempotente, `likes_count` corretto con like concorrenti, filtro geografico |
-| Chat | cursore (prima pagina, pagine successive, `hasMore`, `before` estraneo), non membro, ordine dei controlli STOMP (token → limite → body) |
+| Amicizie | richiesta, richieste incrociate, accetta/rifiuta/annulla/rimuovi con i permessi, rifiuto silenzioso visto dalle due parti, riapertura solo da chi ha chiuso, amicizia altrui → 404, limite |
+| Ricerca utenti | solo verificati e ACTIVE, se stessi esclusi, mai email, `q` corto → 400, caratteri `%`/`_` cercati letteralmente, stato dell'amicizia per ogni risultato, 401 senza token |
+| Chat | cursore (prima pagina, pagine successive, `hasMore`, `before` estraneo), non membro, ordine dei controlli STOMP (token → limite → body), nuova conversazione fra non amici → 403, invio dopo la rimozione → `CHAT_LOCKED` con storico leggibile, sblocco aperto e chiuso (annuncio chiuso, evento iniziato, origine nascosta), `canSend` |
+| Contatto eventi | evento futuro → 201 e scrittura libera; evento iniziato → 409; proprio evento → 400; bozza → 404; chat bloccata all'inizio dell'evento |
 | WebSocket | CONNECT senza token o con token scaduto, SUBSCRIBE non ammessa, messaggio a entrambi, chiusura delle sessioni alla sospensione |
 | Notifiche | consegnate dopo il commit; nessuna consegna in caso di rollback; nessuna notifica a se stessi |
 
@@ -1342,7 +1522,7 @@ I test si scrivono nella card che introduce la funzionalità, non alla fine.
 ### 11.3 Postman e STOMP
 
 Collection v2.1 in `postman/resonance.postman_collection.json` con cartelle Auth, Users, Admin,
-Events, Collab, Feed, Chat; environment `local` e `render` con `baseUrl`; lo script di test del login
+Events, Collab, Feed, Friends (decisione 59), Chat; environment `local` e `render` con `baseUrl`; lo script di test del login
 salva `accessToken`; il refresh usa il cookie jar di Postman (che non è soggetto a CORS: aggiunge
 manualmente `X-Requested-With`). Per ogni endpoint: una richiesta di successo e almeno un errore
 significativo. Nessun segreto nei file. Per la cartella Users sono previste: `PATCH /api/users/me`
@@ -1510,14 +1690,16 @@ sera del 13 ottobre (richiesta dello studente) per scaricare il 14.
 | 14 ott | F0-03 · F1-01 · F1-02 · F1-03 | 2,5 h · 2,5 h · 3,5 h · 3 h | 11,5 h | **alto**: F1-03 può slittare al 15 |
 | 15 ott | F1-04 · F2-01 · F2-02 · F2-03 | 2 h · 2,5 h · 3,5 h · 2 h | 10 h | **alto**: primo deploy a fine giornata |
 | 16 ott | F3-01 · F3-02 · F3-03 | 2,5 h · 3 h · 2,5 h | 8 h | medio |
-| 17 ott | F4-01 · F4-02 · F4-03 | 2 h · 3 h · 2,5 h | 7,5 h | basso: margine per recuperare ritardi |
-| 18 ott | F5-01 · F5-02 · F5-03 | 3,5 h · 3,5 h · 3 h | 10 h | **alto**: WebSocket e chiusura sessioni |
+| 16 ott (pom.) – 17 ott | F4-01 · F4-02 · F4-03 · F4-04 · F4-05 | 2 h · 3 h · 2,5 h · 4 h · 1,5 h | 13 h | **alto**: F3 chiusa in anticipo, ma il margine del 17 è consumato |
+| 18 ott | F5-01 · F5-02 · F5-03 · F5-04 | 3,5 h · 4,5 h · 3,5 h · 1,5 h | 13 h | **alto**: WebSocket, chiusura sessioni e permesso di scrittura |
 | 19 ott | F6-01 · F6-02 · F6-03 | 3 h · 3 h · 2,5 h | 8,5 h | medio |
 
-Totale backend circa 60 ore. Giorni a rischio: 14, 15 e 18. Se un giorno sfora, il primo margine
-è il 17 (F4 più leggera); oltre quello si applica l'ordine dei tagli della sezione 1-BIS del brief
-(verifica dinamica del report → Swagger → notifiche live → bacheca collab). Con il taglio delle
-notifiche live, F5-03 si riduce alla sola candidatura (messaggio in chat senza notifica).
+Totale backend circa 68,5 ore (60 + 8,5 della decisione 59). Giorni a rischio: 14, 15, 17 e 18. Il
+giorno di anticipo accumulato in F3 assorbe le card aggiunte il 16 ottobre, quindi non resta un giorno
+di margine: se un giorno sfora si applica subito l'ordine dei tagli (brief 1-BIS, aggiornato dalla
+decisione 59): verifica dinamica del report → Swagger → notifiche live → contatto degli eventi (F5-04)
+→ bacheca collab. Con il taglio delle notifiche live, F5-03 si riduce alla sola candidatura (messaggio
+in chat e sblocco, senza notifica).
 
 ### F0 — Setup (13 sera – 14 ottobre)
 
@@ -1558,15 +1740,18 @@ notifiche live, F5-03 si riduce alla sola candidatura (messaggio in chat senza n
 |---|---|---|
 | F4-01 · Annunci collab | V6, create/list/detail/close/delete | test, Postman |
 | F4-02 · Feed e like | V7, create/list (geo)/detail/delete, like/unlike con `likes_count` atomico | test di concorrenza dei like, Postman |
-| F4-03 · Moderazione admin dei contenuti | `moderation`: hide/restore/hidden list per i 4 tipi, regola dei livelli | test, Postman; promemoria merge |
+| F4-03 · Moderazione admin dei contenuti | `moderation`: hide/restore/hidden list per i 4 tipi, regola dei livelli | test, Postman |
+| F4-04 · Amicizie | V8, `friendship`: richiesta, accetta, rifiuta, annulla, rimuovi, elenchi, rifiuto silenzioso (6.14) | test degli stati e dei permessi, Postman Friends |
+| F4-05 · Ricerca utenti | `GET /api/users/search` con stato dell'amicizia (6.5) | test, Postman Users; promemoria merge |
 
 ### F5 — Real-time (18 ottobre)
 
 | Card | Contenuto | Criterio |
 |---|---|---|
 | F5-01 · WebSocket, CONNECT e sessioni | `WebSocketConfig`, `JwtChannelInterceptor`, handler degli errori STOMP, registro sessioni e chiusura alla sospensione | test STOMP di connessione e sospensione |
-| F5-02 · Chat | V8, REST (lista, crea, messaggi a cursore, letti), invio STOMP con ordine dei controlli, consegna dopo il commit | test REST e STOMP, Postman (solo REST) |
-| F5-03 · Notifiche live e candidature | `notification`, notifiche like/messaggio/candidatura, `POST /applications`, pagina HTML STOMP facoltativa | test after-commit e rollback; promemoria merge |
+| F5-02 · Chat | V9 (con `chat_unlocks`), REST (lista con `canSend`, crea solo fra amici, messaggi a cursore, letti), invio STOMP con ordine dei controlli e permesso di scrittura, consegna dopo il commit | test REST e STOMP, Postman (solo REST) |
+| F5-03 · Notifiche live e candidature | `notification`, notifiche like/messaggio/candidatura, `POST /applications` con sblocco della chat, pagina HTML STOMP facoltativa | test after-commit e rollback, sblocco aperto e chiuso |
+| F5-04 · Contatto degli eventi | `POST /contact` per concerti e indie event con sblocco fino all'inizio (6.6) | test, Postman Events; promemoria merge |
 
 ### F6 — Hardening e rilascio (19 ottobre)
 
@@ -1576,15 +1761,18 @@ notifiche live, F5-03 si riduce alla sola candidatura (messaggio in chat senza n
 | F6-02 · Swagger e report di sicurezza | springdoc + Swagger UI, `report-sicurezza.md` (statica + dinamica, Strix se disponibile) | report con risultati reali |
 | F6-03 · Fallback SPA e deploy finale | `SpaResourceConfig` e regola di sicurezza per i `GET` statici, verifica del cookie in browser sulla stessa origine, preparazione degli account della demo, README finale | test del fallback (index di prova, `/api/...` inesistente → 404 JSON), deploy finale verificato; promemoria merge |
 
-Ordine dei tagli in caso di ritardo (brief 1-BIS): verifica dinamica del report → Swagger →
-notifiche live → bacheca collab. Mai tagliati: autenticazione a due token, ruoli e admin, eventi con
-geolocalizzazione, feed con like, chat, demo di promozione e sospensione, documentazione essenziale.
+Ordine dei tagli in caso di ritardo (brief 1-BIS, aggiornato dalla decisione 59): verifica dinamica
+del report → Swagger → notifiche live → contatto degli eventi (F5-04) → bacheca collab. Mai tagliati:
+autenticazione a due token, ruoli e admin, eventi con geolocalizzazione, feed con like, chat con
+amicizie e ricerca utenti (la chat ne dipende), demo di promozione e sospensione, documentazione
+essenziale.
 
 ### Dipendenze fra fasi
 
-F0 → F1 → F2 (primo deploy) → F3 → F4 → F5 → F6. Le candidature (F5-03) richiedono chat (F5-02) e
-collab (F4-01); le notifiche dei like richiedono il feed (F4-02); la chiusura delle sessioni (F5-01)
-completa la sospensione di F2-02.
+F0 → F1 → F2 (primo deploy) → F3 → F4 → F5 → F6. La ricerca (F4-05) richiede le amicizie (F4-04); la
+chat (F5-02) richiede le amicizie; le candidature (F5-03) richiedono chat (F5-02) e collab (F4-01); il
+contatto degli eventi (F5-04) richiede la chat e gli eventi (F3); le notifiche dei like richiedono il
+feed (F4-02); la chiusura delle sessioni (F5-01) completa la sospensione di F2-02.
 
 ### Card FE (lista "FE in attesa", non sviluppate ora)
 
@@ -1592,14 +1780,15 @@ FE-01 Setup Vite/TS/Redux/Router/Bootstrap, proxy Vite verso `localhost:8080` e 
 Dockerfile · FE-02 Client API e refresh silenzioso · FE-03
 Registrazione, verifica e login · FE-04 Profilo e ruoli · FE-05 Eventi vicini e mappa · FE-06
 Pubblicazione eventi · FE-07 Feed e like · FE-08 Collab e candidature · FE-09 Chat e notifiche
-STOMP · FE-10 Area di moderazione · FE-11 Deploy integrato (stesso servizio) e prova della demo.
+STOMP, ricerca utenti e amicizie (decisione 59) · FE-10 Area di moderazione · FE-11 Deploy integrato (stesso servizio) e prova della demo.
 
 ### Demo finale
 
 Promozione di un utente ad ADMIN da parte del SUPERADMIN; sospensione di un utente con motivo e
 durata (login rifiutato con i dettagli, sessione WebSocket chiusa); riattivazione; nascondere e
-ripristinare un contenuto; eventi vicini sulla mappa; feed con like; chat in tempo reale con
-notifica.
+ripristinare un contenuto; eventi vicini sulla mappa; feed con like; ricerca di un utente, richiesta
+di amicizia accettata e chat in tempo reale con notifica; candidatura a un annuncio che sblocca la chat
+fra non amici.
 
 ---
 
@@ -1616,7 +1805,10 @@ modifiche distruttive.
 | `track_uploads` | storage delle immagini/file da scegliere (Cloudinary escluso); controllo dei primi byte di NoseY |
 | `collab_matches` con `ai_score` | FK verso `collab_posts` e `users` |
 | `reviews` | FK verso eventi e utenti |
-| `follows` | tabella con PK composta (follower, followed), al posto delle amicizie di NoseY |
+| `follows` | tabella con PK composta (follower, followed): seguire senza reciprocità, accanto alle amicizie dell'MVP (decisione 59) |
+| Notifiche live delle richieste di amicizia | stesso pattern di `LiveNotification` (decisione 59) |
+| Fine degli eventi (`end_date`) | colonna nullable con una nuova migrazione; oggi lo sblocco della chat di un evento finisce all'inizio |
+| Ricerca utenti con indice trigram (`pg_trgm`) | oggi `ILIKE` senza indice, adeguato ai volumi dell'MVP |
 | `notifications` (storico) | i payload `LiveNotification` sono già il formato da salvare |
 | `indie_events.official_concert_id` | colonna nullable aggiunta con una nuova migrazione |
 | Appeal delle sospensioni | i campi di sospensione esistono già |

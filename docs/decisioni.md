@@ -637,6 +637,9 @@ conversazioni e candidature.
 
 Riusa il controller STOMP di NoseY; chiunque può scrivere a chiunque senza sistema di amicizie.
 
+**Modificata dalla decisione 59 (16 ottobre):** avvio via REST e invio via STOMP restano; una conversazione
+nuova si crea solo fra amici e ogni invio richiede l'amicizia o uno sblocco aperto.
+
 ### Alternative scartate
 
 - **Invio del primo messaggio direttamente all'id del destinatario**: due percorsi di invio da gestire.
@@ -1334,3 +1337,64 @@ finiscono solo il tipo di eccezione e lo stato HTTP, mai l'indirizzo.
 - **Aggiornare il parent Spring Boot:** 4.1.1 è l'ultima 4.1.x disponibile; 4.2 è solo milestone.
 - **Salire alle linee minori più recenti (Jackson 2.22/3.2):** cambio di minore non testato con il BOM di Boot.
 - **Rimandare a una card dedicata:** l'esposizione è già in produzione.
+
+## Decisione 59: chat solo fra amici, ricerca utenti e sblocchi da candidature e contatti (richiesta dello studente, sostituisce la chat libera del brief)
+
+### Scelta
+
+Su richiesta dello studente (16 ottobre) la regola del brief "chiunque può scrivere a chiunque" (§7.1, §8.3-E,
+§8.4) è **sostituita**, come la D1 dalla decisione 1. Il brief resta invariato; questa decisione prevale.
+
+- **Amicizie** (package `friendship`, tabella `friendships`, migrazione `V8__friendships.sql`, card F4-04).
+  Una riga per coppia (indice univoco sulla coppia canonica `LEAST`/`GREATEST` degli id), stati persistenti
+  `PENDING`, `ACCEPTED`, `DECLINED`, `CANCELLED`, `REMOVED`, colonna `closed_by` e **rifiuto silenzioso** come
+  NoseY (`request_masked`): chi è stato rifiutato continua a vedere la propria richiesta come inviata.
+  Endpoint: richiesta, accetta, rifiuta, annulla, rimuovi, elenchi (progettazione, sezione 6.14). Dopo un
+  rifiuto o una rimozione può chiedere di nuovo solo chi ha chiuso; dopo un annullamento chiunque. Limite
+  `FRIEND_REQUESTS` (20 in 24 ore). Nessuna eccezione per ADMIN e SUPERADMIN.
+- **Ricerca utenti** `GET /api/users/search?q` (card F4-05): solo autenticati; solo utenti verificati e ACTIVE,
+  escluso chi cerca; solo su `displayName` (mai email), 2–50 caratteri; paginata; limite `USER_SEARCH`
+  (30 al minuto); ogni risultato riporta lo stato dell'amicizia visto da chi cerca e il `friendshipId` quando
+  serve a un'azione.
+- **Permesso di scrittura in chat**: in una conversazione si scrive se i due utenti sono **amici** oppure se
+  esiste uno **sblocco** la cui origine è ancora aperta (tabella `chat_unlocks`, migrazione `V9__chat.sql`):
+  - candidatura a un annuncio collab (F5-03): aperto finché l'annuncio non è chiuso ("risolto"), cancellato
+    dal proprietario o nascosto da un admin;
+  - contatto di un concerto ufficiale o di un indie event pubblicato (F5-04): aperto fino all'**inizio**
+    dell'evento (`event_date`), se non cancellato o nascosto. Il contatto si può aprire solo prima dell'inizio.
+  Il controllo vale a ogni invio (STOMP, dopo il controllo di appartenenza) e alla creazione di una
+  conversazione nuova con `POST /api/chats` (solo fra amici). Lo storico resta sempre leggibile;
+  `ConversationResponse.canSend` dice al frontend se può scrivere.
+- **Notifiche live delle richieste di amicizia**: fuori dall'MVP.
+- **Tagli**: amicizie e ricerca diventano non tagliabili (la chat ne dipende); il contatto degli eventi
+  (F5-04) entra nell'ordine dei tagli prima della bacheca collab.
+
+### Motivazione
+
+- Lo studente vuole che i messaggi fra utenti singoli siano consensuali; la ricerca serve a trovare chi
+  aggiungere.
+- Le candidature e i contatti degli eventi restano utili solo se chi non si conosce può scriversi: lo
+  sblocco è legato a un'origine concreta e finisce con essa, quindi non diventa una chat libera permanente.
+- Gli stati persistenti con rifiuto silenzioso sono già collaudati in NoseY e limitano lo spam: chi è stato
+  rifiutato o rimosso non può insistere.
+- Una tabella di sblocchi con l'origine gestisce più motivi per la stessa coppia (una sola conversazione).
+
+### Alternative scartate
+
+- **Riga cancellata a ogni rifiuto, annullamento o rimozione:** più semplice, ma chi è rifiutato può
+  ripetere la richiesta all'infinito (scelta dello studente).
+- **Stato `UNAVAILABLE` visibile a chi è stato rifiutato:** più semplice del rifiuto silenzioso, ma rivela il
+  rifiuto.
+- **Candidatura che sblocca solo il primo messaggio, o sblocco permanente:** il primo rende inutile la bacheca
+  collab, il secondo trasforma una candidatura in una chat libera per sempre.
+- **Chiusura degli eventi a fine evento (durata convenzionale o nuovo campo `endDate`):** la prima inventa una
+  durata, la seconda modifica le card F3 già chiuse; la chat serve ad accordarsi prima dell'evento.
+- **Contatto solo per le collab:** lo studente vuole anche il contatto con l'organizzatore degli eventi.
+- **Colonna booleana di sblocco su `chat_conversations`:** non distingue le origini, quindi non può chiudersi
+  quando l'origine si chiude.
+
+### Rischi dichiarati
+
+- Circa +8,5 h di lavoro (calendario nella progettazione, sezione 14): il giorno di anticipo serve tutto.
+- `chat_unlocks.source_id` non ha una FK vera (punta a tre tabelle): l'integrità è garantita dal service, che
+  crea lo sblocco solo dopo aver letto l'origine.
