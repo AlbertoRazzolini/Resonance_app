@@ -1305,3 +1305,32 @@ finiscono solo il tipo di eccezione e lo stato HTTP, mai l'indirizzo.
   (colonne e permessi diversi) e il piano lo esclude.
 - **Rendere pubblico `mine` o filtrarlo per stato:** non richiesto; il filtro per stato si potrà aggiungere se
   serve al frontend.
+
+## Decisione 58: patch di sicurezza sulle dipendenze transitive (implementazione)
+
+### Scelta
+
+- Nel `pom.xml` si sovrascrivono, con le proprietà del BOM di Spring Boot 4.1.1, le versioni di quattro librerie
+  transitive con CVE segnalate dall'analisi dell'IDE (Mend.io): `tomcat.version` 11.0.24 → 11.0.27,
+  `jackson-2-bom.version` 2.21.5 → 2.21.7, `jackson-bom.version` 3.1.5 → 3.1.7, `postgresql.version`
+  42.7.13 → 42.7.14. Sono tutte patch della stessa linea minore.
+- Anche `logback` (`logback.version` 1.5.38 → 1.6.5) e `asm` (9.7.1 → 9.11) sono aggiornati. `asm` arriva da
+  `spring-boot-starter-test` (json-smart) e non ha una proprietà nel BOM: si fissa con un `dependencyManagement`.
+  `logback` salta di linea minore (1.5 → 1.6), perché per la 1.5 non esiste una patch successiva alla 1.5.38.
+- Le sovrascritture vanno rimosse quando una nuova patch di Spring Boot 4.1.x include versioni uguali o più
+  recenti.
+
+### Motivazione
+
+- Tomcat e Jackson sono raggiungibili da internet (richieste HTTP, WebSocket, JSON di ogni endpoint) e le CVE di
+  Tomcat arrivano a gravità 9.8; il primo deploy su Render è già stato fatto.
+- Restare sulla stessa linea minore limita il rischio di incompatibilità con Spring Boot 4.1.1; `./mvnw -q verify`
+  passa interamente dopo la modifica. Il salto di `logback` a 1.6 è l'eccezione: Boot 4.1.1 è pensato per la 1.5
+  (con slf4j 2.0.18), quindi il log di Render va controllato dopo il deploy; in caso di problemi basta togliere
+  la proprietà `logback.version`. `asm` è solo in scope `test`, senza effetti sul runtime.
+
+### Alternative scartate
+
+- **Aggiornare il parent Spring Boot:** 4.1.1 è l'ultima 4.1.x disponibile; 4.2 è solo milestone.
+- **Salire alle linee minori più recenti (Jackson 2.22/3.2):** cambio di minore non testato con il BOM di Boot.
+- **Rimandare a una card dedicata:** l'esposizione è già in produzione.

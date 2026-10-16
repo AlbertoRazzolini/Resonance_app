@@ -18,7 +18,24 @@
     <properties>
         <java.version>25</java.version>
         <jjwt.version>0.13.0</jjwt.version>
+        <!-- Patch di sicurezza sopra il BOM di Spring Boot 4.1.1 (decisione 58). -->
+        <tomcat.version>11.0.27</tomcat.version>
+        <jackson-2-bom.version>2.21.7</jackson-2-bom.version>
+        <jackson-bom.version>3.1.7</jackson-bom.version>
+        <postgresql.version>42.7.14</postgresql.version>
+        <logback.version>1.6.5</logback.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- asm arriva da spring-boot-starter-test (json-smart) e non ha una proprieta' nel BOM di Boot (decisione 58). -->
+            <dependency>
+                <groupId>org.ow2.asm</groupId>
+                <artifactId>asm</artifactId>
+                <version>9.11</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>
