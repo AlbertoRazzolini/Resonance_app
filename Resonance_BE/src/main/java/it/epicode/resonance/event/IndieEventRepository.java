@@ -38,6 +38,12 @@ public interface IndieEventRepository extends JpaRepository<IndieEvent, UUID> {
     Optional<IndieEvent> findWithMusicianById(UUID id);
 
     /**
+     * Eventi nascosti (da un admin o dal proprietario) con l'autore gia' caricato, per l'elenco della moderazione.
+     */
+    @EntityGraph(attributePaths = "musician")
+    Page<IndieEvent> findByModerationHiddenAtIsNotNull(Pageable pageable);
+
+    /**
      * Eventi non nascosti di un musicista, bozze comprese, con l'autore gia' caricato (elenco "mine").
      */
     @EntityGraph(attributePaths = "musician")

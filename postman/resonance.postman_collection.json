@@ -1584,6 +1584,466 @@
             "description": "Solo SUPERADMIN. Idempotente. Vale subito: il token dell'ex ADMIN riceve 403 alla richiesta successiva."
           },
           "response": []
+        },
+        {
+          "name": "Moderazione",
+          "description": "Nascondi, ripristina ed elenco dei nascosti (card F4-03). Eseguire in ordine, dopo il login come SUPERADMIN o ADMIN (accessToken) e con fanAccessToken copiato da un login come FAN.",
+          "item": [
+            {
+              "name": "Crea un post da moderare come FAN (201)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('201 con il post del FAN', function () {",
+                      "    pm.response.to.have.status(201);",
+                      "    pm.environment.set('moderationPostId', pm.response.json().id);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/feed-posts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "feed-posts"
+                  ]
+                },
+                "description": "Preparazione: un FAN (fanAccessToken) pubblica un post e lo script salva moderationPostId. Si usa un FAN perche' un admin non puo' moderare i propri contenuti.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"body\": \"Post da moderare creato da Postman\"\n}"
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{fanAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Nascondi un post (204)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('204 senza body', function () {",
+                      "    pm.response.to.have.status(204);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/moderation/feed-posts/{{moderationPostId}}/hide",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "moderation",
+                    "feed-posts",
+                    "{{moderationPostId}}",
+                    "hide"
+                  ]
+                },
+                "description": "ADMIN o SUPERADMIN. reason obbligatorio (3-500 caratteri). Il post sparisce da lista e dettaglio pubblici. {type} puo' essere official-concerts, indie-events, feed-posts o collab-posts.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Contenuto offensivo (prova da Postman)\"\n}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Nascondi senza motivo (400)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('400 VALIDATION_ERROR sul campo reason', function () {",
+                      "    pm.response.to.have.status(400);",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.code).to.eql('VALIDATION_ERROR');",
+                      "    pm.expect(body.fields).to.have.property('reason');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/moderation/feed-posts/{{moderationPostId}}/hide",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "moderation",
+                    "feed-posts",
+                    "{{moderationPostId}}",
+                    "hide"
+                  ]
+                },
+                "description": "Errore significativo: il motivo e' obbligatorio. La validazione viene prima di ogni altro controllo.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Nascondi come FAN (403)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('403 ACCESS_DENIED', function () {",
+                      "    pm.response.to.have.status(403);",
+                      "    pm.expect(pm.response.json().code).to.eql('ACCESS_DENIED');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/moderation/feed-posts/{{moderationPostId}}/hide",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "moderation",
+                    "feed-posts",
+                    "{{moderationPostId}}",
+                    "hide"
+                  ]
+                },
+                "description": "Errore significativo: senza ruolo ADMIN l'area di moderazione e' vietata (usa fanAccessToken).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Contenuto offensivo (prova da Postman)\"\n}"
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{fanAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Elenco dei nascosti (200)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 con il post nascosto e deletedByOwner falso', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    const hidden = pm.response.json().content.find(function (c) { return c.id === pm.environment.get('moderationPostId'); });",
+                      "    pm.expect(hidden).to.not.be.undefined;",
+                      "    pm.expect(hidden.deletedByOwner).to.eql(false);",
+                      "    pm.expect(hidden.hiddenReason).to.be.a('string');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/moderation/feed-posts/hidden",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "moderation",
+                    "feed-posts",
+                    "hidden"
+                  ]
+                },
+                "description": "ADMIN o SUPERADMIN. Elenco paginato (page, size) dal piu' recente. Comprende anche i contenuti cancellati dal proprietario, con deletedByOwner vero."
+              },
+              "response": []
+            },
+            {
+              "name": "Elenco dei nascosti come FAN (403)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('403 ACCESS_DENIED', function () {",
+                      "    pm.response.to.have.status(403);",
+                      "    pm.expect(pm.response.json().code).to.eql('ACCESS_DENIED');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/moderation/feed-posts/hidden",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "moderation",
+                    "feed-posts",
+                    "hidden"
+                  ]
+                },
+                "description": "Errore significativo: solo gli admin vedono i contenuti nascosti (usa fanAccessToken).",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{fanAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Ripristina un post (204)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('204 senza body', function () {",
+                      "    pm.response.to.have.status(204);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/moderation/feed-posts/{{moderationPostId}}/restore",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "moderation",
+                    "feed-posts",
+                    "{{moderationPostId}}",
+                    "restore"
+                  ]
+                },
+                "description": "ADMIN o SUPERADMIN. Ammesso solo per i contenuti nascosti da un admin: il post torna visibile."
+              },
+              "response": []
+            },
+            {
+              "name": "Crea un secondo post da moderare come FAN (201)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('201 con il post del FAN', function () {",
+                      "    pm.response.to.have.status(201);",
+                      "    pm.environment.set('moderationPostId', pm.response.json().id);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/feed-posts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "feed-posts"
+                  ]
+                },
+                "description": "Preparazione del caso successivo: nuovo post del FAN, moderationPostId viene sovrascritto.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"body\": \"Post da moderare creato da Postman\"\n}"
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{fanAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Il proprietario cancella il post (204)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('204 senza body', function () {",
+                      "    pm.response.to.have.status(204);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/feed-posts/{{moderationPostId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "feed-posts",
+                    "{{moderationPostId}}"
+                  ]
+                },
+                "description": "Preparazione: il FAN cancella il proprio post (cancellazione logica, hidden_by = il FAN).",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{fanAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Ripristina un post cancellato dal proprietario (409)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('409 RESTORE_NOT_ALLOWED', function () {",
+                      "    pm.response.to.have.status(409);",
+                      "    pm.expect(pm.response.json().code).to.eql('RESTORE_NOT_ALLOWED');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/moderation/feed-posts/{{moderationPostId}}/restore",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "moderation",
+                    "feed-posts",
+                    "{{moderationPostId}}",
+                    "restore"
+                  ]
+                },
+                "description": "Errore significativo: un admin non puo' annullare la cancellazione del proprietario."
+              },
+              "response": []
+            }
+          ]
         }
       ]
     },

@@ -1474,3 +1474,43 @@ Su richiesta dello studente (16 ottobre) la regola del brief "chiunque può scri
 - **`likes_count` modificabile dall'entity con `@Version` o lock:** più codice e contesa sulla riga, per un risultato
   che l'UPDATE atomico dà già.
 - **Indice completo su `(created_at, id)`:** include i post nascosti, che la lista non mostra mai.
+
+## Decisione 62: scelte di implementazione della moderazione admin (implementazione)
+
+### Scelta
+
+- **Ordine dei controlli di `hide` e `restore`:** contenuto inesistente = 404; poi la regola dei livelli sull'autore
+  (403 `INSUFFICIENT_PLATFORM_LEVEL`); poi lo stato (409 `CONTENT_ALREADY_HIDDEN`, `CONTENT_NOT_HIDDEN`,
+  `RESTORE_NOT_ALLOWED`). I ruoli dell'autore si leggono dal database. Un admin che modera un proprio contenuto riceve
+  403 (la regola vieta di agire su se stessi).
+- **`{type}` sconosciuto = 400 `VALIDATION_ERROR`:** un `Converter<String, ModeratedContentType>` traduce il segmento
+  dell'URL (`feed-posts`, ...) e lancia `IllegalArgumentException` per i valori sconosciuti, che il
+  `GlobalExceptionHandler` già trasforma in 400.
+- **L'admin vede anche i contenuti nascosti:** `hide` su un contenuto già cancellato dal proprietario risponde 409
+  `CONTENT_ALREADY_HIDDEN`, non 404. Gli eventi indie in bozza si possono nascondere.
+- **`reason` di `hide`:** si tolgono gli spazi ai bordi prima di validare (3–500 caratteri); un motivo di soli spazi è
+  400.
+- **Elenco dei nascosti:** `HiddenContentResponse {id, author, title, hiddenAt, hiddenBy, hiddenReason, deletedByOwner}`.
+  `author` è un `AuthorSummary`; `title` è il titolo, oppure per i post del feed il testo, accorciato a 100 caratteri
+  con `...`. Ordine fisso `hidden_at desc, id desc`. Ogni repository ha `findByModerationHiddenAtIsNotNull` con
+  l'autore caricato insieme (nessuna query per riga).
+- **Un solo service per i quattro tipi**, con una vista interna `Content(author, moderation)` costruita da un `switch`
+  sul tipo; non c'è un'interfaccia comune sulle entity, che restano indipendenti.
+
+### Motivazione
+
+- Il livello è una regola di accesso e si controlla prima di guardare lo stato: chi non può agire su un autore riceve
+  sempre 403, qualunque sia lo stato del contenuto; il 404 resta solo per ciò che non esiste.
+- Il converter usa i segmenti del design (sezione 5.7) senza cambiare i nomi dell'enum.
+- Mostrare i nascosti all'admin gli permette di distinguere "già nascosto" da "inesistente" e di moderare ogni stato.
+- Il troncamento a 100 caratteri tiene l'elenco leggero anche con post molto lunghi.
+- Lo `switch` evita di toccare le entity (decisioni 41 e 43) e tiene la regola di moderazione in un punto solo.
+
+### Alternative scartate
+
+- **404 per un contenuto già nascosto:** confonderebbe l'admin, che deve poterlo ripristinare o capire perché non può.
+- **Una `@Query` nativa con `UNION` sulle quattro tabelle per l'elenco:** il tipo è già nell'URL, quindi basta una
+  query per tipo, più semplice e paginata dal database.
+- **Interfaccia `Moderable` implementata dalle quattro entity:** cambierebbe classi già consegnate per risparmiare
+  quattro righe in uno `switch`.
+- **Lasciare che un admin moderi i propri contenuti:** la sezione 5.6 vieta di agire su se stessi.

@@ -1,5 +1,7 @@
 package it.epicode.resonance.event;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -43,6 +45,12 @@ public interface OfficialConcertRepository extends JpaRepository<OfficialConcert
      */
     @EntityGraph(attributePaths = "host")
     Optional<OfficialConcert> findWithHostById(UUID id);
+
+    /**
+     * Concerti nascosti (da un admin o dal proprietario) con l'autore gia' caricato, per l'elenco della moderazione.
+     */
+    @EntityGraph(attributePaths = "host")
+    Page<OfficialConcert> findByModerationHiddenAtIsNotNull(Pageable pageable);
 
     /**
      * Concerti con i loro autori, per comporre la pagina di una ricerca nelle vicinanze.

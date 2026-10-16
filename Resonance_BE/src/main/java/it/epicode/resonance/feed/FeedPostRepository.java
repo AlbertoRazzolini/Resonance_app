@@ -48,6 +48,12 @@ public interface FeedPostRepository extends JpaRepository<FeedPost, UUID> {
     Optional<FeedPost> findWithAuthorById(UUID id);
 
     /**
+     * Post nascosti (da un admin o dal proprietario) con l'autore gia' caricato, per l'elenco della moderazione.
+     */
+    @EntityGraph(attributePaths = "author")
+    Page<FeedPost> findByModerationHiddenAtIsNotNull(Pageable pageable);
+
+    /**
      * Post non nascosti con l'autore gia' caricato (lista senza filtro geografico).
      */
     @EntityGraph(attributePaths = "author")

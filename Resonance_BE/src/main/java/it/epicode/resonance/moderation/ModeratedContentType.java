@@ -20,4 +20,16 @@ public enum ModeratedContentType {
     public String path() {
         return path;
     }
+
+    /**
+     * Tipo dal segmento dell'URL; un valore sconosciuto lancia IllegalArgumentException, che diventa un 400.
+     */
+    public static ModeratedContentType fromPath(String path) {
+        for (ModeratedContentType type : values()) {
+            if (type.path.equals(path)) {
+                return type;
+            }
+        }
+        throw new IllegalArgumentException("Tipo di contenuto sconosciuto: " + path);
+    }
 }

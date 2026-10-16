@@ -20,6 +20,12 @@ public interface CollabPostRepository extends JpaRepository<CollabPost, UUID> {
     Optional<CollabPost> findWithMusicianById(UUID id);
 
     /**
+     * Annunci nascosti (da un admin o dal proprietario) con l'autore gia' caricato, per l'elenco della moderazione.
+     */
+    @EntityGraph(attributePaths = "musician")
+    Page<CollabPost> findByModerationHiddenAtIsNotNull(Pageable pageable);
+
+    /**
      * Annunci aperti e non nascosti, con l'autore gia' caricato (lista pubblica).
      */
     @EntityGraph(attributePaths = "musician")
