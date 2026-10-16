@@ -1078,7 +1078,9 @@ ancora aperta:
 | `INDIE_EVENT` | `status = PUBLISHED`, `event_date > now` e `hidden_at IS NULL` |
 
 Il controllo è una query nativa con tre `EXISTS` (uno per tipo) e `now` dal `Clock`. Si applica a ogni
-invio (sezione 7.5, errore `CHAT_LOCKED`). `POST /api/chats` restituisce sempre una conversazione già
+invio (sezione 7.5, errore `CHAT_LOCKED`). Si scrive solo se entrambi i membri sono attivi: con un membro
+sospeso (sospensione scaduta = attivo) `canSend` è falso e l'invio dà `CHAT_LOCKED` con un testo neutro, senza
+rivelare la sospensione (decisione 66). `POST /api/chats` restituisce sempre una conversazione già
 esistente (anche se `canSend` è falso: lo storico resta leggibile) e ne crea una nuova solo fra amici.
 `canSend` si calcola per la pagina intera con due query (amici fra le coppie, sblocchi aperti per gli id
 delle conversazioni), non una per riga. Lista, storico e `read` non dipendono dal permesso. Candidature

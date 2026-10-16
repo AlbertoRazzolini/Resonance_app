@@ -52,6 +52,9 @@ public enum ErrorCode {
     NOT_FRIENDSHIP_REQUESTER(HttpStatus.FORBIDDEN),
     FRIEND_REQUEST_NOT_PENDING(HttpStatus.CONFLICT),
     NOT_FRIENDS(HttpStatus.FORBIDDEN),
+    CANNOT_MESSAGE_SELF(HttpStatus.BAD_REQUEST),
+    NOT_CONVERSATION_MEMBER(HttpStatus.FORBIDDEN),
+    CHAT_LOCKED(HttpStatus.FORBIDDEN),
     // Solo WebSocket (sezione 7.2): sulle API il token non valido e' UNAUTHENTICATED.
     TOKEN_INVALID(null);
 

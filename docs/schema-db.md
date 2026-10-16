@@ -17,8 +17,9 @@ creato e si aggiorna a ogni migrazione che modifica lo schema, nello stesso sott
 | `V6__collab_posts` | F4-01 | tabella `collab_posts` | Applicata |
 | `V7__feed_and_likes` | F4-02 | tabelle `feed_posts`, `post_likes` | Applicata |
 | `V8__friendships` | F4-04 | enum `friendship_status`; tabella `friendships` | Applicata |
+| `V9__chat` | F5-02 | enum `chat_unlock_source`; tabelle `chat_conversations`, `chat_messages`, `chat_unlocks` | Applicata |
 
-Migrazione ancora da fare (progettazione, sezione 3.6): `V9__chat` (F5-02).
+Tutte le migrazioni previste dalla progettazione, sezione 3.6, sono applicate.
 
 ## Convenzioni
 
@@ -38,6 +39,7 @@ Migrazione ancora da fare (progettazione, sezione 3.6): `V9__chat` (F5-02).
 | `email_code_purpose` | `EMAIL_VERIFICATION`, `PASSWORD_RESET` | `EmailCodePurpose` |
 | `indie_event_status` | `DRAFT`, `PUBLISHED` | `IndieEventStatus` |
 | `friendship_status` | `PENDING`, `ACCEPTED`, `DECLINED`, `CANCELLED`, `REMOVED` | `FriendshipStatus` |
+| `chat_unlock_source` | `COLLAB_POST`, `OFFICIAL_CONCERT`, `INDIE_EVENT` | `ChatUnlockSource` |
 
 ## Tabelle
 
@@ -288,6 +290,53 @@ Indici: `uq_friendships_pair` univoco su `(LEAST(requester_id, addressee_id), GR
 addressee_id))`, che impedisce una seconda riga per la coppia anche con i ruoli invertiti; `ix_friendships_requester
 (requester_id)`; `ix_friendships_addressee (addressee_id)`.
 
+### chat_conversations
+
+Conversazione privata fra due utenti (decisione 59): una sola per coppia, qualunque dei due la apra. La coppia è
+canonica, con `user_a_id` minore di `user_b_id`; il confronto è quello di PostgreSQL (byte senza segno), per questo
+l'applicazione ordina gli id come stringhe esadecimali minuscole e non con `UUID.compareTo`.
+
+| Colonna | Tipo | Vincoli |
+|---|---|---|
+| `id` | uuid | PK `pk_chat_conversations`, default `gen_random_uuid()` |
+| `user_a_id` | uuid | NOT NULL, FK `fk_chat_conversations_user_a` → `users(id)`; il minore dei due id |
+| `user_b_id` | uuid | NOT NULL, FK `fk_chat_conversations_user_b` → `users(id)` |
+| `created_at` | timestamptz | NOT NULL, default `now()` |
+| `last_message_at` | timestamptz | NULL fino al primo messaggio; ordina la lista delle conversazioni |
+
+Vincoli: `ck_chat_conversations_order` (`user_a_id < user_b_id`) e `uq_chat_conversations_pair` univoco su
+`(user_a_id, user_b_id)`, che rende sicura la creazione concorrente (`INSERT ... ON CONFLICT DO NOTHING` e rilettura).
+Indice `ix_chat_conversations_user_b (user_b_id)`; `user_a_id` è già coperto dal vincolo di unicità.
+
+### chat_messages
+
+| Colonna | Tipo | Vincoli |
+|---|---|---|
+| `id` | uuid | PK `pk_chat_messages`, default `gen_random_uuid()` |
+| `conversation_id` | uuid | NOT NULL, FK `fk_chat_messages_conversation` → `chat_conversations(id)` |
+| `sender_id` | uuid | NOT NULL, FK `fk_chat_messages_sender` → `users(id)` |
+| `body` | varchar(2000) | NOT NULL |
+| `read_at` | timestamptz | NULL fino a quando l'altro membro lo legge |
+| `sent_at` | timestamptz | NOT NULL, default `now()`; l'applicazione lo valorizza dall'orologio |
+
+Indice `ix_chat_messages_cursor (conversation_id, sent_at DESC, id DESC)`: serve la paginazione a cursore dello
+storico, che a pari istante ordina per `id`.
+
+### chat_unlocks
+
+Origini che permettono di scrivere senza amicizia (decisione 59): una candidatura a un annuncio o il contatto di un
+evento. Lo sblocco vale finché l'origine è aperta; la regola è nella query del permesso di scrittura, non nella tabella.
+
+| Colonna | Tipo | Vincoli |
+|---|---|---|
+| `conversation_id` | uuid | NOT NULL, PK `pk_chat_unlocks` (con `source_type` e `source_id`), FK `fk_chat_unlocks_conversation` → `chat_conversations(id)` |
+| `source_type` | chat_unlock_source | NOT NULL, PK `pk_chat_unlocks` |
+| `source_id` | uuid | NOT NULL, PK `pk_chat_unlocks`; id dell'annuncio o dell'evento, **senza FK** perché punta a tre tabelle diverse |
+| `created_at` | timestamptz | NOT NULL, default `now()` |
+
+La chiave composta impedisce un secondo sblocco dalla stessa origine (`INSERT ... ON CONFLICT DO NOTHING`). Senza FK,
+lo sblocco si crea solo dopo aver letto l'origine nella stessa transazione.
+
 ## Relazioni (diagramma ER)
 
 ```mermaid
@@ -310,6 +359,11 @@ erDiagram
     USERS ||--o{ FRIENDSHIPS : "chiede (requester_id)"
     USERS ||--o{ FRIENDSHIPS : "riceve (addressee_id)"
     USERS |o--o{ FRIENDSHIPS : "chiude (closed_by)"
+    USERS ||--o{ CHAT_CONVERSATIONS : "membro A (user_a_id)"
+    USERS ||--o{ CHAT_CONVERSATIONS : "membro B (user_b_id)"
+    CHAT_CONVERSATIONS ||--o{ CHAT_MESSAGES : "contiene"
+    USERS ||--o{ CHAT_MESSAGES : "invia (sender_id)"
+    CHAT_CONVERSATIONS ||--o{ CHAT_UNLOCKS : "sbloccata da"
 
     USERS {
         uuid id PK
@@ -442,5 +496,29 @@ erDiagram
         boolean request_masked
         timestamptz created_at
         timestamptz updated_at
+    }
+
+    CHAT_CONVERSATIONS {
+        uuid id PK
+        uuid user_a_id FK
+        uuid user_b_id FK
+        timestamptz created_at
+        timestamptz last_message_at
+    }
+
+    CHAT_MESSAGES {
+        uuid id PK
+        uuid conversation_id FK
+        uuid sender_id FK
+        varchar body
+        timestamptz read_at
+        timestamptz sent_at
+    }
+
+    CHAT_UNLOCKS {
+        uuid conversation_id PK, FK
+        chat_unlock_source source_type PK
+        uuid source_id PK
+        timestamptz created_at
     }
 ```

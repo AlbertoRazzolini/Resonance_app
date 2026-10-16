@@ -1668,3 +1668,62 @@ Su richiesta dello studente (16 ottobre) la regola del brief "chiunque può scri
   tipo è ambigua; `delayedExecutor` non richiede bean.
 - **`@Controller` annidato in una `@TestConfiguration` per il controller di prova:** Spring registra le classi
   annidate due volte (mapping ambiguo); una classe a sé con `@TestComponent` non viene scansionata dagli altri test.
+
+## Decisione 66: scelte di implementazione della chat (implementazione)
+
+### Scelta
+
+- **`NEW_MESSAGE` resta a F5-03 (scelta dello studente):** `ChatService.send` pubblica solo `ChatMessageEvent`
+  (consegna del messaggio a mittente e destinatario). La notifica `NEW_MESSAGE` della sezione 7.5, passo 6, la aggiunge
+  F5-03 insieme a `LiveNotificationEvent`, come già previsto dal suo sotto-task 1.
+- **Ordine dei controlli in `POST /api/chats` (scelta dello studente):** se stessi 400 `CANNOT_MESSAGE_SELF`; se la
+  coppia ha già una conversazione la si restituisce senza altri controlli e senza toccare il limite; per una
+  conversazione nuova: destinatario inesistente, non verificato o sospeso 404, non amici 403 `NOT_FRIENDS`, solo alla fine
+  il limite `CONVERSATIONS_CREATED` e la creazione. I rifiuti non consumano le 20 creazioni al giorno.
+- **Un membro sospeso blocca la scrittura (scelta dello studente, regola nuova rispetto alla sezione 6.9):** `canSend`
+  è falso se uno dei due membri non è attivo (una sospensione scaduta conta come attivo, come nella riattivazione
+  pigra), anche fra amici o con uno sblocco aperto. L'invio risponde `CHAT_LOCKED` con il testo neutro "Al momento non
+  puoi inviare messaggi a questo utente": non dice che l'altro è sospeso. Lista e storico restano leggibili, e una
+  conversazione già esistente con un sospeso si restituisce comunque.
+- **Coppia canonica ordinata come stringhe:** `ck_chat_conversations_order` confronta gli uuid byte per byte senza
+  segno, mentre `UUID.compareTo` di Java è con segno; l'applicazione ordina quindi le stringhe esadecimali minuscole
+  (larghezza fissa, stesso ordine di PostgreSQL). Con `compareTo` una coppia con un id che inizia per 8-f violerebbe
+  il vincolo.
+- **Creazione concorrente:** `INSERT ... ON CONFLICT DO NOTHING` sulla coppia canonica e rilettura; due `POST`
+  contemporanei danno la stessa conversazione. Il limite è consumato prima dell'inserimento: due richieste
+  concorrenti per la stessa coppia nuova possono consumarne due, un caso trascurabile.
+- **`ChatService.canSend(conversation)` senza `me`:** controlla entrambi i membri, quindi vale per l'invio e per la
+  lista. Per la lista il calcolo è per pagina con due query più i due utenti già caricati (`relationsFor` per le
+  amicizie, una query per gli sblocchi aperti); per il singolo invio sono `areFriends`, la query con i tre `EXISTS` e
+  due `resolve`.
+- **`ChatUnlock` è un'entity di sola lettura:** le righe si creano solo con `insertIfAbsent` nativo (`ON CONFLICT DO
+  NOTHING`, enum con `cast`), mai con `save`; l'entity serve a `ddl-auto: validate`.
+- **`sent_at` dall'orologio dell'applicazione:** non dal `DEFAULT now()`, così i test controllano l'ordine dei messaggi
+  e la finestra di `CHAT_MESSAGES` con lo stesso `Clock`.
+- **Cursore:** `before` è l'id del messaggio più vecchio già caricato; se non appartiene alla conversazione 404
+  `NOT_FOUND`. Il confronto su `(sent_at, id)` legge il cursore dal database nella stessa query. `size` 1-100
+  (default 30) con `@Min`/`@Max` sul parametro: fuori range 400 `VALIDATION_ERROR`.
+- **Errori di appartenenza:** conversazione inesistente 404; esistente ma non membro 403 `NOT_CONVERSATION_MEMBER`
+  (come da sezione 6.9) per storico, lettura e invio; nell'invio il controllo viene prima del permesso (sezione 7.5).
+- **Interfaccia per F5-03 e F5-04:** `findOrCreateConversation(a, b)`, `unlock(...)` e `appendMessage(...)`
+  sono pubblici; `appendMessage` aggiorna `last_message_at` ma non pubblica eventi né controlla il permesso: chi lo
+  chiama pubblica `ChatMessageEvent` nella stessa transazione.
+
+### Motivazione
+
+- Un messaggio a un sospeso non verrebbe letto né consegnato (le sue sessioni sono chiuse); bloccarlo con un testo
+  neutro avvisa chi scrive senza rivelare un dato di moderazione, in linea con il rifiuto silenzioso delle amicizie.
+- Contare il limite solo quando la creazione sta per avvenire evita che chi prova con non amici esaurisca le
+  creazioni; le conversazioni esistenti sono una lettura.
+- Una sola regola di scrittura per invio e lista evita che il frontend mostri il campo di testo e l'invio fallisca
+  (o il contrario).
+
+### Alternative scartate
+
+- **Motivo esplicito ("account sospeso") a chi scrive:** più chiaro, ma rivela la moderazione a chiunque abbia una
+  chat con quell'utente.
+- **Nessun blocco verso i sospesi:** i messaggi resterebbero in attesa senza avviso.
+- **Limite consumato prima di ogni controllo:** più semplice, ma ogni tentativo con un non amico brucerebbe una
+  creazione.
+- **Creare ora una versione minima di `LiveNotificationEvent`:** anticiperebbe lavoro di F5-03.
+- **`UUID.compareTo` per la coppia canonica:** discorde dal confronto di PostgreSQL.

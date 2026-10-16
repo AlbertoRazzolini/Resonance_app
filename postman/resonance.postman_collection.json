@@ -4993,8 +4993,736 @@
     },
     {
       "name": "Chat",
-      "description": "Conversazioni e storico dei messaggi, solo la parte REST (card F5).",
-      "item": []
+      "description": "Conversazioni e storico dei messaggi, solo la parte REST (card F5-02). L'invio dei messaggi passa dal WebSocket e non sta in Postman. Servono accessToken (primo utente), fanAccessToken (secondo utente) e adminAccessToken (un terzo utente che non e membro della conversazione ne amico del secondo), copiati da un login come nelle cartelle Admin e Friends. Eseguire in ordine: la sequenza rende i due utenti amici e termina rimuovendo l'amicizia, cosi puo essere rieseguita (la conversazione resta, come lo storico).",
+      "item": [
+        {
+          "name": "Identifica il primo utente (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 e salva l id di chi possiede accessToken', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.environment.set('userId', pm.response.json().id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Preparazione. Con accessToken legge il proprio profilo e salva userId."
+          },
+          "response": []
+        },
+        {
+          "name": "Identifica il secondo utente (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 e salva l id di chi possiede fanAccessToken', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.environment.set('friendUserId', pm.response.json().id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Preparazione. Con fanAccessToken (secondo utente) legge il proprio profilo e salva friendUserId."
+          },
+          "response": []
+        },
+        {
+          "name": "Conversazione con se stessi (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 CANNOT_MESSAGE_SELF', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql('CANNOT_MESSAGE_SELF');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/chats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "chats"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipientId\": \"{{userId}}\"\n}"
+            },
+            "description": "Errore significativo. Non si apre una conversazione con se stessi."
+          },
+          "response": []
+        },
+        {
+          "name": "Conversazione con un non amico (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 NOT_FRIENDS', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('NOT_FRIENDS');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/chats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "chats"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipientId\": \"{{friendUserId}}\"\n}"
+            },
+            "description": "Errore significativo. Con adminAccessToken, che non e amico del secondo utente e non ha una conversazione con lui: una conversazione nuova si apre solo fra amici."
+          },
+          "response": []
+        },
+        {
+          "name": "Preparazione: chiedi amicizia (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 e salva l id dell amicizia', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.environment.set('friendshipId', pm.response.json().id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{friendUserId}}\"\n}"
+            },
+            "description": "Preparazione. Il primo utente chiede l'amicizia al secondo. Se i due sono gia amici (esecuzione interrotta) risponde 409 ALREADY_FRIENDS: rimuovere prima l'amicizia dalla cartella Friends."
+          },
+          "response": []
+        },
+        {
+          "name": "Preparazione: accetta come secondo utente (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 FRIENDS', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql('FRIENDS');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships/{{friendshipId}}/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships",
+                "{{friendshipId}}",
+                "accept"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Preparazione. Il secondo utente accetta: ora i due sono amici."
+          },
+          "response": []
+        },
+        {
+          "name": "Apri la conversazione (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con l altro utente in forma ridotta e canSend vero', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.environment.set('conversationId', body.id);",
+                  "    pm.expect(body).to.have.all.keys('id', 'otherUser', 'lastMessage', 'unreadCount', 'lastMessageAt', 'canSend');",
+                  "    pm.expect(body.otherUser.id).to.eql(pm.environment.get('friendUserId'));",
+                  "    pm.expect(body.otherUser.email).to.be.undefined;",
+                  "    pm.expect(body.canSend).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/chats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "chats"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipientId\": \"{{friendUserId}}\"\n}"
+            },
+            "description": "Fra amici trova o crea la conversazione e salva conversationId. Se esiste gia (esecuzione precedente) la restituisce senza consumare il limite di creazioni."
+          },
+          "response": []
+        },
+        {
+          "name": "Apri la stessa conversazione dall'altra parte (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con lo stesso id', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().id).to.eql(pm.environment.get('conversationId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/chats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "chats"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipientId\": \"{{userId}}\"\n}"
+            },
+            "description": "Coppia canonica: qualunque dei due la apra, la conversazione e una sola."
+          },
+          "response": []
+        },
+        {
+          "name": "Elenco conversazioni (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con la conversazione, canSend vero e nessuna email', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.all.keys('content', 'page', 'size', 'totalElements', 'totalPages');",
+                  "    const found = body.content.find(function (c) { return c.id === pm.environment.get('conversationId'); });",
+                  "    pm.expect(found).to.not.be.undefined;",
+                  "    pm.expect(found.canSend).to.eql(true);",
+                  "    pm.expect(found.otherUser.email).to.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/chats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "chats"
+              ]
+            },
+            "description": "Le conversazioni del primo utente, dall'ultima attivita, con ultimo messaggio, non letti e canSend."
+          },
+          "response": []
+        },
+        {
+          "name": "Elenco conversazioni senza token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 UNAUTHENTICATED', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().code).to.eql('UNAUTHENTICATED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/chats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "chats"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Errore significativo. La chat richiede il login."
+          },
+          "response": []
+        },
+        {
+          "name": "Storico messaggi (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con la pagina del cursore', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.all.keys('messages', 'hasMore');",
+                  "    pm.expect(body.messages).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/chats/{{conversationId}}/messages?size=30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "chats",
+                "{{conversationId}}",
+                "messages"
+              ],
+              "query": [
+                {
+                  "key": "size",
+                  "value": "30"
+                }
+              ]
+            },
+            "description": "Storico a cursore dal messaggio piu recente. Per la pagina successiva si passa before con l'id dell'ultimo messaggio ricevuto. La conversazione e vuota finche non si invia un messaggio dal WebSocket (pagina tools/stomp-test)."
+          },
+          "response": []
+        },
+        {
+          "name": "Storico con size fuori range (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql('VALIDATION_ERROR');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/chats/{{conversationId}}/messages?size=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "chats",
+                "{{conversationId}}",
+                "messages"
+              ],
+              "query": [
+                {
+                  "key": "size",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Errore significativo. size va da 1 a 100."
+          },
+          "response": []
+        },
+        {
+          "name": "Storico come non membro (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 NOT_CONVERSATION_MEMBER', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('NOT_CONVERSATION_MEMBER');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/chats/{{conversationId}}/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "chats",
+                "{{conversationId}}",
+                "messages"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Errore significativo. Con adminAccessToken, che non e uno dei due membri."
+          },
+          "response": []
+        },
+        {
+          "name": "Segna come letti (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 senza corpo', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/chats/{{conversationId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "chats",
+                "{{conversationId}}",
+                "read"
+              ]
+            },
+            "description": "Segna come letti i messaggi dell'altro membro; i propri restano com'erano."
+          },
+          "response": []
+        },
+        {
+          "name": "Segna come letti da non membro (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 NOT_CONVERSATION_MEMBER', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('NOT_CONVERSATION_MEMBER');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/chats/{{conversationId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "chats",
+                "{{conversationId}}",
+                "read"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Errore significativo. Con adminAccessToken, che non e uno dei due membri."
+          },
+          "response": []
+        },
+        {
+          "name": "Chiusura: rimuovi l'amicizia (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 senza corpo', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships/{{friendshipId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships",
+                "{{friendshipId}}"
+              ]
+            },
+            "description": "Chiusura. La sequenza puo essere rieseguita."
+          },
+          "response": []
+        },
+        {
+          "name": "Dopo la rimozione la conversazione resta ma non si scrive (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con lo stesso id e canSend falso', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.id).to.eql(pm.environment.get('conversationId'));",
+                  "    pm.expect(body.canSend).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/chats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "chats"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipientId\": \"{{friendUserId}}\"\n}"
+            },
+            "description": "Una conversazione esistente si restituisce sempre: lo storico resta leggibile, ma senza amicizia (ne sblocco aperto) canSend e falso."
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [
