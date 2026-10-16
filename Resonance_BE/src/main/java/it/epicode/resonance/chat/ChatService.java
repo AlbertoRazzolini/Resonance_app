@@ -234,9 +234,9 @@ public class ChatService {
 
     /**
      * I primi {@value #PREVIEW_LENGTH} caratteri del messaggio (progettazione, sezione 7.4), contati per punti di
-     * codice cosi' una emoji non viene spezzata a meta'.
+     * codice cosi' una emoji non viene spezzata a meta'. Pubblico perche' lo usa anche il contatto degli eventi.
      */
-    private static String preview(String body) {
+    public static String preview(String body) {
         if (body.codePointCount(0, body.length()) <= PREVIEW_LENGTH) {
             return body;
         }

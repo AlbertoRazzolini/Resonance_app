@@ -2180,7 +2180,7 @@
     },
     {
       "name": "Events",
-      "description": "Concerti ufficiali e indie event (card F3). Eseguire in ordine, prima i concerti (login come HOST in accessToken) e poi gli indie event (login come MUSICIAN in accessToken); fanAccessToken e' il token di un login come FAN. Nominatim e' reale: serve la rete.",
+      "description": "Concerti ufficiali e indie event (card F3). Eseguire in ordine, prima i concerti (login come HOST in accessToken) e poi gli indie event (login come MUSICIAN in accessToken); fanAccessToken e' il token di un login come FAN. Nominatim e' reale: serve la rete. I contatti (card F5-04) usano fanAccessToken per i 201 e per il 404 sulla bozza, accessToken dell'HOST per il 400 sul proprio concerto.",
       "item": [
         {
           "name": "Crea concerto (201)",
@@ -2529,6 +2529,106 @@
               ]
             },
             "description": "Errore significativo. Un id che non esiste (o un concerto nascosto) e' un 404."
+          },
+          "response": []
+        },
+        {
+          "name": "Contatto del concerto (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 con conversazione e messaggio', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.conversationId).to.be.a('string');",
+                  "    pm.expect(body.messageId).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/official-concerts/{{concertId}}/contact",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "official-concerts",
+                "{{concertId}}",
+                "contact"
+              ]
+            },
+            "description": "Richiede il login come utente diverso dall'HOST (fanAccessToken), non serve essere amici. Crea la conversazione con l'organizzatore, lo sblocco (aperto fino all'inizio del concerto) e il messaggio 'Contatto per «titolo»:'. L'organizzatore connesso su STOMP riceve il messaggio e la notifica NEW_MESSAGE. Messaggio da 1 a 1800 caratteri; massimo 10 contatti in 24 ore.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Avete ancora posto per un set acustico?\"\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Contatto del proprio concerto (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 CANNOT_CONTACT_OWN_EVENT', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql('CANNOT_CONTACT_OWN_EVENT');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/official-concerts/{{concertId}}/contact",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "official-concerts",
+                "{{concertId}}",
+                "contact"
+              ]
+            },
+            "description": "Errore significativo. Usa accessToken dell'HOST che ha creato il concerto: non ci si puo' contattare da soli.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Avete ancora posto per un set acustico?\"\n}"
+            }
           },
           "response": []
         },
@@ -2886,6 +2986,60 @@
           "response": []
         },
         {
+          "name": "Contatto di una bozza altrui (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 NOT_FOUND', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql('NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/indie-events/{{indieEventId}}/contact",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "indie-events",
+                "{{indieEventId}}",
+                "contact"
+              ]
+            },
+            "description": "Errore significativo. Da eseguire prima di 'Pubblica la bozza': una bozza non si puo' contattare e risponde 404 come se non esistesse.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Avete ancora posto per un set acustico?\"\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Pubblica la bozza (200)",
           "event": [
             {
@@ -3054,6 +3208,62 @@
               ]
             },
             "description": "Errore significativo. Senza lat la ricerca non parte."
+          },
+          "response": []
+        },
+        {
+          "name": "Contatto dell'indie event (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 con conversazione e messaggio', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.conversationId).to.be.a('string');",
+                  "    pm.expect(body.messageId).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/indie-events/{{indieEventId}}/contact",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "indie-events",
+                "{{indieEventId}}",
+                "contact"
+              ]
+            },
+            "description": "Da eseguire dopo 'Pubblica la bozza'. Richiede il login come utente diverso dal MUSICIAN (fanAccessToken), non serve essere amici. Crea la conversazione con l'organizzatore, lo sblocco (aperto fino all'inizio dell'evento) e il messaggio 'Contatto per «titolo»:'.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Avete ancora posto per un set acustico?\"\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },

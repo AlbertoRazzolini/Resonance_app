@@ -1,6 +1,8 @@
 package it.epicode.resonance.event;
 
 import it.epicode.resonance.auth.AuthenticatedUser;
+import it.epicode.resonance.event.dto.ContactRequest;
+import it.epicode.resonance.event.dto.ContactResponse;
 import it.epicode.resonance.event.dto.CreateIndieEventRequest;
 import it.epicode.resonance.event.dto.IndieEventResponse;
 import it.epicode.resonance.common.PageParams;
@@ -25,7 +27,8 @@ import java.util.UUID;
 
 /**
  * Endpoint degli indie event (progettazione, sezione 6.6). La creazione e' riservata ai MUSICIAN da
- * {@code SecurityConfig}; ricerca e dettaglio sono pubblici, con le bozze visibili solo al proprietario.
+ * {@code SecurityConfig}; ricerca e dettaglio sono pubblici, con le bozze visibili solo al proprietario; il
+ * contatto dell'organizzatore e' per qualunque utente autenticato.
  */
 @RestController
 @RequestMapping("/api/indie-events")
@@ -81,6 +84,16 @@ public class IndieEventController {
     @PatchMapping("/{id}/publish")
     public IndieEventResponse publish(@PathVariable UUID id, @AuthenticationPrincipal AuthenticatedUser user) {
         return eventService.publish(id, user.id());
+    }
+
+    /**
+     * Contatto dell'organizzatore da parte del chiamante: messaggio in chat e sblocco fino all'inizio dell'evento.
+     */
+    @PostMapping("/{id}/contact")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ContactResponse contact(@PathVariable UUID id, @AuthenticationPrincipal AuthenticatedUser user,
+                                   @Valid @RequestBody ContactRequest request) {
+        return eventService.contact(id, user.id(), request.message());
     }
 
     /**

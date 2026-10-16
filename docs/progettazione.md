@@ -992,17 +992,20 @@ mai nel profilo pubblico.
 | `GET /api/indie-events/{id}` | pubblico | una bozza è visibile solo al proprietario (altrimenti 404) |
 | `PATCH /api/indie-events/{id}/publish` | proprietario | 200; già pubblicato → 409; data passata → 400 |
 | `DELETE /api/indie-events/{id}` | proprietario | soft delete |
-| `POST /api/official-concerts/{id}/contact` | autenticato | `{message (1–2000)}` → 201 `{conversationId, messageId}` (decisione 59) |
+| `POST /api/official-concerts/{id}/contact` | autenticato | `{message (1–1800)}` → 201 `{conversationId, messageId}` (decisioni 59 e 69) |
 | `POST /api/indie-events/{id}/contact` | autenticato | come sopra, solo indie event `PUBLISHED` |
 
 **Contatto dell'organizzatore** (card F5-04, decisione 59), sul modello della candidatura (6.7):
-evento esistente, non nascosto e, se indie, pubblicato (altrimenti 404); non ancora iniziato
+evento esistente, non nascosto, con organizzatore attivo e, se indie, pubblicato (altrimenti 404 con lo stesso
+messaggio; una bozza è un 404 anche per il proprietario); non ancora iniziato
 (`event_date` nel futuro secondo il `Clock`, altrimenti 409 `EVENT_CLOSED`); organizzatore ≠ chiamante
 (400 `CANNOT_CONTACT_OWN_EVENT`); limite `EVENT_CONTACTS`. Nella stessa transazione: trova o crea la
 conversazione chiamante–organizzatore (senza controllo di amicizia), crea lo sblocco
 (`OFFICIAL_CONCERT` o `INDIE_EVENT`, id dell'evento) e salva il messaggio `Contatto per «<titolo>»:`
-seguito dal testo. Dopo il commit: messaggio su `/user/queue/messages` a entrambi e, se le notifiche live
-esistono, `NEW_MESSAGE` all'organizzatore. Lo sblocco resta aperto fino all'inizio dell'evento.
+seguito dal testo (da 1 a 1800 caratteri: con 2000 il totale supererebbe i 2000 di `chat_messages.body`, decisione
+69). Dopo il commit: messaggio su `/user/queue/messages` a entrambi e `NEW_MESSAGE` all'organizzatore. Lo sblocco
+resta aperto fino all'inizio dell'evento. Il limite `EVENT_CONTACTS` è unico per concerti e indie event e si
+consuma solo a controlli superati.
 
 Request di creazione: `{title (3–150), description? (≤5000), venueName (≤150), address (≤255),
 eventDate (futuro), genreTags (≤10 tag, ciascuno 1–30, normalizzati in minuscolo e senza

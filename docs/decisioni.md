@@ -1823,3 +1823,55 @@ Limiti dei servizi esterni, che nessuna scelta di codice rimuove:
   istanza.
 - **Cache applicativa:** i volumi dell'MVP non la giustificano e introdurrebbe problemi di invalidazione.
 - **Nessuna dichiarazione:** la domanda sulla scalabilità resterebbe senza risposta documentata.
+
+## Decisione 69: scelte di implementazione del contatto degli eventi (implementazione)
+
+### Scelta
+
+- **Messaggio di contatto da 1 a 1800 caratteri (scelta dello studente, scostamento dalla sezione 6.6):** il testo
+  salvato è `Contatto per «<titolo>»:` + a capo + messaggio. Come per le candidature (decisione 67), con 2000 di
+  messaggio e un titolo di 150 il totale supererebbe i 2000 di `chat_messages.body` e il database darebbe 500. Oltre
+  1800: 400 `VALIDATION_ERROR` con il campo `message`.
+- **Organizzatore non attivo = evento inesistente (scelta dello studente):** se l'organizzatore è sospeso o non
+  verificato, il contatto risponde 404 `NOT_FOUND` con lo stesso messaggio dell'evento nascosto («Concerto non
+  trovato» o «Evento non trovato»), come per le candidature (decisione 67) e per `POST /api/chats` (decisione 66): la
+  sospensione non si rivela e non si crea un messaggio in una conversazione bloccata.
+- **`EventContactService` condiviso (scelta dello studente):** la logica comune ai due contatti sta in un service
+  nuovo del package `event`; `OfficialConcertService.contact` e `IndieEventService.contact` fanno solo i controlli
+  di visibilità (404) e gli passano un `Target` (origine dello sblocco, id, titolo, organizzatore, data). Scostamento
+  dalla lista file del piano, che nominava solo i due service.
+- **Ordine dei controlli:** evento non nascosto, pubblicato se indie, con organizzatore attivo (404), non ancora
+  iniziato (409 `EVENT_CLOSED`), organizzatore diverso dal chiamante (400 `CANNOT_CONTACT_OWN_EVENT`) e solo alla fine
+  il limite `EVENT_CONTACTS`: i rifiuti non lo consumano. Un proprio evento già iniziato dà quindi 409, non 400.
+- **Solo indie event `PUBLISHED`, anche per il proprietario:** una bozza è un 404 per tutti, perché non è ancora un
+  evento da contattare; il 404 viene prima del 400 anche sul proprio evento.
+- **Evento aperto fino all'istante di inizio escluso:** `event_date > now` (dal `Clock`), lo stesso confronto che
+  apre lo sblocco in `canSend` (sezione 6.9), così contatto e permesso di scrittura non divergono.
+- **`NEW_MESSAGE` all'organizzatore:** a differenza della candidatura (che ha `COLLAB_APPLICATION`) il contatto non ha
+  un tipo suo; si invia `NEW_MESSAGE` con `targetId` la conversazione e `preview` dei primi 100 caratteri del testo
+  salvato, prefisso compreso. `ChatService.preview` è diventato pubblico per riusarlo.
+- **Limite `EVENT_CONTACTS` unico:** 10 in 24 ore per utente, condiviso fra concerti e indie event (chiave: id
+  dell'utente), in `app.rate-limits.event-contacts`.
+- **Nessun controllo sul ruolo del chiamante:** basta essere autenticati, come da sezione 6.6.
+
+### Motivazione
+
+- Il limite a 1800 dà un errore chiaro invece di un 500 e non richiede una migrazione; resta più che sufficiente per
+  presentarsi a un organizzatore.
+- Trattare l'organizzatore sospeso come un evento inesistente è coerente con chat e candidature e impedisce messaggi
+  che nessuno può leggere né risolvere (`canSend` sarebbe falso).
+- Un service solo per le regole comuni evita di copiare due volte i controlli di accesso: una differenza fra
+  concerti e indie event sarebbe difficile da notare.
+- Confrontare con lo stesso `event_date > now` dello sblocco evita un contatto accettato su un evento per cui la chat
+  sarebbe già bloccata.
+
+### Alternative scartate
+
+- **Messaggio fino a 2000 con prefisso tagliato:** il titolo nel messaggio salvato non sarebbe più quello reale.
+- **Messaggio fino a 2000 con rifiuto solo se il totale sfora:** errore poco prevedibile, che compare solo con titoli
+  lunghi.
+- **Organizzatore sospeso ammesso:** il contatto riuscirebbe, ma la chat sarebbe subito `CHAT_LOCKED` e la sospensione
+  si intuirebbe.
+- **Logica duplicata nei due service:** una quindicina di righe ripetute, con il rischio che le regole divergano.
+- **Un tipo di notifica nuovo per il contatto:** non previsto dalla sezione 7.4; `NEW_MESSAGE` basta al frontend per
+  aprire la conversazione.

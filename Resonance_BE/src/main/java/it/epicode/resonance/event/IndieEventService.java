@@ -1,9 +1,13 @@
 package it.epicode.resonance.event;
 
+import it.epicode.resonance.auth.AccessStatus;
+import it.epicode.resonance.auth.UserAccessService;
+import it.epicode.resonance.chat.ChatUnlockSource;
 import it.epicode.resonance.common.AppException;
 import it.epicode.resonance.common.ErrorCode;
 import it.epicode.resonance.common.PageParams;
 import it.epicode.resonance.common.PageResponse;
+import it.epicode.resonance.event.dto.ContactResponse;
 import it.epicode.resonance.event.dto.CreateIndieEventRequest;
 import it.epicode.resonance.event.dto.IndieEventResponse;
 import it.epicode.resonance.geo.GeoPoint;
@@ -28,7 +32,7 @@ import java.util.stream.Collectors;
 
 /**
  * Indie event (progettazione, sezioni 5.7, 6.6, 10.1 e 10.2): creazione con geocodifica, bozze e pubblicazione,
- * elenco personale, ricerca nelle vicinanze e cancellazione del proprietario.
+ * elenco personale, ricerca nelle vicinanze, cancellazione del proprietario e contatto dell'organizzatore.
  */
 @Service
 public class IndieEventService {
@@ -37,14 +41,19 @@ public class IndieEventService {
     private final UserRepository users;
     private final GeocodingService geocoding;
     private final TransactionTemplate transactions;
+    private final UserAccessService userAccess;
+    private final EventContactService contacts;
     private final Clock clock;
 
     public IndieEventService(IndieEventRepository events, UserRepository users, GeocodingService geocoding,
-                             TransactionTemplate transactions, Clock clock) {
+                             TransactionTemplate transactions, UserAccessService userAccess,
+                             EventContactService contacts, Clock clock) {
         this.events = events;
         this.users = users;
         this.geocoding = geocoding;
         this.transactions = transactions;
+        this.userAccess = userAccess;
+        this.contacts = contacts;
         this.clock = clock;
     }
 
@@ -135,6 +144,26 @@ public class IndieEventService {
         IndieEvent event = findViewable(id, userId);
         requireOwner(event, userId);
         event.getModeration().hide(userId, reason, clock.instant());
+    }
+
+    /**
+     * Contatta l'organizzatore di un indie event (sezione 6.6). Si contattano solo gli eventi pubblicati: una
+     * bozza e' un 404 per tutti, anche per il proprietario, come un evento nascosto o con l'organizzatore
+     * sospeso o non verificato, tutti con lo stesso messaggio (decisioni 66 e 69). I controlli successivi e la
+     * chat sono di {@link EventContactService}.
+     */
+    @Transactional
+    public ContactResponse contact(UUID id, UUID callerId, String message) {
+        IndieEvent event = events.findWithMusicianById(id)
+                .filter(found -> !found.getModeration().isHidden())
+                .filter(found -> found.getStatus() == IndieEventStatus.PUBLISHED)
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Evento non trovato"));
+        User musician = event.getMusician();
+        if (userAccess.resolve(musician.getId()).status() != AccessStatus.ACTIVE) {
+            throw new AppException(ErrorCode.NOT_FOUND, "Evento non trovato");
+        }
+        return contacts.contact(new EventContactService.Target(ChatUnlockSource.INDIE_EVENT, id, event.getTitle(),
+                musician, event.getEventDate()), callerId, message);
     }
 
     private IndieEventResponse save(UUID musicianId, CreateIndieEventRequest request, GeoPoint point) {

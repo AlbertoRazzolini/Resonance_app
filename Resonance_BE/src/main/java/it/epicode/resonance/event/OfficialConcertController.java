@@ -3,6 +3,8 @@ package it.epicode.resonance.event;
 import it.epicode.resonance.auth.AuthenticatedUser;
 import it.epicode.resonance.common.PageParams;
 import it.epicode.resonance.common.PageResponse;
+import it.epicode.resonance.event.dto.ContactRequest;
+import it.epicode.resonance.event.dto.ContactResponse;
 import it.epicode.resonance.event.dto.CreateOfficialConcertRequest;
 import it.epicode.resonance.event.dto.OfficialConcertResponse;
 import it.epicode.resonance.geo.NearbyQuery;
@@ -24,7 +26,8 @@ import java.util.UUID;
 
 /**
  * Endpoint dei concerti ufficiali (progettazione, sezione 6.6). La creazione e' riservata agli HOST da
- * {@code SecurityConfig}; dettaglio e ricerca sono pubblici.
+ * {@code SecurityConfig}; dettaglio e ricerca sono pubblici, il contatto dell'organizzatore e' per qualunque
+ * utente autenticato.
  */
 @RestController
 @RequestMapping("/api/official-concerts")
@@ -62,6 +65,16 @@ public class OfficialConcertController {
     @GetMapping("/{id}")
     public OfficialConcertResponse get(@PathVariable UUID id) {
         return concertService.get(id);
+    }
+
+    /**
+     * Contatto dell'organizzatore da parte del chiamante: messaggio in chat e sblocco fino all'inizio del concerto.
+     */
+    @PostMapping("/{id}/contact")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ContactResponse contact(@PathVariable UUID id, @AuthenticationPrincipal AuthenticatedUser user,
+                                   @Valid @RequestBody ContactRequest request) {
+        return concertService.contact(id, user.id(), request.message());
     }
 
     /**

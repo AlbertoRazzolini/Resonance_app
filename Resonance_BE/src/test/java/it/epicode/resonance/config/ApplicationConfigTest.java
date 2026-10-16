@@ -41,6 +41,7 @@ class ApplicationConfigTest {
             assertLimit(binder, "collab-applications", 10, Duration.ofHours(24));
             assertLimit(binder, "friend-requests", 20, Duration.ofHours(24));
             assertLimit(binder, "user-search", 30, Duration.ofMinutes(1));
+            assertLimit(binder, "event-contacts", 10, Duration.ofHours(24));
         });
     }
 
