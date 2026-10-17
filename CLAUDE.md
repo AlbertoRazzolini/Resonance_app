@@ -78,6 +78,8 @@ verifiche non eseguiti.
 ## Documentazione (nello stesso sotto-task della modifica)
 
 - Nuova decisione tecnica → `docs/decisioni.md` (Scelta, Motivazione, Alternative scartate).
+- A ogni migrazione che cambia lo schema si aggiornano sia l'erDiagram di dettaglio (per area e completo) sia
+  il flowchart di panoramica in `docs/schema-db.md` (decisione 73).
 - Migrazione Flyway che modifica lo schema → `docs/schema-db.md` con il diagramma ER Mermaid dello
   schema applicato.
 - Cambiamento approvato del design → `docs/progettazione.md`.

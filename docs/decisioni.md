@@ -1984,3 +1984,30 @@ Limiti dei servizi esterni, che nessuna scelta di codice rimuove:
 - **Documentazione dietro login ADMIN:** complica l'uso da Swagger UI e non protegge dati.
 - **springdoc 2.x:** incompatibile con Spring Boot 4.
 - **Annotare ogni endpoint:** documentazione più ricca ma costosa; la collection Postman resta il riferimento d'uso.
+
+## Decisione 73: due diagrammi per lo schema, panoramica e dettaglio (progettazione, sezione 3.7)
+
+### Scelta
+
+- In `docs/schema-db.md`, sezione "Relazioni": un **flowchart di panoramica** (`flowchart TB`, linee a gradini)
+  con solo i nomi delle tabelle, `users` in alto e le altre raggruppate per area (autenticazione, eventi, social,
+  chat), e sulle frecce la cardinalità (1:N, N:N).
+- Sotto, l'**erDiagram di dettaglio** con colonne, PK/FK e cardinalità, diviso in quattro diagrammi per area;
+  `USERS` si ripete in ciascuno (completa nel primo, solo con la chiave negli altri).
+- In fondo resta l'**ER completo**: l'erDiagram unico con tutte le tabelle, come prima, per chi vuole la vista
+  d'insieme anche se le linee si incrociano.
+- A ogni migrazione che cambia lo schema si aggiornano tutti e tre (regola in `CLAUDE.md` e progettazione, 3.7).
+  Nessun test li confronta con le migrazioni: `ddl-auto: validate` copre già entity e schema, e un controllo
+  sul testo Mermaid costerebbe più della sua utilità.
+
+### Motivazione
+
+- Con 13 tabelle quasi tutte legate a `users`, il layout automatico dell'erDiagram incrocia le linee attorno
+  alla tabella centrale e il quadro d'insieme si perde.
+- Il flowchart dà la struttura a colpo d'occhio; l'erDiagram resta il riferimento per i dettagli, senza ripeterli.
+
+### Alternative scartate
+
+- **Solo l'erDiagram completo:** è il caso poco leggibile descritto sopra; per questo è affiancato, non sostituito.
+- **Solo la panoramica:** perde colonne e chiavi, che servono per verificare le migrazioni.
+- **Test che confronta i diagrammi con lo schema:** fragile e di poco valore, vedi sopra.

@@ -547,9 +547,11 @@ prima della decisione 59; le amicizie la precedono, quindi diventa `V9`.)
 ### 3.7 Allineamento di docs/schema-db.md
 
 `docs/schema-db.md` descrive lo schema **effettivamente applicato**: a ogni migrazione che modifica
-lo schema, nello stesso sotto-task, si aggiornano tabelle, vincoli e diagramma ER Mermaid. La
+lo schema, nello stesso sotto-task, si aggiornano tabelle, vincoli e i diagrammi Mermaid:
+il `flowchart` di panoramica, l'`erDiagram` di dettaglio (per area) e l'ER completo (decisione 73). La
 sezione 3 di questo documento è il modello di riferimento; `schema-db.md` è lo stato reale. Un test
-di avvio con `ddl-auto: validate` verifica che entity e migrazioni coincidano.
+di avvio con `ddl-auto: validate` verifica che entity e migrazioni coincidano; nessun test controlla
+i diagrammi, che sono documentazione e si allineano a mano, come l'elenco delle tabelle.
 
 ---
 
@@ -1668,7 +1670,7 @@ e limiti condivisi: da progettare allora, non ora).
 | `docs/brief.md` | Brief integrale | Non si modifica |
 | `docs/progettazione.md` | Questo documento, sezioni numerate | Quando cambia in modo approvato il design |
 | `docs/decisioni.md` | Una voce per decisione: Scelta, Motivazione, Alternative scartate | Nello stesso sotto-task in cui si prende la decisione |
-| `docs/schema-db.md` | Tabelle, tipi, chiavi, vincoli, ER Mermaid dello schema applicato | A ogni migrazione che modifica lo schema, nello stesso sotto-task |
+| `docs/schema-db.md` | Tabelle, tipi, chiavi, vincoli, ER Mermaid di dettaglio e flowchart di panoramica dello schema applicato | A ogni migrazione che modifica lo schema, nello stesso sotto-task |
 | `docs/riuso-nosey.md` | Mappa NoseY → Resonance | Quando si porta una classe non prevista o cambia la destinazione |
 | `docs/report-sicurezza.md` | F6: analisi statica e verifica dinamica (SQL injection, XSS, CSRF, brute force, furto/riuso del refresh token, escalation di ruolo), risultati reali, correzioni, criticità aperte | F6 |
 | `README.md` (radice) | Descrizione, backend, avvio locale con Docker e profilo dev (porta 5433), variabili d'ambiente senza valori, import Postman, link al deploy (solo quando esiste) | Quando cambiano avvio, variabili, struttura o deploy |

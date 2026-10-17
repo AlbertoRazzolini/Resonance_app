@@ -29,6 +29,8 @@ Tutte le migrazioni previste dalla progettazione, sezione 3.6, sono applicate.
 - Enum PostgreSQL con valori in maiuscolo, mappati su enum Java.
 - Contenuti moderabili con `hidden_at`, `hidden_by`, `hidden_reason`.
 - Nessuna credenziale nelle migrazioni; nessuna modifica a migrazioni già applicate.
+- `flyway_schema_history` è la tabella di servizio con cui Flyway registra le migrazioni applicate: non è creata
+  da nessuna migrazione, non ha relazioni con le altre tabelle e non compare nei diagrammi.
 
 ## Enum
 
@@ -337,7 +339,292 @@ evento. Lo sblocco vale finché l'origine è aperta; la regola è nella query de
 La chiave composta impedisce un secondo sblocco dalla stessa origine (`INSERT ... ON CONFLICT DO NOTHING`). Senza FK,
 lo sblocco si crea solo dopo aver letto l'origine nella stessa transazione.
 
-## Relazioni (diagramma ER)
+## Relazioni
+
+Tre diagrammi, da mantenere allineati a ogni migrazione che modifica lo schema (decisione 73): la panoramica
+mostra solo le tabelle e come si collegano; il dettaglio, diviso per area, ha colonne, chiavi e cardinalità; l'ER
+completo riunisce tutto in un solo diagramma.
+
+### Panoramica
+
+Solo i nomi delle tabelle. Le frecce vanno dalla tabella referenziata a quella che porta la chiave esterna.
+Non compaiono le relazioni di `users` con se stessa (`suspended_by`), di `refresh_tokens` con se stessa
+(`replaced_by`) e le chiavi `hidden_by` verso `users`, ripetute in quasi ogni tabella: stanno nel dettaglio.
+`chat_unlocks.source_id` non è una chiave esterna (punta a tre tabelle diverse, vedi sopra) e quindi non è disegnato.
+Manca anche `flyway_schema_history`, la tabella di servizio che Flyway gestisce da solo: non ha relazioni con le
+tabelle dell'applicazione e non fa parte del modello.
+
+```mermaid
+%%{init: {"flowchart": {"curve": "step"}}}%%
+flowchart TB
+    users["users"]
+
+    subgraph auth["Utenti e autenticazione"]
+        user_roles["user_roles"]
+        refresh_tokens["refresh_tokens"]
+        email_codes["email_codes"]
+    end
+
+    subgraph events["Eventi"]
+        official_concerts["official_concerts"]
+        indie_events["indie_events"]
+    end
+
+    subgraph social["Social"]
+        collab_posts["collab_posts"]
+        feed_posts["feed_posts"]
+        post_likes["post_likes"]
+        friendships["friendships"]
+    end
+
+    subgraph chat["Chat"]
+        chat_conversations["chat_conversations"]
+        chat_messages["chat_messages"]
+        chat_unlocks["chat_unlocks"]
+    end
+
+    users -->|"1:N"| user_roles
+    users -->|"1:N"| refresh_tokens
+    users -->|"1:N"| email_codes
+    users -->|"1:N"| official_concerts
+    users -->|"1:N"| indie_events
+    users -->|"1:N"| collab_posts
+    users -->|"1:N"| feed_posts
+    users -->|"1:N"| post_likes
+    feed_posts -->|"1:N"| post_likes
+    users -->|"N:N (richiedente, destinatario)"| friendships
+    users -->|"N:N (due membri)"| chat_conversations
+    chat_conversations -->|"1:N"| chat_messages
+    users -->|"1:N (mittente)"| chat_messages
+    chat_conversations -->|"1:N"| chat_unlocks
+```
+
+### Dettaglio per area
+
+In ogni diagramma `USERS` compare di nuovo: nel primo con tutte le colonne, negli altri solo con la chiave, per
+collegare le tabelle dell'area.
+
+#### Utenti e autenticazione
+
+```mermaid
+erDiagram
+    USERS ||--o{ USER_ROLES : "ha ruoli"
+    USERS |o--o{ USERS : "sospeso da (suspended_by)"
+    USERS ||--o{ REFRESH_TOKENS : "ha sessioni"
+    REFRESH_TOKENS |o--o| REFRESH_TOKENS : "sostituito da (replaced_by)"
+    USERS ||--o{ EMAIL_CODES : "riceve codici"
+
+    USERS {
+        uuid id PK
+        varchar email UK
+        varchar password_hash
+        varchar display_name
+        varchar avatar_url
+        boolean email_verified
+        user_status status
+        varchar bio
+        varchar city
+        double latitude
+        double longitude
+        timestamptz created_at
+        timestamptz suspended_at
+        uuid suspended_by FK
+        varchar suspension_reason
+        timestamptz suspended_until
+    }
+
+    USER_ROLES {
+        uuid user_id PK, FK
+        user_role role PK
+        timestamptz granted_at
+    }
+
+    REFRESH_TOKENS {
+        uuid id PK
+        uuid user_id FK
+        char token_hash UK
+        timestamptz expires_at
+        boolean revoked
+        timestamptz created_at
+        timestamptz revoked_at
+        uuid replaced_by FK
+    }
+
+    EMAIL_CODES {
+        uuid id PK
+        uuid user_id FK
+        email_code_purpose purpose UK
+        varchar code
+        timestamptz sent_at
+        int attempts
+        int sends_count
+        timestamptz sends_window_start
+        timestamptz created_at
+    }
+```
+
+#### Eventi
+
+```mermaid
+erDiagram
+    USERS ||--o{ OFFICIAL_CONCERTS : "pubblica (HOST)"
+    USERS |o--o{ OFFICIAL_CONCERTS : "nasconde (hidden_by)"
+    USERS ||--o{ INDIE_EVENTS : "crea (MUSICIAN)"
+    USERS |o--o{ INDIE_EVENTS : "nasconde (hidden_by)"
+
+    USERS {
+        uuid id PK
+    }
+
+    OFFICIAL_CONCERTS {
+        uuid id PK
+        uuid host_id FK
+        varchar title
+        varchar description
+        varchar venue_name
+        varchar address
+        double latitude
+        double longitude
+        timestamptz event_date
+        text_array genre_tags
+        varchar cover_image_url
+        varchar external_ticket_url
+        timestamptz created_at
+        timestamptz hidden_at
+        uuid hidden_by FK
+        varchar hidden_reason
+    }
+
+    INDIE_EVENTS {
+        uuid id PK
+        uuid musician_id FK
+        varchar title
+        varchar description
+        varchar venue_name
+        varchar address
+        double latitude
+        double longitude
+        timestamptz event_date
+        text_array genre_tags
+        varchar cover_image_url
+        boolean is_free
+        indie_event_status status
+        timestamptz created_at
+        timestamptz hidden_at
+        uuid hidden_by FK
+        varchar hidden_reason
+    }
+```
+
+#### Social
+
+```mermaid
+erDiagram
+    USERS ||--o{ COLLAB_POSTS : "pubblica (MUSICIAN)"
+    USERS |o--o{ COLLAB_POSTS : "nasconde (hidden_by)"
+    USERS ||--o{ FEED_POSTS : "scrive"
+    USERS |o--o{ FEED_POSTS : "nasconde (hidden_by)"
+    USERS ||--o{ POST_LIKES : "mette like"
+    FEED_POSTS ||--o{ POST_LIKES : "riceve like"
+    USERS ||--o{ FRIENDSHIPS : "chiede (requester_id)"
+    USERS ||--o{ FRIENDSHIPS : "riceve (addressee_id)"
+    USERS |o--o{ FRIENDSHIPS : "chiude (closed_by)"
+
+    USERS {
+        uuid id PK
+    }
+
+    COLLAB_POSTS {
+        uuid id PK
+        uuid musician_id FK
+        varchar title
+        varchar description
+        varchar role_needed
+        text_array genre_tags
+        varchar location
+        boolean is_open
+        timestamptz created_at
+        timestamptz hidden_at
+        uuid hidden_by FK
+        varchar hidden_reason
+    }
+
+    FEED_POSTS {
+        uuid id PK
+        uuid author_id FK
+        varchar body
+        varchar image_url
+        double latitude
+        double longitude
+        int likes_count
+        timestamptz created_at
+        timestamptz hidden_at
+        uuid hidden_by FK
+        varchar hidden_reason
+    }
+
+    POST_LIKES {
+        uuid user_id PK, FK
+        uuid post_id PK, FK
+        timestamptz created_at
+    }
+
+    FRIENDSHIPS {
+        uuid id PK
+        uuid requester_id FK
+        uuid addressee_id FK
+        friendship_status status
+        uuid closed_by FK
+        boolean request_masked
+        timestamptz created_at
+        timestamptz updated_at
+    }
+```
+
+#### Chat
+
+```mermaid
+erDiagram
+    USERS ||--o{ CHAT_CONVERSATIONS : "membro A (user_a_id)"
+    USERS ||--o{ CHAT_CONVERSATIONS : "membro B (user_b_id)"
+    CHAT_CONVERSATIONS ||--o{ CHAT_MESSAGES : "contiene"
+    USERS ||--o{ CHAT_MESSAGES : "invia (sender_id)"
+    CHAT_CONVERSATIONS ||--o{ CHAT_UNLOCKS : "sbloccata da"
+
+    USERS {
+        uuid id PK
+    }
+
+    CHAT_CONVERSATIONS {
+        uuid id PK
+        uuid user_a_id FK
+        uuid user_b_id FK
+        timestamptz created_at
+        timestamptz last_message_at
+    }
+
+    CHAT_MESSAGES {
+        uuid id PK
+        uuid conversation_id FK
+        uuid sender_id FK
+        varchar body
+        timestamptz read_at
+        timestamptz sent_at
+    }
+
+    CHAT_UNLOCKS {
+        uuid conversation_id PK, FK
+        chat_unlock_source source_type PK
+        uuid source_id PK
+        timestamptz created_at
+    }
+```
+
+### ER completo
+
+Vista d'insieme: l'erDiagram con tutte le tabelle, le colonne e le relazioni in un solo diagramma. È lo stesso
+contenuto dei diagrammi per area, riunito; le linee si incrociano attorno a `users`, per leggere meglio usare la
+panoramica o il dettaglio per area.
 
 ```mermaid
 erDiagram
