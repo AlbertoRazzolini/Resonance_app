@@ -1775,6 +1775,16 @@ in chat e sblocco, senza notifica).
 | F6-02 · Swagger e report di sicurezza | springdoc + Swagger UI, `report-sicurezza.md` (statica + dinamica, Strix se disponibile) | report con risultati reali |
 | F6-03 · Fallback SPA e deploy finale | `SpaResourceConfig` e regola di sicurezza per i `GET` statici, verifica del cookie in browser sulla stessa origine, preparazione degli account della demo, README finale | test del fallback (index di prova, `/api/...` inesistente → 404 JSON), deploy finale verificato; promemoria merge |
 
+### F7 — Valutazione dell'ottimizzazione (condizionata, dopo F6-03)
+
+| Card | Contenuto | Criterio |
+|---|---|---|
+| F7-01 · Valutazione dell'ottimizzazione del backend | Sessione di brainstorming (superpowers, Opus 5.5) su ciò che si può alleggerire o riorganizzare senza cambiare il comportamento; misure dei punti lenti; documento di proposte con rischio e beneficio | `docs/ottimizzazione.md` con le proposte; nessun file di codice modificato; decisione dello studente se e come realizzarle (decisione 71) |
+
+F7 non fa parte del calendario del 25 ottobre: parte solo se dopo F6-03 resta tempo e il frontend ha la
+precedenza dal 20. Se manca tempo si salta senza conseguenze sulle funzionalità. Le card di
+realizzazione (F7-02 e seguenti) nascono solo dopo la scelta dello studente.
+
 Ordine dei tagli in caso di ritardo (brief 1-BIS, aggiornato dalla decisione 59): verifica dinamica
 del report → Swagger → notifiche live → contatto degli eventi (F5-04) → bacheca collab. Mai tagliati:
 autenticazione a due token, ruoli e admin, eventi con geolocalizzazione, feed con like, chat con
@@ -1783,7 +1793,7 @@ essenziale.
 
 ### Dipendenze fra fasi
 
-F0 → F1 → F2 (primo deploy) → F3 → F4 → F5 → F6. La ricerca (F4-05) richiede le amicizie (F4-04); la
+F0 → F1 → F2 (primo deploy) → F3 → F4 → F5 → F6 → F7 (condizionata). La ricerca (F4-05) richiede le amicizie (F4-04); la
 chat (F5-02) richiede le amicizie; le candidature (F5-03) richiedono chat (F5-02) e collab (F4-01); il
 contatto degli eventi (F5-04) richiede la chat e gli eventi (F3); le notifiche dei like richiedono il
 feed (F4-02); la chiusura delle sessioni (F5-01) completa la sospensione di F2-02.

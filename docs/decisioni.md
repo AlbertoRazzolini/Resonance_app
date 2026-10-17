@@ -1927,3 +1927,30 @@ Limiti dei servizi esterni, che nessuna scelta di codice rimuove:
 - **Eseguire Postman anche su Render adesso:** l'istanza non è ancora quella definitiva; si fa in F6-03.
 - **Rendere la collection autonoma (utenti creati dalla collection):** i codici email arrivano solo nel log in
   sviluppo, quindi non funzionerebbe su Render.
+
+## Decisione 71: fase 7 di valutazione dell'ottimizzazione, condizionata (progettazione, sezione 14)
+
+### Scelta
+
+- **Fase 7 come ultima fase, solo di valutazione (scelta dello studente):** una card, F7-01, che produce
+  `docs/ottimizzazione.md` con proposte per alleggerire o riorganizzare il backend, senza modificare codice.
+- **Condizionata:** parte solo dopo F6-03 e solo se resta tempo; il frontend ha la precedenza dal 20 ottobre. Se
+  manca tempo si salta senza conseguenze sulle funzionalità.
+- **Criteri per le proposte:** non cambiano il comportamento osservabile, sono coperte da test già esistenti e
+  hanno un beneficio concreto (meno duplicazione o complessità, o un punto lento misurato). Il codice solido anche
+  se più pesante, soprattutto concorrenza e sicurezza, non si tocca.
+- **Poi si decide:** le card di realizzazione (F7-02 e seguenti) nascono solo dopo la scelta dello studente; la
+  fase può anche concludersi con la decisione di non procedere.
+
+### Motivazione
+
+- Il brainstorming è solo analisi: non sposta il calendario del 25 ottobre e non rischia regressioni.
+- Con 813 test e la collection Postman le proposte si possono verificare senza cambiare le funzioni.
+- Separare la valutazione dalla realizzazione evita refactor a intuito, vietati fuori dalla fase da `CLAUDE.md`.
+
+### Alternative scartate
+
+- **Voce Post-V1 dopo la consegna:** valida, ma lo studente preferisce valutare subito se c'è tempo.
+- **Card F6-04 in coda alla fase 6:** mescola ottimizzazione e rilascio e ruba tempo al frontend.
+- **Fase 7 di realizzazione già pianificata:** prematura senza un elenco di proposte misurate.
+- **Non aggiungerla:** il backend resterebbe senza una verifica esplicita delle parti alleggeribili.

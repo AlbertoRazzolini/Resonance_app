@@ -485,6 +485,36 @@ dominio X").
 
 ---
 
+# F7 — Valutazione dell'ottimizzazione (condizionata, dopo F6-03)
+
+Fase facoltativa: parte solo se dopo F6-03 resta tempo (il frontend ha la precedenza dal 20 ottobre, consegna
+il 25). Solo analisi e documento: nessun file di codice si modifica in questa fase. Se manca tempo si salta (decisione 71).
+
+### Card F7-01 · Valutazione dell'ottimizzazione del backend — stima 2 h
+
+**Riferimenti:** decisione 71; `CLAUDE.md` (niente refactor fuori dalla fase).
+**Sicurezza: no**
+**File:** `docs/ottimizzazione.md` (nuovo); nessun file di codice.
+
+Criteri per ammettere una proposta (devono valere tutti e tre): non cambia il comportamento osservabile (stessi
+codici d'errore, stesso ordine dei controlli); è coperta da test già esistenti; ha un beneficio concreto (meno
+duplicazione, meno complessità, o un punto lento misurato). Restano fuori il codice solido anche se più
+pesante, in particolare concorrenza e sicurezza (refresh token, like concorrenti, ordine dei controlli STOMP) e la
+logica documentata nelle decisioni.
+
+- [ ] **1. Brainstorming e misure (60 min).** Sessione con superpowers e Opus 5.5 su duplicazioni, classi con più
+  responsabilità e dipendenze inutili; per le prestazioni solo punti misurati (query senza indice, N+1, paginazione).
+- [ ] **2. Documento di proposte (45 min).** `docs/ottimizzazione.md`: per ogni proposta file coinvolti, beneficio,
+  rischio, test che la coprono ed effort; elenco a parte di ciò che si è deciso di non toccare e perché.
+- [ ] **3. Decisione (15 min).** Lo studente sceglie se fare F7, in che forma (anche in parte) e quando; se sì nascono le
+  card F7-02 e seguenti, altrimenti la scelta si registra in `decisioni.md`.
+
+**Criterio:** documento di proposte consegnato, `git status` con soli file di documentazione, decisione dello
+studente registrata.
+**Commit proposto:** `docs(optimization): add backend optimization proposals`
+
+---
+
 # Card FE (lista "FE in attesa", non sviluppate ora)
 
 Checklist sintetiche, da dettagliare in un piano del frontend dal 20 ottobre.
