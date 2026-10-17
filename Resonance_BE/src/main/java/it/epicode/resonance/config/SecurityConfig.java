@@ -108,6 +108,9 @@ public class SecurityConfig {
                         // /ws: l'autenticazione avviene al CONNECT (sezione 7.2).
                         // /error: altrimenti l'inoltro interno a /error diventa un 401 e il frontend fa logout.
                         .requestMatchers("/ws/**", "/error").permitAll()
+                        // Documentazione OpenAPI (decisione 5): solo GET. Descrive i percorsi, non espone dati.
+                        .requestMatchers(HttpMethod.GET, "/v3/api-docs/**", "/swagger-ui/**",
+                                "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/superadmin/**").hasRole("SUPERADMIN")
                         .anyRequest().authenticated())

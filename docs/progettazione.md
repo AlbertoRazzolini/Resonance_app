@@ -1343,6 +1343,9 @@ Elenco esplicito per metodo e percorso, senza pattern generici, per tutti gli en
 frontend e `index.html`, che non contengono dati). È una conseguenza della nuova D1: il vincolo
 "senza wildcard" del brief resta rispettato per le API, che sono le uniche risorse con dati.
 
+Anche la documentazione OpenAPI è pubblica, solo in `GET`: `/v3/api-docs/**`, `/swagger-ui/**` e `/swagger-ui.html`
+(decisione 72). Descrive la forma delle API e non contiene dati.
+
 ### 8.5 Cookie, CSRF e CORS
 
 Il refresh e il logout si basano su un cookie, quindi un sito malevolo potrebbe provare a farli

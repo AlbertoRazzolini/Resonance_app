@@ -18,6 +18,7 @@
     <properties>
         <java.version>25</java.version>
         <jjwt.version>0.13.0</jjwt.version>
+        <springdoc.version>3.1.1</springdoc.version>
         <!-- Patch di sicurezza sopra il BOM di Spring Boot 4.1.1 (decisione 58). -->
         <tomcat.version>11.0.27</tomcat.version>
         <jackson-2-bom.version>2.21.7</jackson-2-bom.version>
@@ -110,6 +111,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+        <!-- Documentazione OpenAPI e Swagger UI (decisione 5); la serie 3.x e' quella per Spring Boot 4 (decisione 72). -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${springdoc.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

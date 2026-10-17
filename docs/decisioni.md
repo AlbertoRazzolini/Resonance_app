@@ -1954,3 +1954,33 @@ Limiti dei servizi esterni, che nessuna scelta di codice rimuove:
 - **Card F6-04 in coda alla fase 6:** mescola ottimizzazione e rilascio e ruba tempo al frontend.
 - **Fase 7 di realizzazione già pianificata:** prematura senza un elenco di proposte misurate.
 - **Non aggiungerla:** il backend resterebbe senza una verifica esplicita delle parti alleggeribili.
+
+## Decisione 72: springdoc-openapi 3.1.1 con documentazione pubblica (F6-02, decisione 5)
+
+### Scelta
+
+- Dipendenza `springdoc-openapi-starter-webmvc-ui` **3.1.1** (ultima della serie 3.x, la serie per Spring Boot 4;
+  compilata contro Boot 4.1.0, quindi compatibile con il 4.1.1 del progetto). La versione sta nella proprietà
+  `springdoc.version` del `pom.xml`, perché il BOM di Spring Boot non la gestisce.
+- `OpenApiConfig` dichiara titolo, descrizione e lo schema `bearerAuth` (HTTP Bearer JWT) come requisito globale.
+- Percorsi pubblici solo in `GET`: `/v3/api-docs/**`, `/swagger-ui/**`, `/swagger-ui.html`, elencati in
+  `SecurityConfig`. Restano attivi in tutti i profili, produzione compresa.
+- Nessuna annotazione `@Operation` o `@Schema` sul codice: la descrizione è quella dedotta da controller e DTO.
+- Pubblica anche in produzione: confermato dallo studente fra tre opzioni (pubblica ovunque, spenta in `prod`,
+  solo ADMIN); la scelta si può rivedere a fine backend.
+
+### Motivazione
+
+- La serie 2.x di springdoc è per Spring Boot 3 e non funziona con Spring Framework 7.
+- La documentazione descrive la forma delle API, non contiene dati; chi sviluppa il frontend la consulta anche da
+  Render senza login. Gli endpoint protetti restano protetti: il pulsante "Authorize" invia il Bearer.
+- Il requisito Bearer globale non rende privati gli endpoint pubblici: il filtro ignora un token assente o non
+  valido (sezione 8.2).
+- Le annotazioni su ogni metodo gonfierebbero i controller e costerebbero tempo fuori dal perimetro della card.
+
+### Alternative scartate
+
+- **Swagger UI solo in dev:** il frontend e la demo usano Render, dove la documentazione serve.
+- **Documentazione dietro login ADMIN:** complica l'uso da Swagger UI e non protegge dati.
+- **springdoc 2.x:** incompatibile con Spring Boot 4.
+- **Annotare ogni endpoint:** documentazione più ricca ma costosa; la collection Postman resta il riferimento d'uso.
