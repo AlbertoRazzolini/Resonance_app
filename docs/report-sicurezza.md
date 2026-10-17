@@ -61,13 +61,22 @@ eseguito; ciò che non è stato fatto è nella sezione "Non eseguito".
 ### Brute force
 
 - **Codice:** `RateLimitService` (in memoria, finestra scorrevole) limita i login falliti a 10 ogni 15 minuti per email;
-  una risposta identica per email inesistente e password errata evita l'enumerazione; password con più di 72 byte
-  respinte da `@PasswordMax72Bytes`.
+  una risposta identica per email inesistente e password errata evita l'enumerazione, e per un'email sconosciuta
+  si confronta comunque un hash BCrypt fittizio dello stesso costo, così anche il tempo è lo stesso (decisione 48);
+  al login una password con più di 72 byte è trattata come errata senza chiamare BCrypt, mentre registrazione e
+  reset la respingono con `@PasswordMax72Bytes`.
 - **Test automatici:** `login_afterTenFailures_returns429EvenWithTheCorrectPassword`,
   `login_succeeding_resetsTheFailureCounter`, `login_withUnknownEmail_returnsTheSameResponseAsWrongPassword`,
   `RateLimitServiceTest`.
 - **Dinamica:** 10 login falliti → 401, l'11° → 429 `TOO_MANY_REQUESTS`, e anche con la password giusta il login è
   rifiutato (429); email inesistente e password errata danno lo stesso codice, stato e messaggio.
+- **Dinamica, tempi del login (17 ottobre):** istanza locale `dev`, account di prova verificato e poi cancellato,
+  limite dei fallimenti alzato solo per la prova; 20 giri di riscaldamento scartati e 50 misure per caso, con i
+  casi alternati a ogni giro. Mediane: password errata su account esistente 52,1 ms, email inesistente 51,9 ms
+  (distribuzioni sovrapposte: dal tempo non si capisce se l'email esiste); login riuscito 55,8 ms (il di più è il
+  salvataggio del refresh token e richiede la password giusta); password di 80 byte circa 3 ms sia con email
+  esistente sia inesistente. I valori assoluti non sono quelli di produzione (`spring-boot:run` riduce
+  l'ottimizzazione della JVM), ma il confronto fra i casi è valido.
 - **Esito:** funziona come progettato. Limiti noti: il contatore si azzera al riavvio e vale per una sola istanza;
   chi invia 10 login falliti con l'email altrui la blocca per 15 minuti (accettato, decisione 48); la risposta 429
   non ha l'header `Retry-After`.
