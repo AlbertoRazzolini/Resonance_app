@@ -1875,3 +1875,55 @@ Limiti dei servizi esterni, che nessuna scelta di codice rimuove:
 - **Logica duplicata nei due service:** una quindicina di righe ripetute, con il rischio che le regole divergano.
 - **Un tipo di notifica nuovo per il contatto:** non previsto dalla sezione 7.4; `NEW_MESSAGE` basta al frontend per
   aprire la conversazione.
+
+## Decisione 70: hardening della sicurezza (implementazione)
+
+### Scelta
+
+- **Header di risposta (scelta dello studente):** restano quelli predefiniti di Spring Security (`X-Content-Type-Options`,
+  `X-Frame-Options: DENY`, `Cache-Control`, HSTS sulle richieste https) e in `SecurityConfig` si aggiungono
+  `Referrer-Policy: no-referrer` e `Permissions-Policy: geolocation=(self), camera=(), microphone=()`. La
+  geolocalizzazione del sito stesso resta ammessa perché il frontend la usa per gli eventi vicini. Il test
+  `SecurityHeadersIntegrationTest` li verifica su risposte di successo, 401 e 404.
+- **Email del primo SUPERADMIN nel log di avvio (scelta dello studente):** `SuperadminBootstrap` continua a scrivere
+  l'email (mai la password), perché su Render serve a verificare il bootstrap. Va mascherata a fine MVP completo
+  (backend e frontend), dopo i test finali. Mascherare riguarda solo il log: database ed elenco admin
+  (`GET /api/admin/users`) mostrano le email intere.
+- **Matrice di accesso (test in più rispetto al piano):** `AccessMatrixIntegrationTest` legge dagli handler mappati
+  tutti gli endpoint `/api/**` e verifica che senza token rispondano 401 tutti tranne quelli dell'elenco pubblico
+  della sezione 6.3 (che a sua volta deve contenere solo endpoint esistenti). Un endpoint nuovo dimenticato in
+  `SecurityConfig` o nell'elenco fa fallire il test.
+- **Prove di mutazione (scelta dello studente: circa 8, ne sono state fatte 11):** ruolo HOST sui concerti,
+  proprietà di un post, contenuti nascosti, utente sospeso nel filtro JWT, chat bloccata, risposta alle amicizie solo
+  del destinatario, contatto di un evento iniziato, riuso del refresh token, header CSRF del refresh, area admin e
+  ricerca utenti pubblica. Ognuna è stata intercettata da test con nome: nessun test aggiunto per questo motivo.
+- **Postman eseguita solo in locale (scelta dello studente):** 143 richieste su 143 senza errori, su un database di
+  prova separato, con un backend avviato da uno script di appoggio non versionato. La prova con l'environment
+  `render` è nel sotto-task 2 di F6-03. Corretto un errore della collection: «Verify con codice sbagliato (400)»
+  stava dopo «Verify (200)» e a email già verificata risponde 409; ora è prima.
+- **Revisione del codice:** nessuna correzione necessaria su endpoint pubblici (coincidono con la sezione 6.3), log
+  (nessuna password, token o codice in produzione; il codice di verifica è scritto solo da `LogEmailService`, profilo
+  `!prod`), query native (solo parametri legati; le concatenazioni riguardano costanti SQL) e `@Valid` (presente su
+  tutti i body REST; il body STOMP è validato a mano nel service).
+- **Copertura della tabella 11.2:** tutte le righe hanno test, tranne il fallback SPA, che nasce in F6-03.
+
+### Motivazione
+
+- Gli header predefiniti proteggono già da clickjacking e sniffing del tipo di file, ma nessun test lo garantiva: un
+  test li blocca contro una disattivazione accidentale. Referrer-Policy e Permissions-Policy riducono ciò che il
+  browser rivela o consente senza costi.
+- Tenere l'email nel log per ora evita di perdere un'informazione utile mentre si fa debug; il momento giusto per
+  oscurarla è dopo i test finali.
+- La matrice di accesso protegge dalla dimenticanza più probabile (un endpoint nuovo senza regola) senza dover
+  scrivere un test per ogni endpoint.
+- Le mutazioni mostrano che i test falliscono davvero quando un controllo viene tolto, non solo che passano.
+
+### Alternative scartate
+
+- **Solo i default, senza header extra:** nessuna difesa in più per il referrer e i permessi del browser.
+- **Mascherare subito l'email nel log, o toglierla:** meno comodo per verificare il bootstrap su Render.
+- **Un test per ogni endpoint per le regole di accesso:** già coperti dai test di ogni card; la matrice evita di
+  duplicarli.
+- **Eseguire Postman anche su Render adesso:** l'istanza non è ancora quella definitiva; si fa in F6-03.
+- **Rendere la collection autonoma (utenti creati dalla collection):** i codici email arrivano solo nel log in
+  sviluppo, quindi non funzionerebbe su Render.

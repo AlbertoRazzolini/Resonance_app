@@ -20,6 +20,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -60,6 +61,13 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)
+                // Header predefiniti di Spring (nosniff, X-Frame-Options, Cache-Control, HSTS su https) piu'
+                // due aggiunti a mano (sezione 8.1): niente Referer verso altri siti e solo la
+                // geolocalizzazione del browser consentita, che il frontend usa per gli eventi vicini.
+                .headers(headers -> headers
+                        .referrerPolicy(referrer -> referrer.policy(ReferrerPolicy.NO_REFERRER))
+                        .permissionsPolicyHeader(permissions -> permissions
+                                .policy("geolocation=(self), camera=(), microphone=()")))
                 .authorizeHttpRequests(requests -> requests
                         // Prima di tutto: un /api/... senza handler risponde 404 JSON, anche senza token
                         // e anche sotto /api/admin/** (sezione 6.3), non 401 ne' 403.

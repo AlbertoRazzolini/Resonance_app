@@ -1307,6 +1307,11 @@ disattivato perché l'autenticazione delle API viaggia nell'header `Authorizatio
 non invia mai da solo; l'unico endpoint basato su cookie (refresh/logout) ha la protezione dedicata
 di 8.5.
 
+Header di risposta: restano attivi quelli predefiniti di Spring Security (`X-Content-Type-Options: nosniff`,
+`X-Frame-Options: DENY`, `Cache-Control` senza cache, `Strict-Transport-Security` sulle richieste https) e si
+aggiungono `Referrer-Policy: no-referrer` e `Permissions-Policy`, che consente solo la geolocalizzazione del sito
+stesso e disattiva camera e microfono (decisione 70).
+
 ### 8.2 JwtFilter e AuthenticationEntryPoint
 
 `JwtFilter` (non è un `@Component`, per non essere registrato due volte):
@@ -1402,6 +1407,8 @@ accedere per 15 minuti (conseguenza accettata, decisione 48).
 - Mai nei log: password, hash, access e refresh token, `DATABASE_URL` completa (`DatabaseUrl`
   stampa l'URL JDBC senza credenziali), corpo delle richieste a Brevo. Eccezione voluta: in dev
   `LogEmailService` scrive il codice di verifica nel log (non è attivo in prod).
+- Il log di avvio del primo SUPERADMIN riporta la sua email (mai la password): è voluto per verificare il bootstrap
+  su Render. L'email va mascherata a fine MVP completo (backend e frontend), dopo i test finali (decisione 70).
 - `spring.mvc.log-resolved-exception: false`: evita che la validazione finisca nel log con il
   valore rifiutato (es. una password).
 

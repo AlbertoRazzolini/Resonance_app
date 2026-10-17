@@ -152,6 +152,39 @@
           "response": []
         },
         {
+          "name": "Verify con codice sbagliato (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 CODE_INVALID (o CODE_EXPIRED a tentativi finiti)', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.be.oneOf(['CODE_INVALID', 'CODE_EXPIRED']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"code\": \"000000\",\n  \"password\": \"{{userPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "verify"]
+            },
+            "description": "Errore significativo, da eseguire prima di Verify (200): a email gia' verificata la risposta sarebbe 409. Un codice sbagliato da' 400 CODE_INVALID e consuma un tentativo (al massimo 5): finiti i tentativi, o passati 15 minuti, la risposta e' 400 CODE_EXPIRED anche con il codice giusto e serve un nuovo invio. Email gia' verificata: 409 ALREADY_VERIFIED."
+          },
+          "response": []
+        },
+        {
           "name": "Verify (200)",
           "event": [
             {
@@ -188,39 +221,6 @@
               "path": ["api", "auth", "verify"]
             },
             "description": "Pubblico. Imposta verificationCode nell'environment con il codice ricevuto (nel log in dev). 200 con { accessToken, accessTokenExpiresAt, user } e il cookie di refresh, come il login; lo script salva accessToken. La password deve essere quella della registrazione (altrimenti 400 WRONG_PASSWORD, il codice resta usabile)."
-          },
-          "response": []
-        },
-        {
-          "name": "Verify con codice sbagliato (400)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('400 CODE_INVALID (o CODE_EXPIRED a tentativi finiti)', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "    pm.expect(pm.response.json().code).to.be.oneOf(['CODE_INVALID', 'CODE_EXPIRED']);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "auth": { "type": "noauth" },
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"code\": \"000000\",\n  \"password\": \"{{userPassword}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/verify",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "verify"]
-            },
-            "description": "Errore significativo. Un codice sbagliato da' 400 CODE_INVALID e consuma un tentativo (al massimo 5): finiti i tentativi, o passati 15 minuti, la risposta e' 400 CODE_EXPIRED anche con il codice giusto e serve un nuovo invio. Email gia' verificata: 409 ALREADY_VERIFIED."
           },
           "response": []
         },
