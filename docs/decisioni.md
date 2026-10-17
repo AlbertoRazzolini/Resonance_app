@@ -2011,3 +2011,38 @@ Limiti dei servizi esterni, che nessuna scelta di codice rimuove:
 - **Solo l'erDiagram completo:** è il caso poco leggibile descritto sopra; per questo è affiancato, non sostituito.
 - **Solo la panoramica:** perde colonne e chiavi, che servono per verificare le migrazioni.
 - **Test che confronta i diagrammi con lo schema:** fragile e di poco valore, vedi sopra.
+
+## Decisione 74: fallback SPA, cache e verifica del rilascio finale (F6-03, decisione 1, progettazione, sezioni 6.3 e 12.5)
+
+### Scelta
+
+- **Un solo handler `/**`:** `spring.web.resources.add-mappings: false` e `SpaResourceConfig` registra due handler:
+  `/assets/**` (da `classpath:/static/assets/`, senza fallback) e `/**` (da `classpath:/static/`, con un resolver
+  che per un percorso senza estensione, fuori da `/api` e `/ws`, restituisce `index.html`).
+- **Cache:** `/assets/**` con `max-age=31536000, public, immutable` (Vite mette l'hash nel nome dei file);
+  tutto il resto, `index.html` compreso, `no-cache`.
+- **Sicurezza:** una regola in `SecurityConfig` rende pubblici i soli `GET` fuori da `/api` e `/ws`, dopo le
+  regole dell'API. Solo `GET`: `HEAD` e `OPTIONS` fuori da `/api` restano protetti. Un `POST /qualcosa` risponde 401.
+- **Un file con estensione mancante** (es. `/assets/mancante.js`) e un `/api/...` inesistente rispondono 404 JSON
+  `NOT_FOUND`, mai `index.html`. La pagina iniziale `/` la gestisce il welcome page di Spring Boot (forward a `index.html`).
+- **Verifica su Render:** cookie di refresh e WebSocket si provano dalla console del browser aperto sulla stessa
+  origine (snippet nel README). La pagina `tools/stomp-test/` resta per lo sviluppo locale: su Render non è
+  ammessa nessuna origine esterna.
+
+### Motivazione
+
+- Con `add-mappings` attivo, Boot registra a sua volta un handler `/**` e il fallback dipenderebbe dall'ordine
+  dei configurer; così il comportamento è deterministico. Si perdono solo i `/webjars/**` di Boot, che non si usano
+  (Swagger UI registra i suoi handler).
+- Un nome con hash non cambia mai contenuto: un anno di cache è sicuro, mentre `index.html` rivalidato a ogni
+  apertura carica subito i nuovi file dopo un deploy.
+- Il browser carica pagine e file solo con `GET`; ogni altro metodo passa dall'API, che ha le sue regole.
+- La prova nella console usa la stessa origine che avrà il frontend, senza toccare la configurazione di produzione.
+
+### Alternative scartate
+
+- **Lasciare attivo il mapping di Boot:** due registrazioni di `/**`, con il fallback non garantito.
+- **Cache di 30 giorni senza `immutable`:** più richieste di rivalidazione, senza vantaggio con i nomi con hash.
+- **`GET` e `HEAD` pubblici:** estensione di sezione 6.3 non richiesta dal frontend.
+- **Aprire `ALLOWED_ORIGIN` su Render per usare la pagina STOMP:** cambia la configurazione di produzione e non prova la stessa origine.
+- **Pagina di prova nuova in `tools/`, cartella Postman "Demo", anticipo di FE-01:** file e lavoro fuori dalla card.

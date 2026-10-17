@@ -26,10 +26,10 @@ Il backend espone le API REST e il canale WebSocket (STOMP) di Resonance. Le sue
 Stack: Java 25, Spring Boot 4.1.1, PostgreSQL con Flyway. Il design di riferimento è in
 `docs/progettazione.md`.
 
-> Stato: setup iniziale (fase F0). Sono pronti progetto, profili, PostgreSQL locale, la migrazione V1
-> (utenti e ruoli), l'health check `GET /api/health`, la gestione comune degli errori, il Dockerfile
-> e il Blueprint di Render (`render.yaml`, applicato: vedi "Deploy"); le altre API arrivano con le card
-> successive.
+> Stato: il backend è completo (fasi F0-F6). Sono implementati autenticazione a due token, ruoli e
+> admin, eventi con geolocalizzazione, annunci collab, feed con like, amicizie e ricerca utenti, chat e
+> notifiche live, moderazione, documentazione OpenAPI e il fallback che serve il frontend dallo stesso
+> servizio. Il frontend (`Resonance_FE/`) si sviluppa dal 20 ottobre.
 
 ## Prerequisiti
 
@@ -103,8 +103,7 @@ configurazione di avvio di IntelliJ, su Render dal Blueprint o dalla dashboard).
 La collection e gli environment stanno in `postman/`:
 
 - `resonance.postman_collection.json` (formato v2.1): cartelle Health, Auth, Users, Admin, Events,
-  Collab, Feed, Friends e Chat. Per ora contengono richieste Health, Auth (registrazione, verifica, password dimenticata e reset, login, refresh, logout), Users (profilo e ruoli), Admin (elenco utenti, sospensione, nomina e revoca ADMIN), Friends (richiesta, rifiuto silenzioso, annulla, accetta, elenchi, rimozione) e Chat (conversazioni, storico a cursore, lettura); le altre si
-  riempiono con le card che creano gli endpoint. L'autorizzazione Bearer `{{accessToken}}` è impostata a
+  Collab, Feed, Friends e Chat. Ogni cartella ha le richieste di successo e gli errori più significativi degli endpoint REST: Health, Auth (registrazione, verifica, password dimenticata e reset, login, refresh, logout), Users (profilo e ruoli), Admin (elenco utenti, sospensione, nomina e revoca ADMIN, moderazione), Events (concerti ufficiali e indie event), Collab, Feed, Friends (richiesta, rifiuto silenzioso, annulla, accetta, elenchi, rimozione) e Chat (conversazioni, storico a cursore, lettura). L'autorizzazione Bearer `{{accessToken}}` è impostata a
   livello di collection.
 - `resonance-local.postman_environment.json` (`baseUrl` = `http://localhost:8080`) e
   `resonance-render.postman_environment.json` (`baseUrl` = `https://resonance-6o89.onrender.com`).
@@ -121,8 +120,15 @@ Per la cartella Admin servono il login come SUPERADMIN (account creato dal boots
 
 Il backend è online su Render: **https://resonance-6o89.onrender.com** (health check:
 `/api/health`). Il Blueprint `render.yaml` crea il database `resonance-db` (PostgreSQL 17) e un solo
-servizio web `resonance` (Docker, piano gratuito, Frankfurt); il deploy parte dai push su `main`. Per
-ora il servizio contiene solo il backend: il frontend arriva dal 20 ottobre.
+servizio web `resonance` (Docker, piano gratuito, Frankfurt); il deploy parte dai push su `main`.
+
+Il servizio serve API e frontend dalla stessa origine. I file statici stanno in `classpath:/static/`
+(`SpaResourceConfig`): una rotta del frontend senza estensione (es. `/eventi/123`) risponde con
+`index.html`, i file in `/assets/` hanno la cache lunga (un anno), `index.html` no. Un percorso `/api/...`
+inesistente risponde sempre 404 in JSON, mai con `index.html`. Finché il frontend non c'è (stage Node del
+Dockerfile, card FE-01), la cartella è vuota e anche queste rotte rispondono 404 JSON.
+
+Documentazione OpenAPI: `/swagger-ui.html` (interfaccia) e `/v3/api-docs` (JSON), pubbliche in sola lettura.
 
 **Spin-down.** Il piano gratuito sospende il servizio dopo circa 15 minuti senza traffico: la prima
 richiesta dopo la pausa attende il risveglio (circa un minuto; il primo avvio a freddo è durato quasi
@@ -137,5 +143,90 @@ via Brevo, verifica, login, refresh e logout; il cookie `resonance_refresh` arri
 `HttpOnly` e `SameSite=Lax` (decisione 47); login e refresh con `Origin` della stessa origine
 rispondono 200, mentre un `Origin` di un altro sito dà 403 "Invalid CORS request". Il proxy di
 Render risulta quindi interno per Tomcat e non serve `server.tomcat.remoteip.internal-proxies`. Non
-ancora provato: il refresh da un browser reale (si fa con il frontend) e la sospensione di un
-utente (endpoint della card F2-02).
+ancora provato su Render: il refresh da un browser reale e il WebSocket sulla stessa origine (vedi
+"Verifica del rilascio finale").
+
+### Verifica del rilascio finale
+
+Dopo il merge `develop → main` (lo esegue lo studente) e il deploy automatico di Render:
+
+1. **Log di avvio** nella dashboard di Render: Flyway applica le migrazioni, il bootstrap del SUPERADMIN non
+   segnala errori, nessuna eccezione.
+2. **Health check:** `GET https://resonance-6o89.onrender.com/api/health` risponde `{"status":"UP","database":"UP"}`.
+3. **Postman:** environment `render`, cartelle principali (Health, Auth, Users, Admin, Events, Feed, Friends).
+4. **Fallback:** `GET /api/inesistente` risponde 404 JSON (`code` `NOT_FOUND`); `GET /eventi/123` risponde 404 JSON
+   finché non c'è il frontend e `index.html` quando c'è.
+5. **Cookie di refresh in un browser reale.** Apri `https://resonance-6o89.onrender.com/api/health` e, dalla
+   console degli strumenti per sviluppatori, incolla (con le credenziali di un utente di prova, mai salvate
+   in un file):
+
+   ```js
+   const login = await fetch('/api/auth/login', {
+     method: 'POST', credentials: 'include',
+     headers: { 'Content-Type': 'application/json' },
+     body: JSON.stringify({ email: '<email>', password: '<password>' })
+   });
+   const { accessToken } = await login.json();
+   console.log('login', login.status);                       // atteso 200
+   const refresh = await fetch('/api/auth/refresh', {
+     method: 'POST', credentials: 'include',
+     headers: { 'X-Requested-With': 'XMLHttpRequest' }
+   });
+   console.log('refresh', refresh.status);                   // atteso 200
+   ```
+
+   Il cookie `resonance_refresh` è `HttpOnly`: non si legge dal JavaScript, si vede in Strumenti per sviluppatori,
+   Archiviazione (o Application), Cookie, con `Secure`, `HttpOnly`, `SameSite=Lax` e `Path=/api/auth/refresh`.
+   Il refresh risponde 200 solo se il browser l'ha salvato e rimandato. Se disponibile, ripeti su Safari.
+6. **WebSocket sulla stessa origine.** La pagina `tools/stomp-test/` non si può usare su Render (in produzione non è
+   ammessa nessuna origine esterna). Nella stessa console, dopo il login del punto 5:
+
+   ```js
+   await new Promise((ok) => { const s = document.createElement('script');
+     s.src = 'https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js';
+     s.onload = ok; document.documentElement.appendChild(s); });
+   const client = new StompJs.Client({
+     brokerURL: 'wss://' + location.host + '/ws',
+     connectHeaders: { Authorization: 'Bearer ' + accessToken },
+     reconnectDelay: 0,
+     onConnect: () => { console.log('WebSocket connesso');
+       client.subscribe('/user/queue/messages', (f) => console.log('messaggio', f.body));
+       client.subscribe('/user/queue/notifications', (f) => console.log('notifica', f.body)); },
+     onStompError: (f) => console.log('errore STOMP', f.headers.message),
+     onWebSocketClose: () => console.log('WebSocket chiuso')
+   });
+   client.activate();
+   ```
+
+   Atteso: "WebSocket connesso". Inviando un messaggio da un altro utente amico (Postman) compare "messaggio".
+
+## Demo
+
+### Account della demo
+
+Nessuna credenziale sta nel repository: gli account si preparano a mano su Render, con email reali (il
+codice di verifica arriva da Brevo), prima della demo.
+
+1. **SUPERADMIN:** le variabili `SUPERADMIN_EMAIL` e `SUPERADMIN_PASSWORD` nella dashboard di Render
+   (vedi "Primo SUPERADMIN"); il servizio lo crea al primo avvio.
+2. **Due utenti con il flusso normale:** per ciascuno `POST /api/auth/register`, poi `POST /api/auth/verify`
+   con il codice ricevuto per email, poi `POST /api/auth/login`. Uno sarà promosso ADMIN durante la demo, l'altro
+   sospeso.
+3. **Resi amici** (decisione 59), perché la chat si apre solo fra amici: il primo utente invia
+   `POST /api/friendships` con `{"userId": "<id del secondo>"}` (l'id si legge da `GET /api/users/me`
+   o dalla ricerca `GET /api/users/search?q=`); il secondo accetta con `POST /api/friendships/{id}/accept`
+   (l'id è nell'elenco `GET /api/friendships?type=INCOMING`). Verifica con `GET /api/friendships?type=FRIENDS`.
+
+### Checklist della demo
+
+Prima: apri `/api/health` qualche minuto prima per svegliare il servizio, fai login con i tre account e
+verifica la connessione WebSocket.
+
+- Promozione di un utente ad ADMIN da parte del SUPERADMIN.
+- Sospensione di un utente con motivo e durata: login rifiutato con i dettagli, sessione WebSocket chiusa.
+- Riattivazione dell'utente.
+- Nascondere e ripristinare un contenuto (moderazione).
+- Eventi vicini sulla mappa.
+- Feed con like.
+- Ricerca di un utente, richiesta di amicizia accettata e chat in tempo reale con notifica.
+- Candidatura a un annuncio che sblocca la chat fra non amici.

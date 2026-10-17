@@ -24,6 +24,12 @@ spring:
     # e per la validazione anche il valore rifiutato (es. una password troppo corta, in chiaro).
     log-resolved-exception: false
 
+  web:
+    resources:
+      # Gli handler dei file statici li registra SpaResourceConfig (fallback a index.html, cache):
+      # quello predefinito di Boot, anch'esso su /**, ne farebbe un doppione (progettazione, sezione 12.5).
+      add-mappings: false
+
 server:
   # Render assegna la porta in PORT.
   port: ${PORT:8080}

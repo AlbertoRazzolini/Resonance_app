@@ -5,6 +5,8 @@ import it.epicode.resonance.auth.JwtFilter;
 import it.epicode.resonance.auth.UserAccessService;
 import it.epicode.resonance.common.ErrorCode;
 import it.epicode.resonance.common.ErrorResponse;
+import it.epicode.resonance.web.SpaResourceConfig;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -111,6 +113,9 @@ public class SecurityConfig {
                         // Documentazione OpenAPI (decisione 5): solo GET. Descrive i percorsi, non espone dati.
                         .requestMatchers(HttpMethod.GET, "/v3/api-docs/**", "/swagger-ui/**",
                                 "/swagger-ui.html").permitAll()
+                        // Frontend (decisione 1, sezione 6.3): i GET fuori da /api e /ws servono solo file statici
+                        // o index.html. Dopo le regole /api e /ws, e solo GET: ogni altro metodo resta protetto.
+                        .requestMatchers(SecurityConfig::isStaticFileRequest).permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/superadmin/**").hasRole("SUPERADMIN")
                         .anyRequest().authenticated())
@@ -121,6 +126,14 @@ public class SecurityConfig {
                                 ErrorCode.ACCESS_DENIED, "Ruolo insufficiente per questa risorsa")))
                 .addFilterBefore(new JwtFilter(accessTokens, userAccess), UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    /**
+     * Vero per un GET fuori da /api e /ws: puo' solo servire un file statico o index.html (sezione 6.3).
+     */
+    private static boolean isStaticFileRequest(HttpServletRequest request) {
+        String path = request.getRequestURI().substring(request.getContextPath().length());
+        return HttpMethod.GET.matches(request.getMethod()) && !SpaResourceConfig.isApiOrWebSocketPath(path);
     }
 
     /**
