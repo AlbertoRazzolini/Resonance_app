@@ -487,7 +487,7 @@ dominio X").
 
 # F7 — Valutazione dell'ottimizzazione (condizionata, dopo F6-03)
 
-Fase facoltativa: parte solo se dopo F6-03 resta tempo (il frontend ha la precedenza dal 20 ottobre, consegna
+Fase facoltativa: parte solo se dopo F6-03 resta tempo (il frontend ha la precedenza dal 18 ottobre, dopo F7-03, consegna
 il 25). F7-01 è solo analisi e documento, senza modifiche al codice; se manca tempo si salta (decisione 71). Lo studente
 ha scelto di realizzare tutte le proposte ammesse in F7-02 (decisione 75). Dopo l'analisi di sicurezza del 18 ottobre ha
 aggiunto F7-03, con le correzioni scelte fra quelle proposte (decisione 76).
@@ -614,7 +614,7 @@ stessi esiti di F7-02; report e decisione 76 aggiornati.
 
 # Card FE (lista "FE in attesa", non sviluppate ora)
 
-Checklist sintetiche, da dettagliare in un piano del frontend dal 20 ottobre.
+Checklist sintetiche, da dettagliare in un piano del frontend dal 18 ottobre, dopo F7-03.
 
 - **FE-01 · Setup e build integrata:** progetto Vite + React + TS (senza React Compiler); Redux Toolkit, React Router, Bootstrap, CSS custom properties; proxy Vite `/api` e `/ws` (`ws: true`) verso `localhost:8080`; stage Node nel Dockerfile e copia di `dist/` in `static/`.
 - **FE-02 · Client API e refresh silenzioso:** client con access token in Redux; refresh con `credentials: 'include'` e `X-Requested-With`; un refresh alla volta; retry su 409 `REFRESH_CONFLICT`; gestione di `ErrorResponse.code`.

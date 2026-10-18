@@ -1,7 +1,7 @@
 # Resonance - Regole di lavoro
 
-Backend Spring Boot in `Resonance_BE/` (capstone Epicode). Frontend in `Resonance_FE/` solo dal
-20 ottobre: non toccarlo prima.
+Backend Spring Boot in `Resonance_BE/` (capstone Epicode). Frontend in `Resonance_FE/` dal
+18 ottobre, dopo la card F7-03 (rinforzo di sicurezza): non toccarlo prima.
 
 ## Inizio di ogni sessione
 
@@ -27,8 +27,8 @@ decisione restano complete e comprensibili: l'utente è uno studente.
 
 ## Vincolo di tempo
 
-- Consegna 25 ottobre. Backend 13–19 ottobre (calendario e stime: progettazione, sezione 14);
-  frontend dal 20.
+- Consegna 25 ottobre. Backend 13–18 ottobre, F7-03 compresa (calendario e stime: progettazione, sezione 14);
+  frontend dal 18, dopo F7-03.
 - Se una card o una fase rischia di sforare, avvisare subito e proporre un taglio in quest'ordine:
   1. report di sicurezza solo con analisi statica; 2. Swagger; 3. notifiche live (la chat resta);
   4. contatto degli eventi (F5-04); 5. bacheca collab.
@@ -128,7 +128,7 @@ verifiche non eseguiti.
 - Rispettare tutti i vincoli del brief (salvo la D1 sostituita); non indebolire requisiti, non
   inventarne, non riaprire decisioni prese.
 - Punti da chiarire: alternative, pro, contro e raccomandazione, poi attendere la risposta.
-- Nessuna funzionalità Post-V1/Post-V2, niente frontend prima del 20 ottobre, niente refactor fuori
+- Nessuna funzionalità Post-V1/Post-V2, niente frontend prima della fine di F7-03, niente refactor fuori
   dalla fase, niente anticipi di fasi successive.
 - Rischi e incompatibilità si dichiarano; il brief e il design non si correggono da soli.
 - Design, roadmap, card Trello, database, endpoint e collection Postman restano coerenti fra loro.

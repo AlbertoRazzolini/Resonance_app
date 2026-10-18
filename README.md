@@ -9,7 +9,7 @@ Il repository contiene:
 | Cartella | Contenuto |
 |---|---|
 | `Resonance_BE/` | Backend Spring Boot (questo documento ne descrive l'avvio). |
-| `Resonance_FE/` | Frontend React: non ancora presente, si sviluppa dal 20 ottobre. |
+| `Resonance_FE/` | Frontend React: non ancora presente, si sviluppa dal 18 ottobre, dopo la card F7-03. |
 | `docs/` | Brief, progettazione, registro delle decisioni, schema del database, mappa del riuso. |
 
 ## Backend
@@ -29,7 +29,7 @@ Stack: Java 25, Spring Boot 4.1.1, PostgreSQL con Flyway. Il design di riferimen
 > Stato: il backend è completo (fasi F0-F6). Sono implementati autenticazione a due token, ruoli e
 > admin, eventi con geolocalizzazione, annunci collab, feed con like, amicizie e ricerca utenti, chat e
 > notifiche live, moderazione, documentazione OpenAPI e il fallback che serve il frontend dallo stesso
-> servizio. Il frontend (`Resonance_FE/`) si sviluppa dal 20 ottobre.
+> servizio. Il frontend (`Resonance_FE/`) si sviluppa dal 18 ottobre, dopo la card F7-03.
 
 ## Prerequisiti
 

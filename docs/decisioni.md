@@ -19,7 +19,7 @@ Un solo servizio web Render (Docker) con indirizzo `onrender.com`, che serve sia
 del frontend React. Dockerfile multi-stage: stage Node che costruisce `Resonance_FE` (aggiunto
 quando il frontend esiste), stage JDK che costruisce `Resonance_BE` copiando la build del frontend
 fra le risorse statiche di Spring, stage JRE finale come in NoseY. Spring inoltra a `index.html` le
-rotte del frontend (fallback SPA), escluse `/api/**` e `/ws/**`. Fino al 20 ottobre il servizio
+rotte del frontend (fallback SPA), escluse `/api/**` e `/ws/**`. Fino alla card FE-01 (18 ottobre, dopo F7-03) il servizio
 contiene solo il backend. `render.yaml` con database + un solo servizio web.
 
 ### Motivazione

@@ -32,7 +32,7 @@
 
 | # | Decisione | Sintesi |
 |---|---|---|
-| D1 | Deploy (**nuova versione**, sostituisce quella del brief) | Un solo servizio web Render (Docker) su `onrender.com` che serve API e build del frontend React. Dockerfile multi-stage (Node → JDK → JRE). Fallback SPA verso `index.html` escluse `/api/**` e `/ws/**`. Fino al 20 ottobre il servizio contiene solo il backend. Stessa origine: cookie di refresh di prima parte `SameSite=Lax`, nessun CORS in produzione. `render.yaml` con database + un solo servizio web. Nessun dominio personalizzato. |
+| D1 | Deploy (**nuova versione**, sostituisce quella del brief) | Un solo servizio web Render (Docker) su `onrender.com` che serve API e build del frontend React. Dockerfile multi-stage (Node → JDK → JRE). Fallback SPA verso `index.html` escluse `/api/**` e `/ws/**`. Fino alla card FE-01 (18 ottobre, dopo F7-03) il servizio contiene solo il backend. Stessa origine: cookie di refresh di prima parte `SameSite=Lax`, nessun CORS in produzione. `render.yaml` con database + un solo servizio web. Nessun dominio personalizzato. |
 | D2 | Immagini | Solo URL (`avatar_url`, `cover_image_url`, `image_url`). Nessun upload. Cloudinary escluso. |
 | D3 | Geocodifica | Nominatim sincrono alla pubblicazione, timeout breve, errore chiaro. |
 | D4 | Blacklist access token | Nessuna. Bastano revoca dei refresh token e lettura di ruoli/stato dal DB. |
@@ -1595,7 +1595,7 @@ aggiunge `sslmode`. Stampa solo l'URL JDBC, mai la password.
 - **Dockerfile** in `Resonance_BE/Dockerfile`, multi-stage, con **contesto di build alla radice del
   repository** (deve poter leggere sia `Resonance_BE` sia `Resonance_FE`):
   1. stage Node (`node:<LTS>`): `npm ci` e `npm run build` di `Resonance_FE` → `dist/`.
-     **Aggiunto solo con la card FE-01**: fino al 20 ottobre `Resonance_FE` non esiste e il
+     **Aggiunto solo con la card FE-01**: fino alla card FE-01 (18 ottobre, dopo F7-03) `Resonance_FE` non esiste e il
      Dockerfile ha solo gli stage 2 e 3.
   2. stage JDK (`eclipse-temurin:25-jdk`, da NoseY): cache delle dipendenze Maven
      (`dependency:go-offline`), copia di `dist/` in `src/main/resources/static/` (quando c'è lo
@@ -1608,7 +1608,7 @@ aggiunge `sslmode`. Stampa solo l'URL JDBC, mai la password.
 - **Fallback SPA** (`SpaResourceConfig`, package `web`): risorse statiche da `classpath:/static/`;
   un percorso senza file corrispondente e senza estensione, fuori da `api/` e `ws`, restituisce
   `index.html` (routing di React Router). `index.html` con `Cache-Control: no-cache`, file in
-  `/assets/` (nomi con hash di Vite) con cache lunga. Senza frontend (fino al 20 ottobre) non c'è
+  `/assets/` (nomi con hash di Vite) con cache lunga. Senza frontend (fino alla card FE-01) non c'è
   `index.html` e questi percorsi rispondono 404 JSON.
 - **`render.yaml`** nella radice, adattato da NoseY: database `resonance-db` (free, Frankfurt) e **un
   solo servizio web** `resonance` (`runtime: docker`, `dockerContext: .`,
@@ -1619,7 +1619,7 @@ aggiunge `sslmode`. Stampa solo l'URL JDBC, mai la password.
   WebSocket, profilo prod e Brevo, adattati alla stessa origine. Nessun servizio statico separato e
   nessun dominio personalizzato. Il nome del servizio determina l'indirizzo
   `https://<servizio>.onrender.com`, assegnato da Render alla creazione.
-- **Sviluppo locale con il frontend** (dal 20 ottobre): backend con `mvnw spring-boot:run` (profilo
+- **Sviluppo locale con il frontend** (dal 18 ottobre): backend con `mvnw spring-boot:run` (profilo
   dev, porta 8080); frontend con il dev server Vite su `localhost:5173`, con proxy di `/api` e `/ws`
   (`ws: true`) verso `localhost:8080`. Il browser vede una sola origine.
 
@@ -1712,6 +1712,10 @@ sera del 13 ottobre (richiesta dello studente) per scaricare il 14.
 | 18 ott | F5-01 · F5-02 · F5-03 · F5-04 | 3,5 h · 4,5 h · 3,5 h · 1,5 h | 13 h | **alto**: WebSocket, chiusura sessioni e permesso di scrittura |
 | 19 ott | F6-01 · F6-02 · F6-03 | 4,5 h · 3 h · 2,5 h | 10 h | **alto**: nessun margine, con 1,5 h tagliabili in F6-01 |
 
+**Aggiornamento del calendario (18 ottobre, scelta dello studente).** Il backend è in anticipo: F6 è chiusa il 17
+ottobre e il 18 si chiudono F7-01 e F7-02. Il frontend parte quindi il 18 ottobre, subito dopo F7-03 (l'ultima card
+del backend), invece del 20; i giorni guadagnati vanno al frontend.
+
 Totale backend circa 70 ore (60 + 8,5 della decisione 59 + 1,5 delle prove di mutazione e della collection
 Postman in F6-01). Giorni a rischio: 14, 15, 17, 18 e 19. Il
 giorno di anticipo accumulato in F3 assorbe le card aggiunte il 16 ottobre, quindi non resta un giorno
@@ -1789,8 +1793,8 @@ in chat e sblocco, senza notifica).
 | F7-03 · Rinforzo di sicurezza: login, sessioni, geocodifica e body | Dall'analisi di sicurezza del 18 ottobre: limite dei login falliti prenotato in modo atomico (S2), reset della password serializzato con refresh e login sulla riga dell'utente (S1), attesa massima della geocodifica e limite `EVENTS_CREATED` (S3), tetto del body JSON (S5, primo taglio) | `./mvnw -q verify` verde; prove di mutazione di S1 e S2 intercettate da test con nome; Postman con gli stessi esiti di F7-02; report di sicurezza e decisione 76 aggiornati |
 
 F7 non fa parte del calendario del 25 ottobre: parte solo se dopo F6-03 resta tempo e il frontend ha la
-precedenza dal 20. Se manca tempo si salta senza conseguenze sulle funzionalità. Dopo F7-01 lo studente ha
-scelto di realizzare tutte le proposte in F7-02, il 19 ottobre (decisione 75). Dopo l'analisi di sicurezza del 18
+precedenza dal 18 ottobre, dopo F7-03. Se manca tempo si salta senza conseguenze sulle funzionalità. Dopo F7-01 lo studente ha
+scelto di realizzare tutte le proposte in F7-02 (decisione 75; prevista il 19 ottobre, realizzata il 18). Dopo l'analisi di sicurezza del 18
 ottobre ha aggiunto F7-03 (circa 4 ore, prima del frontend), con le correzioni S1, S2, S3 e S5; la CSP (S4) passa a
 FE-11 e le altre voci restano rischi accettati (decisione 76).
 
