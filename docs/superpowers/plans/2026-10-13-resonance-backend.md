@@ -489,7 +489,8 @@ dominio X").
 
 Fase facoltativa: parte solo se dopo F6-03 resta tempo (il frontend ha la precedenza dal 20 ottobre, consegna
 il 25). F7-01 è solo analisi e documento, senza modifiche al codice; se manca tempo si salta (decisione 71). Lo studente
-ha scelto di realizzare tutte le proposte ammesse in F7-02 (decisione 75).
+ha scelto di realizzare tutte le proposte ammesse in F7-02 (decisione 75). Dopo l'analisi di sicurezza del 18 ottobre ha
+aggiunto F7-03, con le correzioni scelte fra quelle proposte (decisione 76).
 
 ### Card F7-01 · Valutazione dell'ottimizzazione del backend — stima 2 h
 
@@ -553,6 +554,62 @@ copertura su O1 e O3 intercettate da test con nome; `docs/ottimizzazione.md` ind
 eventualmente quelle ritirate).
 **Commit proposto:** `refactor(backend): realizza le proposte di ottimizzazione O1-O5`
 
+### Card F7-03 · Rinforzo di sicurezza: login, sessioni, geocodifica e body — stima 4 h
+
+**Riferimenti:** decisione 76 (analisi di sicurezza del 18 ottobre, voci S1, S2, S3, S5); decisioni 4, 39, 48, 55 e
+68; §4.7, §4.8, §4.10, §4.11, §8.6, §8.8, §10.1; `docs/report-sicurezza.md`.
+**Sicurezza: sì**
+**File:** `common/RateLimit`, `RateLimitService`; `auth/AuthService`, `RefreshTokenService`, `RefreshTokenRepository`;
+`geo/NominatimGeocodingService`; `event/OfficialConcertService`, `IndieEventService`; `config/JsonLimitsConfig`
+(nuova, customizer del `JsonMapper`); `application.yml` (`app.rate-limits.events-created`, `app.geocoding.max-wait`); test
+`RateLimitServiceTest`, `AuthServiceTest`, `LoginRefreshLogoutIntegrationTest`, `SessionRevocationRaceTest` (nuovo),
+`NominatimGeocodingServiceTest`, `OfficialConcertIntegrationTest`, `IndieEventIntegrationTest`, `ApplicationConfigTest`,
+test del tetto del body (nuovo, in `config`); `docs/decisioni.md` (76), `docs/progettazione.md`,
+`docs/report-sicurezza.md`. Nessuna migrazione, nessun endpoint nuovo: Postman resta invariata.
+
+Ogni correzione nasce da un test che fallisce sul codice attuale (TDD). Nessun cambiamento per richieste in sequenza:
+i test esistenti restano verdi; cambiano solo le verifiche dei mock di `AuthServiceTest` sulle chiamate al limite e il
+costruttore di prova di `NominatimGeocodingService` (nuovo parametro dell'attesa massima). Ordine: S2, S1, S3, S5;
+tagli se il tempo stringe: prima il sotto-task 4, poi il limite delle creazioni del sotto-task 3.
+
+- [ ] **1. Login, tentativo prenotato in modo atomico (35 min, S2).** `RateLimitService.release` toglie l'ultimo evento
+  di una chiave (dentro `compute`). `AuthService.login` usa `consume` al posto di `check` + `record`: il tentativo si
+  prenota prima di BCrypt; login riuscito → `reset` come oggi; password giusta con email non verificata o account
+  sospeso → `release`, perché questi casi non contano come fallimenti (decisione 48). Test: `release` in
+  `RateLimitServiceTest`; in `LoginRefreshLogoutIntegrationTest` 20 login errati in parallelo con la stessa email →
+  esattamente 10 risposte 401 e 10 risposte 429. Prova di mutazione: con `check` + `record` il test parallelo fallisce,
+  poi ripristino. Documentazione: §4.7 (passo 1) e §8.8.
+- [ ] **2. Reset e sessioni serializzati sulla riga dell'utente (90 min, S1).** Ordine dei lock sempre utente → token,
+  come reset e sospensione, così non nascono deadlock. `rotate`: legge il token per hash senza lock per sapere l'utente,
+  blocca la riga dell'utente (`findWithLockById`), poi il token con il lock di oggi; il resto dei passi resta uguale.
+  `login`: BCrypt fuori dal lock; prima di creare il refresh token blocca la riga dell'utente e controlla che l'hash
+  della password sia ancora quello confrontato, altrimenti 401 `INVALID_CREDENTIALS`. Test deterministici in
+  `SessionRevocationRaceTest`: un refresh (e, in un secondo test, un login) fermato con un latch prima del commit, un
+  reset in parallelo; alla fine il refresh token nuovo deve risultare revocato. Restano verdi i test di concorrenza di
+  `RefreshTokenServiceTest` (409 sui refresh simultanei). Prova di mutazione: senza il lock sull'utente i due test
+  falliscono, poi ripristino. Documentazione: §4.8 (concorrenza), §4.10 e §4.11.
+- [ ] **3. Geocodifica: attesa massima e limite delle creazioni (50 min, S3).** `NominatimGeocodingService` usa
+  `tryLock` con `app.geocoding.max-wait` (10 s): oltre, 502 `GEOCODING_UNAVAILABLE` senza chiamare Nominatim (decisione
+  55). Nuovo `RateLimit.EVENTS_CREATED` (`app.rate-limits.events-created`, 20 in 24 ore per utente), unico per concerti
+  e indie event, consumato prima della geocodifica in `OfficialConcertService.create` e `IndieEventService.create`.
+  Test: con il lock occupato da un altro thread la chiamata fallisce entro l'attesa e Nominatim non riceve richieste;
+  la 21ª creazione dello stesso utente (concerti e indie event insieme) → 429 `TOO_MANY_REQUESTS`;
+  `ApplicationConfigTest` con le due chiavi nuove. Se un test esistente crea più di 20 eventi con lo stesso utente, ci si
+  ferma e si avvisa. Documentazione: §8.8 (tabella) e §10.1.
+- [ ] **4. Tetto del body JSON (30 min, S5, primo taglio).** Customizer del `JsonMapper` con
+  `StreamReadConstraints.maxDocumentLength` a 256 KB: oltre il tetto Jackson interrompe la lettura e la risposta è il 400
+  `VALIDATION_ERROR` già esistente ("Corpo della richiesta non leggibile"). Test: un body di poco oltre 256 KB a
+  `POST /api/auth/login` → 400; un body legittimo grande (descrizione collab di 5000 caratteri multibyte) → accettato.
+  Va verificato che il customizer valga anche per il convertitore di Spring MVC. Documentazione: §8.6 e la riga di
+  `config/` nella struttura dei file di questo piano (classe `JsonLimitsConfig`).
+- [ ] **5. Report, decisione e verifica finale (30 min).** `docs/report-sicurezza.md`: sezione con le quattro correzioni
+  e i test che le coprono, criticità aperte aggiornate; decisione 76 completata con l'esito; `./mvnw -q verify`;
+  collection Postman in locale con lo script a segmenti, stessi esiti di F7-02.
+
+**Criterio:** `./mvnw -q verify` verde; prove di mutazione di S1 e S2 intercettate da test con nome; Postman con gli
+stessi esiti di F7-02; report e decisione 76 aggiornati.
+**Commit proposto:** `fix(security): chiude le gare su login e sessioni e limita geocodifica e body JSON`
+
 ---
 
 # Card FE (lista "FE in attesa", non sviluppate ora)
@@ -569,4 +626,4 @@ Checklist sintetiche, da dettagliare in un piano del frontend dal 20 ottobre.
 - **FE-08 · Collab e candidature:** lista, dettaglio, chiusura, candidatura.
 - **FE-09 · Chat e notifiche STOMP:** stompjs con `beforeConnect` e riconnessione automatica, code messaggi/notifiche/errori, cursore dello storico; ricerca utenti e amicizie (richieste, accetta/rifiuta/annulla/rimuovi), casella di testo disattivata quando `canSend` è falso, contatto dell'organizzatore dalla pagina dell'evento (decisione 59).
 - **FE-10 · Area di moderazione:** visibile solo ad ADMIN/SUPERADMIN; sospensione, nomina ADMIN, hide/restore.
-- **FE-11 · Deploy integrato e prova della demo:** build nell'immagine unica, verifica su Render, prova completa della demo (24 ottobre).
+- **FE-11 · Deploy integrato e prova della demo:** build nell'immagine unica, verifica su Render, prova completa della demo (24 ottobre); header `Content-Security-Policy` sugli script (`script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'`) in `SecurityConfig`, provato con il frontend compilato e con Swagger UI (decisione 76). Vincolo per tutte le card FE: niente script inline, script da CDN o `eval`.

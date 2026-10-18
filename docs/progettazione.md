@@ -1786,10 +1786,13 @@ in chat e sblocco, senza notifica).
 |---|---|---|
 | F7-01 · Valutazione dell'ottimizzazione del backend | Sessione di brainstorming (superpowers, Opus 5.5) su ciò che si può alleggerire o riorganizzare senza cambiare il comportamento; misure dei punti lenti; documento di proposte con rischio e beneficio | `docs/ottimizzazione.md` con le proposte; nessun file di codice modificato; decisione dello studente se e come realizzarle (decisione 71) |
 | F7-02 · Realizzazione delle proposte di ottimizzazione | Le cinque proposte ammesse di `docs/ottimizzazione.md` (O1–O5), senza cambi di comportamento; O3 per ultima, primo taglio | `./mvnw -q verify` verde con gli stessi test; collection Postman con gli stessi esiti prima e dopo; prove di copertura su O1 e O3; documento aggiornato con le proposte realizzate (decisione 75) |
+| F7-03 · Rinforzo di sicurezza: login, sessioni, geocodifica e body | Dall'analisi di sicurezza del 18 ottobre: limite dei login falliti prenotato in modo atomico (S2), reset della password serializzato con refresh e login sulla riga dell'utente (S1), attesa massima della geocodifica e limite `EVENTS_CREATED` (S3), tetto del body JSON (S5, primo taglio) | `./mvnw -q verify` verde; prove di mutazione di S1 e S2 intercettate da test con nome; Postman con gli stessi esiti di F7-02; report di sicurezza e decisione 76 aggiornati |
 
 F7 non fa parte del calendario del 25 ottobre: parte solo se dopo F6-03 resta tempo e il frontend ha la
 precedenza dal 20. Se manca tempo si salta senza conseguenze sulle funzionalità. Dopo F7-01 lo studente ha
-scelto di realizzare tutte le proposte in F7-02, il 19 ottobre (decisione 75).
+scelto di realizzare tutte le proposte in F7-02, il 19 ottobre (decisione 75). Dopo l'analisi di sicurezza del 18
+ottobre ha aggiunto F7-03 (circa 4 ore, prima del frontend), con le correzioni S1, S2, S3 e S5; la CSP (S4) passa a
+FE-11 e le altre voci restano rischi accettati (decisione 76).
 
 Ordine dei tagli in caso di ritardo (brief 1-BIS, aggiornato dalla decisione 59): verifica dinamica
 del report → Swagger → notifiche live → contatto degli eventi (F5-04) → bacheca collab. Mai tagliati:
@@ -1810,7 +1813,9 @@ FE-01 Setup Vite/TS/Redux/Router/Bootstrap, proxy Vite verso `localhost:8080` e 
 Dockerfile · FE-02 Client API e refresh silenzioso · FE-03
 Registrazione, verifica e login · FE-04 Profilo e ruoli · FE-05 Eventi vicini e mappa · FE-06
 Pubblicazione eventi · FE-07 Feed e like · FE-08 Collab e candidature · FE-09 Chat e notifiche
-STOMP, ricerca utenti e amicizie (decisione 59) · FE-10 Area di moderazione · FE-11 Deploy integrato (stesso servizio) e prova della demo.
+STOMP, ricerca utenti e amicizie (decisione 59) · FE-10 Area di moderazione · FE-11 Deploy integrato (stesso servizio), `Content-Security-Policy` sugli script provata con il
+frontend compilato (decisione 76) e prova della demo. Vincolo per tutte le card FE: niente script inline, script da
+CDN o `eval`.
 
 ### Demo finale
 

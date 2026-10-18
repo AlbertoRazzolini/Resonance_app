@@ -2092,3 +2092,68 @@ Limiti dei servizi esterni, che nessuna scelta di codice rimuove:
   discussione.
 - **Solo i test Java come confronto:** coprono il comportamento, ma la collection lo prova anche via HTTP come lo vedrà
   il frontend; senza la prova di copertura, "coperta da test" resterebbe un'affermazione.
+
+## Decisione 76: rinforzo di sicurezza di F7-03 (analisi del 18 ottobre, decisioni 48, 55 e 68)
+
+### Scelta
+
+- **Metodo:** analisi di sicurezza del backend del 18 ottobre (decisioni, progettazione, report di sicurezza,
+  `docs/ottimizzazione.md`, codice e test), senza modifiche al codice: dieci voci (S1–S10) non coperte da un test o da un
+  controllo, ordinate per gravità e per rapporto fra beneficio e costo. Scelta dello studente: le quattro raccomandate,
+  in una sola card, F7-03 (circa 4 ore, prima del frontend), nell'ordine S2, S1, S3, S5.
+- **S2, limite dei login falliti prenotato in modo atomico:** il tentativo si registra con `consume` prima di BCrypt,
+  invece di `check` prima e `record` dopo. Un login riuscito azzera il contatore come oggi; con la password giusta ma
+  email non verificata o account sospeso il tentativo si restituisce (`release`), così questi casi continuano a non
+  contare come fallimenti (decisione 48).
+- **S1, reset della password serializzato con refresh e login:** rotazione e login bloccano la riga dell'utente prima di
+  creare un refresh token, nello stesso ordine di reset e sospensione (prima l'utente, poi i token). Il login esegue
+  BCrypt fuori dal lock e, sotto il lock, controlla che l'hash della password non sia cambiato.
+- **S3, geocodifica:** attesa massima del turno di 10 s (`app.geocoding.max-wait`), oltre la quale la risposta è 502
+  `GEOCODING_UNAVAILABLE` (decisione 55); nuovo limite `EVENTS_CREATED`, 20 creazioni in 24 ore per utente, unico per
+  concerti e indie event, consumato prima della geocodifica.
+- **S5, tetto del body JSON:** 256 KB con `StreamReadConstraints.maxDocumentLength` di Jackson; oltre, 400
+  `VALIDATION_ERROR` con l'handler già esistente.
+- **S4, Content-Security-Policy sugli script** (`script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors
+  'none'; form-action 'self'`): spostata in FE-11, dove si prova con il frontend compilato. Vincolo per tutte le card FE:
+  niente script inline, script da CDN o `eval`.
+- **Rischi accettati, fuori dalla card:** S6, carattere NUL e caratteri bidi o di controllo nei testi (PostgreSQL rifiuta
+  il NUL; il rimedio tocca molti DTO e deve rispettare le emoji composte); S7, raffica di richieste sugli endpoint
+  pubblici con email sempre diverse (quota di Brevo e CPU di BCrypt), che richiederebbe un limite per IP (vedi decisione
+  48 e la demo in aula); S8, connessioni e SUBSCRIBE WebSocket senza limite; S9, `Retry-After` sui 429; S10, dettagli di
+  PostgreSQL nel log di Hibernate. Post-V1: CAPTCHA o limite combinato (decisione 48).
+- **Verifica:** TDD, con un test che fallisce sul codice attuale per ogni voce; prove di mutazione su S1 e S2; collection
+  Postman in locale a fine card con gli stessi esiti di F7-02. Nessun endpoint nuovo e nessuna migrazione.
+
+### Motivazione
+
+- **S1:** in PostgreSQL l'`UPDATE` che revoca tutti i token non vede le righe inserite da una transazione che fa commit
+  dopo l'inizio dell'istruzione. Un refresh o un login in corso durante il reset crea un token che resta valido e si
+  rinnova all'infinito: la garanzia della tabella 4.11 ("reset = revoca di tutti") non vale contro chi ha già rubato la
+  sessione e la rinnova di continuo. La sospensione non ha il problema, perché lo stato SUSPENDED resta salvato e ogni
+  rotazione lo ricontrolla. Lo stesso ordine dei lock in tutte le operazioni evita i deadlock; BCrypt fuori dal lock
+  evita di tenere bloccata la riga durante l'hash.
+- **S2:** con `check` prima e `record` dopo, richieste parallele passano tutte il controllo prima che una sola registri il
+  fallimento: con i 200 thread di Tomcat si provano circa 200 password per finestra invece di 10.
+- **S3:** MUSICIAN e HOST si attivano in self-service; senza attesa massima le creazioni in coda sul lock della
+  geocodifica occupano i thread di Tomcat e fermano tutto il servizio, frontend compreso. 10 s lasciano passare circa
+  dieci creazioni contemporanee (una demo in aula) con una risposta nel caso peggiore di circa 15 s. Il limite delle
+  creazioni ferma il singolo utente e protegge l'uso di Nominatim.
+- **S5:** il limite di Tomcat vale per i form, non per il JSON; pochi body di decine di MB esauriscono la memoria del
+  piano gratuito. Il body legittimo più grande sta sotto i 40 KB.
+- **S4 in FE-11:** oggi si potrebbe provare solo con Swagger UI; con il frontend compilato la prova è reale.
+
+### Alternative scartate
+
+- **Tutte le voci S1–S10 in F7-03:** circa 8 ore, troppe prima del frontend.
+- **Solo S1:** lascia aperte due vie di disservizio (S3, S5) e l'aggiramento del limite dei login (S2), che costano poco.
+- **S1 con `FOR SHARE` sulla riga dell'utente:** due refresh simultanei che riattivano una sospensione scaduta
+  dovrebbero passare da `FOR SHARE` a un lock di scrittura e andrebbero in deadlock.
+- **S1 con il lock sull'utente tenuto durante BCrypt:** login paralleli sullo stesso account terrebbero occupate le
+  connessioni del database per tutta la durata dell'hash.
+- **S2 con `reset` invece di `release` per email non verificata o account sospeso:** azzererebbe i fallimenti con una
+  password giusta, contro la decisione 48.
+- **Attesa massima di 5 s o di 30 s:** 5 s darebbe 502 inutili con molti utenti insieme; 30 s terrebbe i thread
+  occupati a lungo e l'utente davanti a un caricamento senza fine.
+- **Limite per IP sugli endpoint pubblici (S7):** falsi positivi dietro lo stesso IP (la demo in aula) e aggirabile con
+  più indirizzi, come già osservato nella decisione 48.
+- **CSP subito in F7-03:** senza frontend la prova sarebbe parziale e una violazione si scoprirebbe solo al deploy.
