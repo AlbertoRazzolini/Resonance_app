@@ -128,11 +128,7 @@ public class AdminUserService {
         policy.requireCanActOn(admin.id(), admin.roles(), targetId, targetRoles);
 
         if (target.getStatus() == UserStatus.SUSPENDED) {
-            target.setStatus(UserStatus.ACTIVE);
-            target.setSuspendedAt(null);
-            target.setSuspendedBy(null);
-            target.setSuspensionReason(null);
-            target.setSuspendedUntil(null);
+            target.clearSuspension();
             users.save(target);
         }
         return AdminUserResponse.from(target, targetRoles);

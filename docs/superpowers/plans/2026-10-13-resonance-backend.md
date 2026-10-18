@@ -88,7 +88,7 @@ Resonance_app/
         ├── user/        User, UserRole, UserRoleId, Role, UserStatus, UserRepository, UserRoleRepository, UserController, UserService, PlatformLevelPolicy, dto/
         ├── admin/       AdminUserController, SuperadminController, AdminUserService, UserSuspendedEvent, dto/
         ├── moderation/  Moderation, ModeratedContentType, ModerationController, ModerationService, dto/
-        ├── geo/         Haversine, GeoPoint, NearbyQuery, GeocodingService, NominatimGeocodingService
+        ├── geo/         GeoPoint, NearbyQuery, NearbyRow, GeocodingService, NominatimGeocodingService
         ├── event/       OfficialConcert, IndieEvent, IndieEventStatus, repository, service, controller, dto/
         ├── collab/      CollabPost, CollabPostRepository, CollabService, CollabController, dto/
         ├── feed/        FeedPost, PostLike, PostLikeId, repository, FeedService, FeedController, dto/
@@ -131,7 +131,7 @@ dominio X").
 | `Moderation` | `@Embeddable` (`hiddenAt`, `hiddenBy`, `hiddenReason`); `boolean isHidden()`; `void hide(UUID by, String reason, Instant at)`; `void restore()`; `boolean hiddenByAuthor(UUID authorId)`. La cancellazione del proprietario la fa il service di ogni dominio (`delete(UUID id, String reason, UUID userId)`) con `hide` | F3-02 |
 | `ModerationService` | `void hide(ModeratedContentType, UUID id, String reason, AuthenticatedUser admin)`; `void restore(ModeratedContentType, UUID id, AuthenticatedUser admin)`; `PageResponse<HiddenContentResponse> listHidden(ModeratedContentType, PageParams)` | F4-03 |
 | `FriendshipService` | `boolean areFriends(UUID a, UUID b)`; `Map<UUID, FriendshipRelation> relationsFor(UUID me, Collection<UUID> otherIds)`; record `FriendshipRelation(FriendshipView status, UUID friendshipId)`; enum `FriendshipView { NONE, OUTGOING, INCOMING, FRIENDS, UNAVAILABLE }` | F4-04 |
-| `ChatService` | `ConversationResponse findOrCreate(UUID me, UUID recipientId)` (conversazione nuova solo fra amici); `ChatConversation findOrCreateConversation(UUID a, UUID b)` (interno: senza amicizia né `CONVERSATIONS_CREATED`, per candidature e contatti); `void unlock(ChatConversation c, ChatUnlockSource source, UUID sourceId)`; `boolean canSend(ChatConversation c)`; `ChatMessage appendMessage(ChatConversation c, UUID senderId, String body)`; `void send(UUID conversationId, SendMessageRequest req, AuthenticatedUser user)` | F5-02 |
+| `ChatService` | `ConversationResponse findOrCreate(UUID me, UUID recipientId)` (conversazione nuova solo fra amici); `ChatConversation findOrCreateConversation(UUID a, UUID b)` (interno: senza amicizia né `CONVERSATIONS_CREATED`, per candidature e contatti); `void unlock(ChatConversation c, ChatUnlockSource source, UUID sourceId)`; `boolean canSend(ChatConversation c)`; `ChatMessage appendMessage(ChatConversation c, UUID senderId, String body)`; `ChatMessage sendUnlockedMessage(UUID senderId, UUID recipientId, ChatUnlockSource source, UUID sourceId, String body)` (F7-02: conversazione, sblocco, messaggio e `ChatMessageEvent` per candidature e contatti); `void send(UUID conversationId, SendMessageRequest req, AuthenticatedUser user)` | F5-02 |
 | `LiveNotificationEvent` | `record(UUID recipientId, LiveNotification notification)`; `LiveNotification(NotificationType type, Instant createdAt, AuthorSummary actor, UUID targetId, String preview)` | F5-03 |
 | `AuthorSummary` | `record(UUID id, String displayName, String avatarUrl)` in `user.dto` | F2-01 |
 

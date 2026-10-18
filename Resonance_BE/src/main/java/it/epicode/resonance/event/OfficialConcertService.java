@@ -13,6 +13,7 @@ import it.epicode.resonance.event.dto.OfficialConcertResponse;
 import it.epicode.resonance.geo.GeoPoint;
 import it.epicode.resonance.geo.GeocodingService;
 import it.epicode.resonance.geo.NearbyQuery;
+import it.epicode.resonance.geo.NearbyRow;
 import it.epicode.resonance.user.User;
 import it.epicode.resonance.user.UserRepository;
 import org.springframework.data.domain.PageImpl;
@@ -83,13 +84,13 @@ public class OfficialConcertService {
     public PageResponse<OfficialConcertResponse> nearby(NearbyQuery query, PageParams params) {
         Instant now = clock.instant();
         long offset = (long) params.page() * params.size();
-        List<OfficialConcertRepository.NearbyRow> rows = concerts.findNearby(query.lat(), query.lng(),
+        List<NearbyRow> rows = concerts.findNearby(query.lat(), query.lng(),
                 query.radiusKm(), query.minLat(), query.maxLat(), query.minLng(), query.maxLng(), now,
                 params.size(), offset);
         long total = concerts.countNearby(query.lat(), query.lng(), query.radiusKm(), query.minLat(),
                 query.maxLat(), query.minLng(), query.maxLng(), now);
 
-        List<UUID> ids = rows.stream().map(OfficialConcertRepository.NearbyRow::getId).toList();
+        List<UUID> ids = rows.stream().map(NearbyRow::getId).toList();
         Map<UUID, OfficialConcert> byId = concerts.findByIdIn(ids).stream()
                 .collect(Collectors.toMap(OfficialConcert::getId, Function.identity()));
         // Un concerto nascosto fra le due query e' gia' fuori dalla pagina: lo si salta.

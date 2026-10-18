@@ -1,5 +1,6 @@
 package it.epicode.resonance.feed;
 
+import it.epicode.resonance.geo.NearbyRow;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -18,28 +19,17 @@ import java.util.UUID;
 public interface FeedPostRepository extends JpaRepository<FeedPost, UUID> {
 
     /**
-     * Distanza di Haversine in km fra il centro (:lat, :lng) e il post, con raggio terrestre 6371 km: la stessa
-     * formula di {@code geo.Haversine}, che nei test fa da oracolo. {@code least(1.0, ...)} protegge asin() dagli
-     * errori di arrotondamento che porterebbero l'argomento appena sopra 1.
-     */
-    String DISTANCE_KM = """
-            2 * 6371.0 * asin(least(1.0, sqrt(
-                power(sin(radians(p.latitude - cast(:lat as double precision)) / 2), 2)
-                + cos(radians(cast(:lat as double precision))) * cos(radians(p.latitude))
-                  * power(sin(radians(p.longitude - cast(:lng as double precision)) / 2), 2))))""";
-
-    /**
      * Post visibili con coordinate dentro la bounding box, con la distanza calcolata: la box usa l'indice su
      * (latitude, longitude), il filtro esatto sul raggio sta nella query che la racchiude. I post senza
      * coordinate non entrano mai nel confronto.
      */
     String CANDIDATES = """
-            select p.id as id, p.created_at as created_at, """ + DISTANCE_KM + """
+            select e.id as id, e.created_at as created_at, """ + NearbyRow.DISTANCE_KM + """
              as distance_km
-            from feed_posts p
-            where p.hidden_at is null
-              and p.latitude between :minLat and :maxLat
-              and p.longitude between :minLng and :maxLng""";
+            from feed_posts e
+            where e.hidden_at is null
+              and e.latitude between :minLat and :maxLat
+              and e.longitude between :minLng and :maxLng""";
 
     /**
      * Cerca per id caricando subito l'autore, che serve a ogni risposta. Non filtra i nascosti: lo fa il service.
@@ -108,14 +98,4 @@ public interface FeedPostRepository extends JpaRepository<FeedPost, UUID> {
      */
     @Query("select p.likesCount from FeedPost p where p.id = :id")
     int likesCountOf(UUID id);
-
-    /**
-     * Riga del risultato di {@link #findNearby}: id del post e distanza dal centro, in km.
-     */
-    interface NearbyRow {
-
-        UUID getId();
-
-        double getDistanceKm();
-    }
 }

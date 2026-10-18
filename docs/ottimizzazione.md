@@ -68,7 +68,8 @@ concorrenti, ordine dei controlli STOMP), e la logica fissata nelle decisioni.
 ### O2. Ricerca nelle vicinanze: una sola riga di risultato e una sola formula
 
 - **File:** `event/OfficialConcertRepository.java`, `event/IndieEventRepository.java`, `feed/FeedPostRepository.java`,
-  nuovo tipo in `geo`.
+  `event/IndieEventService.java`, `event/OfficialConcertService.java`, `feed/FeedService.java` (importano
+  `geo.NearbyRow` al posto del tipo definito in ogni repository), nuovo tipo in `geo`.
 - **Oggi:** l'interfaccia `NearbyRow { getId(); getDistanceKm(); }` è identica nei tre repository. La formula
   `DISTANCE_KM` è condivisa fra concerti e indie event (decisione 57), ma `FeedPostRepository` ne ha una copia che
   cambia solo l'alias della tabella (`p` invece di `c`).
@@ -202,3 +203,20 @@ Lo studente ha scelto di realizzare tutte e cinque le proposte nella card F7-02,
 prima da tagliare se il tempo stringe (decisione 75). Il comportamento si confronta prima e dopo con la collection
 Postman in locale, e su O1 e O3 una prova di copertura verifica che i test indicati falliscano se la nuova versione
 è sbagliata.
+
+## Esito della realizzazione (F7-02)
+
+Realizzate tutte e cinque le proposte, senza ritirarne nessuna e senza test nuovi o modificati; i test indicati per
+ogni proposta sono passati prima e dopo.
+
+- **O1:** `findLastOfEach` usa `LATERAL`. Prova di copertura: con l'ordine invertito (primo messaggio invece
+  dell'ultimo) fallisce `ChatRestIntegrationTest.list_ordersByLastActivityWithLastMessageAndUnreadCount`.
+- **O2:** un solo `geo.NearbyRow`, con la costante `DISTANCE_KM` (alias `e`), usata dalle query di concerti, indie
+  event e feed.
+- **O3:** `ChatService.sendUnlockedMessage` raccoglie la parte finale di candidatura e contatto; decisioni 66 e 69 e
+  «Interfacce condivise» del piano aggiornate. Prova di copertura: senza `ChatMessageEvent` nel nuovo metodo
+  falliscono `CollabApplicationIntegrationTest.apply_deliversMessageToBoth_andOnlyCollabApplicationToTheAuthor` e
+  `EventContactIntegrationTest.contact_deliversMessageToBoth_andNewMessageOnlyToTheOrganizer`.
+- **O4:** `User.clearSuspension()`, usato da `AdminUserService` (riattivazione manuale) e `SuperadminBootstrap.promote`.
+- **O5:** `Haversine` spostata in `src/test` (stesso package); `geo/package-info.java` e struttura dei file del piano
+  aggiornati.

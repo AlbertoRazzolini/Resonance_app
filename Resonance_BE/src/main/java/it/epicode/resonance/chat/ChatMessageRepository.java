@@ -41,12 +41,18 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
     boolean existsByIdAndConversationId(UUID id, UUID conversationId);
 
     /**
-     * L'ultimo messaggio di ognuna delle conversazioni indicate, con una sola query.
+     * L'ultimo messaggio di ognuna delle conversazioni indicate, con una sola query. Per ogni conversazione
+     * legge solo il messaggio piu' recente, con {@code ix_chat_messages_cursor}: non ordina tutta la chat
+     * (ottimizzazione O1, decisione 75).
      */
     @Query(nativeQuery = true, value = """
-            select distinct on (conversation_id) * from chat_messages
-            where conversation_id in (:conversationIds)
-            order by conversation_id, sent_at desc, id desc""")
+            select m.* from chat_conversations c
+            cross join lateral (
+                select * from chat_messages x
+                where x.conversation_id = c.id
+                order by x.sent_at desc, x.id desc
+                limit 1) m
+            where c.id in (:conversationIds)""")
     List<ChatMessage> findLastOfEach(Collection<UUID> conversationIds);
 
     /**

@@ -1,5 +1,6 @@
 package it.epicode.resonance.event;
 
+import it.epicode.resonance.geo.NearbyRow;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -18,27 +19,16 @@ import java.util.UUID;
 public interface OfficialConcertRepository extends JpaRepository<OfficialConcert, UUID> {
 
     /**
-     * Distanza di Haversine in km fra il centro (:lat, :lng) e il concerto, con raggio terrestre 6371 km: la
-     * stessa formula di {@code geo.Haversine}, che nei test fa da oracolo. {@code least(1.0, ...)} protegge
-     * asin() dagli errori di arrotondamento che porterebbero l'argomento appena sopra 1.
-     */
-    String DISTANCE_KM = """
-            2 * 6371.0 * asin(least(1.0, sqrt(
-                power(sin(radians(c.latitude - cast(:lat as double precision)) / 2), 2)
-                + cos(radians(cast(:lat as double precision))) * cos(radians(c.latitude))
-                  * power(sin(radians(c.longitude - cast(:lng as double precision)) / 2), 2))))""";
-
-    /**
      * Concerti visibili e futuri dentro la bounding box, con la distanza calcolata: la box usa gli indici su
      * (latitude, longitude), il filtro esatto sul raggio sta nella query che la racchiude.
      */
     String CANDIDATES = """
-            select c.id as id, c.event_date as event_date, """ + DISTANCE_KM + """
+            select e.id as id, e.event_date as event_date, """ + NearbyRow.DISTANCE_KM + """
              as distance_km
-            from official_concerts c
-            where c.hidden_at is null and c.event_date >= :now
-              and c.latitude between :minLat and :maxLat
-              and c.longitude between :minLng and :maxLng""";
+            from official_concerts e
+            where e.hidden_at is null and e.event_date >= :now
+              and e.latitude between :minLat and :maxLat
+              and e.longitude between :minLng and :maxLng""";
 
     /**
      * Cerca per id caricando subito l'autore, che serve a ogni risposta. Non filtra i nascosti: lo fa il service.
@@ -74,14 +64,4 @@ public interface OfficialConcertRepository extends JpaRepository<OfficialConcert
     @Query(nativeQuery = true, value = "select count(*) from (" + CANDIDATES + ") t where t.distance_km <= :radiusKm")
     long countNearby(double lat, double lng, double radiusKm, double minLat, double maxLat, double minLng,
                      double maxLng, Instant now);
-
-    /**
-     * Riga del risultato di {@link #findNearby}: id del concerto e distanza dal centro, in km.
-     */
-    interface NearbyRow {
-
-        UUID getId();
-
-        double getDistanceKm();
-    }
 }

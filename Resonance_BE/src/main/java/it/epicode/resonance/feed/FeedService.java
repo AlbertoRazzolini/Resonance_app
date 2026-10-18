@@ -8,6 +8,7 @@ import it.epicode.resonance.feed.dto.CreateFeedPostRequest;
 import it.epicode.resonance.feed.dto.FeedPostResponse;
 import it.epicode.resonance.feed.dto.LikeStatusResponse;
 import it.epicode.resonance.geo.NearbyQuery;
+import it.epicode.resonance.geo.NearbyRow;
 import it.epicode.resonance.notification.LiveNotification;
 import it.epicode.resonance.notification.LiveNotificationEvent;
 import it.epicode.resonance.notification.NotificationType;
@@ -156,12 +157,12 @@ public class FeedService {
      */
     private PageResponse<FeedPostResponse> nearby(NearbyQuery query, PageParams params, UUID viewerId) {
         long offset = (long) params.page() * params.size();
-        List<FeedPostRepository.NearbyRow> rows = posts.findNearby(query.lat(), query.lng(), query.radiusKm(),
+        List<NearbyRow> rows = posts.findNearby(query.lat(), query.lng(), query.radiusKm(),
                 query.minLat(), query.maxLat(), query.minLng(), query.maxLng(), params.size(), offset);
         long total = posts.countNearby(query.lat(), query.lng(), query.radiusKm(), query.minLat(),
                 query.maxLat(), query.minLng(), query.maxLng());
 
-        List<UUID> ids = rows.stream().map(FeedPostRepository.NearbyRow::getId).toList();
+        List<UUID> ids = rows.stream().map(NearbyRow::getId).toList();
         Map<UUID, FeedPost> byId = posts.findByIdIn(ids).stream()
                 .collect(Collectors.toMap(FeedPost::getId, Function.identity()));
         Set<UUID> liked = likedAmong(viewerId, byId.values());

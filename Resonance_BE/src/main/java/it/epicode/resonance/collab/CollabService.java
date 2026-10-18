@@ -4,10 +4,8 @@ import it.epicode.resonance.auth.AccessStatus;
 import it.epicode.resonance.auth.UserAccessService;
 import it.epicode.resonance.chat.ChatConversation;
 import it.epicode.resonance.chat.ChatMessage;
-import it.epicode.resonance.chat.ChatMessageEvent;
 import it.epicode.resonance.chat.ChatService;
 import it.epicode.resonance.chat.ChatUnlockSource;
-import it.epicode.resonance.chat.dto.ChatMessageResponse;
 import it.epicode.resonance.collab.dto.ApplicationResponse;
 import it.epicode.resonance.collab.dto.CollabPostResponse;
 import it.epicode.resonance.collab.dto.CreateCollabPostRequest;
@@ -140,12 +138,10 @@ public class CollabService {
         }
         rateLimits.consume(RateLimit.COLLAB_APPLICATIONS, applicantId.toString());
 
-        ChatConversation conversation = chat.findOrCreateConversation(applicantId, author.getId());
-        chat.unlock(conversation, ChatUnlockSource.COLLAB_POST, postId);
-        ChatMessage saved = chat.appendMessage(conversation, applicantId,
-                "Candidatura per \u00ab" + post.getTitle() + "\u00bb:\n" + message);
+        ChatMessage saved = chat.sendUnlockedMessage(applicantId, author.getId(), ChatUnlockSource.COLLAB_POST,
+                postId, "Candidatura per \u00ab" + post.getTitle() + "\u00bb:\n" + message);
+        ChatConversation conversation = saved.getConversation();
         User applicant = conversation.otherThan(author.getId());
-        events.publishEvent(new ChatMessageEvent(applicantId, author.getId(), ChatMessageResponse.from(saved)));
         events.publishEvent(new LiveNotificationEvent(author.getId(), new LiveNotification(
                 NotificationType.COLLAB_APPLICATION, saved.getSentAt(), AuthorSummary.from(applicant), postId, null)));
         return new ApplicationResponse(conversation.getId(), saved.getId());

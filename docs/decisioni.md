@@ -1707,7 +1707,10 @@ Su richiesta dello studente (16 ottobre) la regola del brief "chiunque può scri
   (come da sezione 6.9) per storico, lettura e invio; nell'invio il controllo viene prima del permesso (sezione 7.5).
 - **Interfaccia per F5-03 e F5-04:** `findOrCreateConversation(a, b)`, `unlock(...)` e `appendMessage(...)`
   sono pubblici; `appendMessage` aggiorna `last_message_at` ma non pubblica eventi né controlla il permesso: chi lo
-  chiama pubblica `ChatMessageEvent` nella stessa transazione.
+  chiama pubblica `ChatMessageEvent` nella stessa transazione. Da F7-02 (ottimizzazione O3, decisione 75) candidature
+  e contatti non lo fanno più a mano: `sendUnlockedMessage(senderId, recipientId, source, sourceId, body)` esegue
+  nello stesso metodo transazionale conversazione, sblocco, messaggio e `ChatMessageEvent`, e restituisce il messaggio
+  salvato; `appendMessage` resta pubblico e senza eventi, perché `send` lo usa con i propri controlli.
 
 ### Motivazione
 
@@ -1847,6 +1850,10 @@ Limiti dei servizi esterni, che nessuna scelta di codice rimuove:
   evento da contattare; il 404 viene prima del 400 anche sul proprio evento.
 - **Evento aperto fino all'istante di inizio escluso:** `event_date > now` (dal `Clock`), lo stesso confronto che
   apre lo sblocco in `canSend` (sezione 6.9), così contatto e permesso di scrittura non divergono.
+- **Parte finale in `ChatService` (F7-02, ottimizzazione O3):** dopo i controlli e il limite, `contact` chiama
+  `ChatService.sendUnlockedMessage`, che salva il messaggio e pubblica `ChatMessageEvent`; la notifica `NEW_MESSAGE`
+  resta in `contact`. L'ordine dei controlli non cambia, e la regola «chi aggiunge un messaggio pubblica
+  `ChatMessageEvent` nella stessa transazione» (decisione 66) sta in un punto solo.
 - **`NEW_MESSAGE` all'organizzatore:** a differenza della candidatura (che ha `COLLAB_APPLICATION`) il contatto non ha
   un tipo suo; si invia `NEW_MESSAGE` con `targetId` la conversazione e `preview` dei primi 100 caratteri del testo
   salvato, prefisso compreso. `ChatService.preview` è diventato pubblico per riusarlo.

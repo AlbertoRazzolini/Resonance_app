@@ -1,5 +1,6 @@
 package it.epicode.resonance.event;
 
+import it.epicode.resonance.geo.NearbyRow;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -18,17 +19,17 @@ import java.util.UUID;
 public interface IndieEventRepository extends JpaRepository<IndieEvent, UUID> {
 
     /**
-     * Eventi pubblicati, visibili e futuri dentro la bounding box, con la distanza calcolata (stessa formula dei
-     * concerti, {@link OfficialConcertRepository#DISTANCE_KM}, con alias {@code c}). Le bozze non compaiono
+     * Eventi pubblicati, visibili e futuri dentro la bounding box, con la distanza calcolata (formula comune
+     * {@link NearbyRow#DISTANCE_KM}, con alias {@code e}). Le bozze non compaiono
      * mai nella ricerca, nemmeno per il proprietario (progettazione, sezione 6.6).
      */
     String CANDIDATES = """
-            select c.id as id, c.event_date as event_date, """ + OfficialConcertRepository.DISTANCE_KM + """
+            select e.id as id, e.event_date as event_date, """ + NearbyRow.DISTANCE_KM + """
              as distance_km
-            from indie_events c
-            where c.status = 'PUBLISHED' and c.hidden_at is null and c.event_date >= :now
-              and c.latitude between :minLat and :maxLat
-              and c.longitude between :minLng and :maxLng""";
+            from indie_events e
+            where e.status = 'PUBLISHED' and e.hidden_at is null and e.event_date >= :now
+              and e.latitude between :minLat and :maxLat
+              and e.longitude between :minLng and :maxLng""";
 
     /**
      * Cerca per id caricando subito l'autore, che serve a ogni risposta. Non filtra nascosti e bozze: lo fa il
@@ -71,14 +72,4 @@ public interface IndieEventRepository extends JpaRepository<IndieEvent, UUID> {
     @Query(nativeQuery = true, value = "select count(*) from (" + CANDIDATES + ") t where t.distance_km <= :radiusKm")
     long countNearby(double lat, double lng, double radiusKm, double minLat, double maxLat, double minLng,
                      double maxLng, Instant now);
-
-    /**
-     * Riga del risultato di {@link #findNearby}: id dell'evento e distanza dal centro, in km.
-     */
-    interface NearbyRow {
-
-        UUID getId();
-
-        double getDistanceKm();
-    }
 }

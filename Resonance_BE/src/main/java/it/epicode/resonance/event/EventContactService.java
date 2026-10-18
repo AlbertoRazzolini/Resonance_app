@@ -2,10 +2,8 @@ package it.epicode.resonance.event;
 
 import it.epicode.resonance.chat.ChatConversation;
 import it.epicode.resonance.chat.ChatMessage;
-import it.epicode.resonance.chat.ChatMessageEvent;
 import it.epicode.resonance.chat.ChatService;
 import it.epicode.resonance.chat.ChatUnlockSource;
-import it.epicode.resonance.chat.dto.ChatMessageResponse;
 import it.epicode.resonance.common.AppException;
 import it.epicode.resonance.common.ErrorCode;
 import it.epicode.resonance.common.RateLimit;
@@ -72,12 +70,10 @@ public class EventContactService {
         }
         rateLimits.consume(RateLimit.EVENT_CONTACTS, callerId.toString());
 
-        ChatConversation conversation = chat.findOrCreateConversation(callerId, organizer.getId());
-        chat.unlock(conversation, target.source(), target.eventId());
-        ChatMessage saved = chat.appendMessage(conversation, callerId,
+        ChatMessage saved = chat.sendUnlockedMessage(callerId, organizer.getId(), target.source(), target.eventId(),
                 "Contatto per «" + target.title() + "»:\n" + message);
+        ChatConversation conversation = saved.getConversation();
         User caller = conversation.otherThan(organizer.getId());
-        events.publishEvent(new ChatMessageEvent(callerId, organizer.getId(), ChatMessageResponse.from(saved)));
         events.publishEvent(new LiveNotificationEvent(organizer.getId(), new LiveNotification(
                 NotificationType.NEW_MESSAGE, saved.getSentAt(), AuthorSummary.from(caller), conversation.getId(),
                 ChatService.preview(saved.getBody()))));

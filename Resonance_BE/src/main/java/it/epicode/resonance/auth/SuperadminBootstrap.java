@@ -82,11 +82,7 @@ public class SuperadminBootstrap implements ApplicationRunner {
     private User promote(User existing, String passwordHash) {
         existing.setPasswordHash(passwordHash);
         existing.setEmailVerified(true);
-        existing.setStatus(UserStatus.ACTIVE);
-        existing.setSuspendedAt(null);
-        existing.setSuspendedBy(null);
-        existing.setSuspensionReason(null);
-        existing.setSuspendedUntil(null);
+        existing.clearSuspension();
         return users.save(existing);
     }
 

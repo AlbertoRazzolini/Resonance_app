@@ -230,6 +230,22 @@ public class ChatService {
         return message;
     }
 
+    /**
+     * Parte finale comune di candidatura e contatto: trova o crea la conversazione senza controllo di amicizia,
+     * registra lo sblocco, salva il messaggio e pubblica {@link ChatMessageEvent} per i due utenti, che arriva dopo
+     * il commit. I controlli, il limite di frequenza e la notifica restano nel chiamante (ottimizzazione O3,
+     * decisione 75). Il chiamante ha gia' verificato che i due utenti siano attivi.
+     */
+    @Transactional
+    public ChatMessage sendUnlockedMessage(UUID senderId, UUID recipientId, ChatUnlockSource source, UUID sourceId,
+                                           String body) {
+        ChatConversation conversation = findOrCreateConversation(senderId, recipientId);
+        unlock(conversation, source, sourceId);
+        ChatMessage saved = appendMessage(conversation, senderId, body);
+        events.publishEvent(new ChatMessageEvent(senderId, recipientId, ChatMessageResponse.from(saved)));
+        return saved;
+    }
+
     // ---- interni ----
 
     /**

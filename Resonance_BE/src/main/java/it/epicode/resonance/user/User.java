@@ -103,4 +103,15 @@ public class User {
         this.passwordHash = passwordHash;
         this.displayName = displayName;
     }
+    /**
+     * Riporta l'utente ad ACTIVE e azzera insieme i quattro campi della sospensione, come chiede il vincolo
+     * {@code ck_users_suspension} (decisione 75, O4).
+     */
+    public void clearSuspension() {
+        this.status = UserStatus.ACTIVE;
+        this.suspendedAt = null;
+        this.suspendedBy = null;
+        this.suspensionReason = null;
+        this.suspendedUntil = null;
+    }
 }
