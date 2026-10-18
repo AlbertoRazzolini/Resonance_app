@@ -220,3 +220,23 @@ ogni proposta sono passati prima e dopo.
 - **O4:** `User.clearSuspension()`, usato da `AdminUserService` (riattivazione manuale) e `SuperadminBootstrap.promote`.
 - **O5:** `Haversine` spostata in `src/test` (stesso package); `geo/package-info.java` e struttura dei file del piano
   aggiornati.
+
+### Verifica su Render
+
+Dopo il merge `develop → main`, il deploy automatico del commit `01eb48c` è riuscito (circa 4 minuti) e
+`GET /api/health` risponde `{"status":"UP","database":"UP"}`.
+
+Prova con l'environment `render` di Postman: 26 richieste della collection che non richiedono credenziali e non
+scrivono dati (`scripts/postman-render-subset.sh`).
+
+- Stato di tutte e 26 le richieste: quello atteso, nessuna fallita.
+- Asserzioni: 26, di cui 5 fallite. Sono le stesse 5 della prova locale a database vuoto e della prova del 17 ottobre
+  (F6-03): concerti vicini, indie event vicini, annunci, post e post con coordinate controllano un contenuto che il
+  database di produzione, ancora vuoto, non ha. Non sono regressioni.
+- Prima e dopo il deploy gli esiti sono identici (la prima prova girava sul codice precedente).
+- Non è stato creato nessun utente né scritto nessun dato sul database di produzione, quindi non c'è nulla da
+  cancellare.
+
+Non coperto su Render: le query di O1 e O2 e il messaggio di O3 richiedono il login, quindi sono provati dai test e
+dalla collection completa in locale (143 richieste, esiti identici prima e dopo). La prova completa con utenti e dati
+veri è rimandata a dopo il frontend.
