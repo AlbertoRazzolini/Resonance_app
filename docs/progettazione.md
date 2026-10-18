@@ -1785,10 +1785,11 @@ in chat e sblocco, senza notifica).
 | Card | Contenuto | Criterio |
 |---|---|---|
 | F7-01 · Valutazione dell'ottimizzazione del backend | Sessione di brainstorming (superpowers, Opus 5.5) su ciò che si può alleggerire o riorganizzare senza cambiare il comportamento; misure dei punti lenti; documento di proposte con rischio e beneficio | `docs/ottimizzazione.md` con le proposte; nessun file di codice modificato; decisione dello studente se e come realizzarle (decisione 71) |
+| F7-02 · Realizzazione delle proposte di ottimizzazione | Le cinque proposte ammesse di `docs/ottimizzazione.md` (O1–O5), senza cambi di comportamento; O3 per ultima, primo taglio | `./mvnw -q verify` verde con gli stessi test; collection Postman con gli stessi esiti prima e dopo; prove di copertura su O1 e O3; documento aggiornato con le proposte realizzate (decisione 75) |
 
 F7 non fa parte del calendario del 25 ottobre: parte solo se dopo F6-03 resta tempo e il frontend ha la
-precedenza dal 20. Se manca tempo si salta senza conseguenze sulle funzionalità. Le card di
-realizzazione (F7-02 e seguenti) nascono solo dopo la scelta dello studente.
+precedenza dal 20. Se manca tempo si salta senza conseguenze sulle funzionalità. Dopo F7-01 lo studente ha
+scelto di realizzare tutte le proposte in F7-02, il 19 ottobre (decisione 75).
 
 Ordine dei tagli in caso di ritardo (brief 1-BIS, aggiornato dalla decisione 59): verifica dinamica
 del report → Swagger → notifiche live → contatto degli eventi (F5-04) → bacheca collab. Mai tagliati:

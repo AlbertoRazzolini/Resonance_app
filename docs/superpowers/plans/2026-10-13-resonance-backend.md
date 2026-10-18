@@ -488,7 +488,8 @@ dominio X").
 # F7 — Valutazione dell'ottimizzazione (condizionata, dopo F6-03)
 
 Fase facoltativa: parte solo se dopo F6-03 resta tempo (il frontend ha la precedenza dal 20 ottobre, consegna
-il 25). Solo analisi e documento: nessun file di codice si modifica in questa fase. Se manca tempo si salta (decisione 71).
+il 25). F7-01 è solo analisi e documento, senza modifiche al codice; se manca tempo si salta (decisione 71). Lo studente
+ha scelto di realizzare tutte le proposte ammesse in F7-02 (decisione 75).
 
 ### Card F7-01 · Valutazione dell'ottimizzazione del backend — stima 2 h
 
@@ -512,6 +513,45 @@ logica documentata nelle decisioni.
 **Criterio:** documento di proposte consegnato, `git status` con soli file di documentazione, decisione dello
 studente registrata.
 **Commit proposto:** `docs(optimization): add backend optimization proposals`
+
+### Card F7-02 · Realizzazione delle proposte di ottimizzazione — stima 2,5 h
+
+**Riferimenti:** decisione 75; `docs/ottimizzazione.md` (proposte O1–O5); decisioni 26, 32, 57, 66 e 69.
+**Sicurezza: no**
+**File:** `chat/ChatMessageRepository`; `geo/NearbyRow` (nuovo) e i repository di concerti, indie event e feed;
+`user/User`, `admin/AdminUserService`, `auth/SuperadminBootstrap`; `geo/Haversine` (spostata nei test),
+`geo/package-info`; `chat/ChatService`, `collab/CollabService`, `event/EventContactService`; `docs/ottimizzazione.md`,
+`docs/decisioni.md` (66 e 69), questo piano.
+
+Refactor senza cambi di comportamento: nessun test nuovo o modificato. Prima di ogni proposta si eseguono i test
+indicati nel documento, poi di nuovo dopo la modifica. Un test che fallisce indica un cambiamento di comportamento: la
+proposta si ritira, il test non si adatta. Il comportamento si confronta anche da fuori, con la collection Postman
+eseguita in locale prima e dopo (decisione 75).
+
+- [ ] **1. Postman prima (10 min).** Collection completa in locale con lo script a segmenti, sul codice non ancora
+  modificato; esiti salvati come riferimento fuori dal repository.
+- [ ] **2. O1, ultimo messaggio con `LATERAL` (25 min).** `findLastOfEach` con la query del documento. Test:
+  `ChatRestIntegrationTest`. Prova di copertura: la query rotta apposta (primo messaggio invece dell'ultimo) deve far
+  fallire test con nome; poi ripristino, confermato con `cmp`.
+- [ ] **3. O2, ricerca nelle vicinanze (30 min).** Un solo `geo.NearbyRow` e una sola costante della formula con un
+  alias neutro, usata dalle tre query (deve restare una costante: il testo di una `@Query` è noto alla compilazione).
+  Test: `NearbySqlTest`, `IndieEventIntegrationTest`, `FeedIntegrationTest`.
+- [ ] **4. O4, `User.clearSuspension()` (10 min).** Usato dalla riattivazione manuale e da `SuperadminBootstrap.promote`.
+  Test: `SuspensionIntegrationTest`, `SuperadminBootstrapTest`.
+- [ ] **5. O5, `Haversine` nei test (10 min).** Spostamento nello stesso package di `src/test`, riga di
+  `package-info.java`, struttura dei file di questo piano. Test: `HaversineTest`, `NearbySqlTest`, `FeedIntegrationTest`.
+- [ ] **6. O3, parte finale comune di candidatura e contatto (40 min, primo taglio).** Metodo di `ChatService` per
+  conversazione, sblocco, messaggio e `ChatMessageEvent`; controlli, limite e notifica restano nei chiamanti. Aggiorna
+  decisioni 66 e 69 e la riga di `ChatService` nelle "Interfacce condivise". Test: `CollabApplicationIntegrationTest`,
+  `EventContactIntegrationTest`. Prova di copertura: il nuovo metodo senza `ChatMessageEvent` deve far fallire test con
+  nome; poi ripristino, confermato con `cmp`.
+- [ ] **7. Postman dopo e confronto (10 min).** Stessa collection sul codice ottimizzato: stessi esiti di tutte le
+  richieste del passo 1.
+
+**Criterio:** `./mvnw -q verify` verde con lo stesso numero di test; Postman con gli stessi esiti prima e dopo; prove di
+copertura su O1 e O3 intercettate da test con nome; `docs/ottimizzazione.md` indica le proposte realizzate (ed
+eventualmente quelle ritirate).
+**Commit proposto:** `refactor(backend): realizza le proposte di ottimizzazione O1-O5`
 
 ---
 

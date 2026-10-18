@@ -2046,3 +2046,42 @@ Limiti dei servizi esterni, che nessuna scelta di codice rimuove:
 - **`GET` e `HEAD` pubblici:** estensione di sezione 6.3 non richiesta dal frontend.
 - **Aprire `ALLOWED_ORIGIN` su Render per usare la pagina STOMP:** cambia la configurazione di produzione e non prova la stessa origine.
 - **Pagina di prova nuova in `tools/`, cartella Postman "Demo", anticipo di FE-01:** file e lavoro fuori dalla card.
+
+## Decisione 75: realizzazione delle proposte di ottimizzazione in F7-02 (F7-01, decisione 71)
+
+### Scelta
+
+- **Metodo di F7-01:** prima una revisione di tutto `src/main`, delle migrazioni e della configurazione, fatta senza
+  leggere decisioni, progettazione e test (30 segnalazioni); poi il filtro dei tre criteri della decisione 71 e delle
+  decisioni già prese. Le query sospette sono misurate con `EXPLAIN (ANALYZE, BUFFERS)` su un database separato nel
+  container di sviluppo, con volumi sintetici circa cento volte la demo, eliminato alla fine. Esito in
+  `docs/ottimizzazione.md`: cinque proposte ammesse (O1–O5) e l'elenco motivato di ciò che non si tocca.
+- **Realizzazione (scelta dello studente, 18 ottobre):** tutte e cinque le proposte in una sola card, F7-02, il 19
+  ottobre, prima del frontend. Ordine: O1, O2, O4, O5 e per ultima O3, la più delicata (ordine degli eventi nella
+  transazione) e la prima da tagliare se il tempo stringe.
+- **Nessun test nuovo o modificato:** la copertura è quella indicata per ogni proposta. Se un test fallisce, la
+  proposta cambia il comportamento e si ritira; il test non si adatta.
+- **Confronto prima e dopo (scelta dello studente):** la collection Postman si esegue in locale sul codice non ancora
+  modificato e di nuovo a fine card, e gli esiti devono coincidere. Su O1 e O3, le due proposte più delicate, una
+  prova di copertura: la nuova versione rotta apposta deve far fallire test con nome, poi si ripristina.
+- **Caricamento "utente o 404" scartato** (sette copie identiche): il ramo 404 non è raggiungibile, perché l'utente è
+  quello autenticato o è già stato controllato, e nessun test lo copre.
+
+### Motivazione
+
+- Il backend è in anticipo sul calendario e il 19 è ancora un giorno di backend; le proposte valgono circa un'ora e
+  mezza e ognuna ha test già esistenti.
+- Il codice valutato al capstone perde duplicazioni e codice usato solo dai test; O1 è l'unico guadagno di velocità
+  misurato (da 27 ms a 0,08 ms con 20 conversazioni da 2.000 messaggi).
+- Una revisione fatta senza le motivazioni scritte non giustifica in partenza il codice esistente; il filtro successivo
+  evita di proporre ciò che le decisioni escludono.
+
+### Alternative scartate
+
+- **Non procedere:** nessun rischio, ma le duplicazioni restano nel codice consegnato.
+- **Solo O1:** è l'unico guadagno misurato, ma con i volumi della demo non si nota.
+- **Rimandare dopo la consegna:** dopo il 25 non serve più alla valutazione.
+- **Revisione fatta solo con il contesto del progetto:** rischia di confermare le scelte esistenti senza metterle in
+  discussione.
+- **Solo i test Java come confronto:** coprono il comportamento, ma la collection lo prova anche via HTTP come lo vedrà
+  il frontend; senza la prova di copertura, "coperta da test" resterebbe un'affermazione.
