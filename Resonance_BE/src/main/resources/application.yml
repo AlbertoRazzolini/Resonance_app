@@ -75,12 +75,18 @@ app:
     event-contacts:
       max: 10
       window: 24h
+    # Creazioni di concerti e indie event, insieme, per utente (progettazione, sezione 8.8; decisione 76).
+    events-created:
+      max: 20
+      window: 24h
   # Nominatim (progettazione, sezione 10.1): una richiesta al secondo, User-Agent identificativo.
   geocoding:
     url: https://nominatim.openstreetmap.org
     contact: ${GEOCODING_CONTACT:}
     connect-timeout: 2s
     read-timeout: 3s
+    # Attesa massima del proprio turno: oltre, 502 GEOCODING_UNAVAILABLE senza chiamare Nominatim (decisione 76).
+    max-wait: 10s
   # Email: log in dev, Brevo via HTTP in prod (progettazione, sezione 9). MAIL_FROM deve essere un
   # mittente confermato nell'account Brevo. Senza chiave o mittente l'email non parte e si scrive nel log.
   mail:

@@ -82,7 +82,7 @@ Resonance_app/
     ├── Dockerfile · pom.xml · mvnw · .mvn/
     └── src/main/java/it/epicode/resonance/
         ├── ResonanceApplication.java
-        ├── config/      SecurityConfig, CorsConfig, WebSocketConfig, AsyncConfig, SchedulingConfig, ClockConfig, DatabaseUrl, OpenApiConfig
+        ├── config/      SecurityConfig, CorsConfig, WebSocketConfig, AsyncConfig, SchedulingConfig, ClockConfig, DatabaseUrl, OpenApiConfig, JsonLimitsConfig
         ├── common/      AppException, ErrorCode, ErrorResponse, GlobalExceptionHandler, StompErrorHandler, WebSocketExceptionHandler, WsError, PageResponse, PageParams, RateLimit, RateLimitService, HttpUrl(+Validator), NotBlankIfPresent
         ├── auth/        AuthController, AuthService, AccessTokenService, RefreshTokenService, RefreshToken(+Repository), RefreshCookieFactory, RefreshOutcome, EmailCode(+Repository), EmailCodeService, EmailCodePurpose, JwtFilter, JwtChannelInterceptor, AuthenticatedUser, UserAccessService, UserAccess, SuperadminBootstrap, PasswordMax72Bytes(+Validator), dto/
         ├── user/        User, UserRole, UserRoleId, Role, UserStatus, UserRepository, UserRoleRepository, UserController, UserService, PlatformLevelPolicy, dto/

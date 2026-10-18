@@ -1,6 +1,7 @@
 package it.epicode.resonance.auth;
 
 import it.epicode.resonance.common.ErrorCode;
+import it.epicode.resonance.user.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,16 +34,19 @@ public class RefreshTokenService {
     private static final Logger log = LoggerFactory.getLogger(RefreshTokenService.class);
 
     private final RefreshTokenRepository tokens;
+    private final UserRepository users;
     private final UserAccessService userAccess;
     private final Clock clock;
     private final Duration ttl;
     private final Duration grace;
     private final SecureRandom random = new SecureRandom();
 
-    public RefreshTokenService(RefreshTokenRepository tokens, UserAccessService userAccess, Clock clock,
+    public RefreshTokenService(RefreshTokenRepository tokens, UserRepository users, UserAccessService userAccess,
+                               Clock clock,
                                @Value("${app.auth.refresh-token-ttl}") Duration ttl,
                                @Value("${app.auth.refresh-grace}") Duration grace) {
         this.tokens = tokens;
+        this.users = users;
         this.userAccess = userAccess;
         this.clock = clock;
         this.ttl = ttl;
@@ -64,14 +68,24 @@ public class RefreshTokenService {
 
     /**
      * Ruota il token presentato (progettazione, sezione 4.8, passi 3-7). Non lancia: restituisce un
-     * esito, cosi' la transazione si chiude con commit e le revoche totali restano salvate.
+     * esito, cosi' la transazione si chiude con commit e le revoche totali restano salvate. Ordine dei lock
+     * sempre utente -> token, come reset e sospensione: il reset della password non puo' concludersi in mezzo a
+     * una rotazione e lasciare valido il token nuovo (progettazione, sezione 4.8; decisione 76, S1).
      */
     @Transactional
     public RefreshOutcome rotate(String rawValue) {
         if (rawValue == null || rawValue.isBlank()) {
             return invalid();
         }
-        Optional<RefreshToken> found = tokens.findWithLockByTokenHash(hash(rawValue));
+        String tokenHash = hash(rawValue);
+        // Prima l'utente, senza lock e senza caricare il token (si rileggerebbe vecchio dopo l'attesa del lock).
+        Optional<UUID> owner = tokens.findUserIdByTokenHash(tokenHash);
+        if (owner.isEmpty()) {
+            return invalid();
+        }
+        users.findWithLockById(owner.get());
+        // Ora il token, con il lock di sempre: due refresh con lo stesso cookie si serializzano qui.
+        Optional<RefreshToken> found = tokens.findWithLockByTokenHash(tokenHash);
         if (found.isEmpty()) {
             return invalid();
         }

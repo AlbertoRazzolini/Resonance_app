@@ -24,6 +24,13 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
     Optional<RefreshToken> findWithLockByTokenHash(String tokenHash);
 
     /**
+     * Id dell'utente proprietario del token, senza lock e senza portare in memoria l'entity: serve a bloccare prima
+     * la riga dell'utente e poi quella del token, nello stesso ordine di reset e sospensione (decisione 76, S1).
+     */
+    @Query("select t.userId from RefreshToken t where t.tokenHash = :tokenHash")
+    Optional<UUID> findUserIdByTokenHash(String tokenHash);
+
+    /**
      * Revoca in blocco tutti i token ancora validi di un utente (con un solo UPDATE) e restituisce
      * quanti ne ha revocati. Non imposta replaced_by: e' una revoca, non una rotazione.
      */

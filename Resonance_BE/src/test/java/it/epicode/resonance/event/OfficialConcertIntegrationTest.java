@@ -139,6 +139,28 @@ class OfficialConcertIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void create_twentyOneCreationsInADay_countingConcertsAndIndieEventsTogether_returns429() throws Exception {
+        // Limite unico EVENTS_CREATED per utente (decisione 76, S3): 20 in 24 ore fra concerti e indie event.
+        User both = userWith("entrambi@example.com", Role.FAN, Role.HOST, Role.MUSICIAN);
+        for (int i = 0; i < 10; i++) {
+            create(both, body(StubGeocodingConfig.FLORENCE_ADDRESS)).andExpect(status().isCreated());
+            mockMvc.perform(post("/api/indie-events")
+                            .header("Authorization", bearer(both))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body(StubGeocodingConfig.FLORENCE_ADDRESS).replace("Concerto di prova", "Serata di prova")))
+                    .andExpect(status().isCreated());
+        }
+
+        create(both, body(StubGeocodingConfig.FLORENCE_ADDRESS))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.code").value("TOO_MANY_REQUESTS"));
+        // Un altro utente non e' toccato dal limite.
+        create(userWith("altro@example.com", Role.FAN, Role.HOST), body(StubGeocodingConfig.FLORENCE_ADDRESS))
+                .andExpect(status().isCreated());
+        assertThat(concerts.count()).isEqualTo(11);
+    }
+
+    @Test
     void create_rejectsDateWithoutOffset() throws Exception {
         User host = userWith("host@example.com", Role.FAN, Role.HOST);
 

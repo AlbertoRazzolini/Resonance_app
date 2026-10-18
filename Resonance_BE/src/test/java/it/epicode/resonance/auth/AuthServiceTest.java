@@ -15,8 +15,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -74,7 +77,7 @@ class AuthServiceTest {
 
         // Il costo di BCrypt si paga anche qui: senza, la risposta sarebbe molto piu' veloce (decisione 48).
         verify(passwordEncoder).matches("password-qualsiasi", DUMMY_HASH);
-        verify(rateLimits).record(RateLimit.LOGIN_FAILED, "nessuno@example.com");
+        verify(rateLimits).consume(RateLimit.LOGIN_FAILED, "nessuno@example.com");
     }
 
     @Test
@@ -130,5 +133,24 @@ class AuthServiceTest {
                 .isInstanceOf(AppException.class);
 
         verify(passwordEncoder, never()).matches(anyString(), anyString());
+    }
+
+    @Test
+    void login_whenThePasswordChangedWhileBcryptWasRunning_failsWithoutCreatingAToken() {
+        // Un reset concluso dopo la lettura dell'hash: sotto il lock l'hash non e' piu' quello confrontato (S1).
+        User user = new User("mario@example.com", "hash-vecchio", "Mario");
+        ReflectionTestUtils.setField(user, "id", UUID.randomUUID());
+        when(users.findByEmail("mario@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("password-giusta", "hash-vecchio")).thenReturn(true);
+        when(userAccess.resolve(user.getId()))
+                .thenReturn(new UserAccess(user.getId(), AccessStatus.ACTIVE, Set.of(), null, null));
+        when(users.lockAndReadPasswordHashById(user.getId())).thenReturn(Optional.of("hash-nuovo"));
+
+        assertThatThrownBy(() -> service.login(new LoginRequest("mario@example.com", "password-giusta")))
+                .isInstanceOfSatisfying(AppException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ErrorCode.INVALID_CREDENTIALS));
+
+        verify(refreshTokens, never()).create(any());
+        verify(rateLimits, never()).reset(any(), anyString());
     }
 }

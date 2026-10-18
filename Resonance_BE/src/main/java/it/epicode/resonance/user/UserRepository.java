@@ -41,6 +41,15 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
     Optional<User> findWithLockById(UUID id);
 
     /**
+     * Blocca la riga dell'utente e ne legge l'hash della password aggiornato: il login lo confronta con quello
+     * usato per BCrypt, perche' un reset concluso nel frattempo l'ha cambiato (decisione 76, S1). Query nativa
+     * di sola lettura: non porta in memoria l'entity, che sarebbe quella gia' caricata e quindi non aggiornata.
+     * Richiede una transazione attiva.
+     */
+    @Query(nativeQuery = true, value = "select password_hash from users where id = :id for update")
+    Optional<String> lockAndReadPasswordHashById(UUID id);
+
+    /**
      * Ricerca utenti per nome (progettazione, sezione 6.5): {@code pattern} e' gia' un LIKE con i jolly di
      * {@code LikePattern.escape}, il backslash e' il carattere di escape. Solo utenti con email verificata e nello
      * stato indicato, escluso {@code me}; ordine fisso per nome senza maiuscole e poi id. Lo stato e' un parametro

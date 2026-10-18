@@ -125,14 +125,47 @@ eseguito; ciò che non è stato fatto è nella sezione "Non eseguito".
 
 ## Correzioni
 
-Nessuna correzione al codice di produzione è stata necessaria.
+Nessuna correzione era stata necessaria in F6-02. Un'analisi successiva (18 ottobre, decisione 76) ha trovato quattro
+punti, corretti in F7-03 ciascuno con un test scritto prima del codice, che falliva sul codice precedente:
+
+- **S2, limite dei login aggirabile con richieste parallele:** `check` prima e `record` dopo lasciavano passare tutte le
+  richieste simultanee (con i 200 thread di Tomcat circa 200 password provate per finestra invece di 10). Ora il
+  tentativo si prenota con `consume` prima di BCrypt; un login riuscito azzera il contatore, mentre password giusta con
+  email non verificata o account sospeso restituisce il tentativo (`release`). Test:
+  `login_twentyParallelFailures_areExactlyTenUnauthorizedAndTenTooManyRequests`, `RateLimitServiceTest` (`release_*`),
+  `login_withCorrectPasswordButUnverifiedEmail_neverCountsAsFailure`,
+  `login_withCorrectPasswordWhileSuspended_neverCountsAsFailure`. Prova di mutazione (ritorno a `check` + `record`):
+  intercettata da `login_twentyParallelFailures_...` e da `AuthServiceTest.login_withUnknownEmail_stillComparesTheDummyHash`.
+- **S1, reset della password in parallelo con un refresh o un login:** l'`UPDATE` che revoca tutti i token non vedeva il
+  token inserito da una transazione non ancora conclusa, che restava valido e si rinnovava all'infinito. Ora rotazione e
+  login bloccano la riga dell'utente prima di toccare i token (ordine utente → token, come reset e sospensione); il login
+  esegue BCrypt fuori dal lock e sotto il lock ricontrolla l'hash. Test: `SessionRevocationRaceTest`
+  (`refresh_racingWithAPasswordReset_...`, `login_racingWithAPasswordReset_...`, con un latch che ferma la sessione prima
+  del commit), `AuthServiceTest.login_whenThePasswordChangedWhileBcryptWasRunning_failsWithoutCreatingAToken`; restano
+  verdi i test di concorrenza di `RefreshTokenServiceTest`. Prove di mutazione: senza il lock sull'utente in `rotate`
+  fallisce `refresh_racingWithAPasswordReset_...`; senza lock e controllo dell'hash nel login falliscono
+  `login_racingWithAPasswordReset_...` e il test di `AuthServiceTest`.
+- **S3, geocodifica senza attesa massima e creazioni senza limite:** le creazioni in coda sul lock della geocodifica
+  potevano occupare i thread di Tomcat e fermare il servizio. Ora il turno si attende al massimo 10 s
+  (`app.geocoding.max-wait`), poi 502 `GEOCODING_UNAVAILABLE` senza chiamare Nominatim, e le creazioni di concerti e indie
+  event sono limitate a 20 in 24 ore per utente (`EVENTS_CREATED`, consumato prima della geocodifica). Test:
+  `geocode_whenTheTurnStaysBusyLongerThanTheMaxWait_throwsUnavailableWithoutCallingNominatim`,
+  `create_twentyOneCreationsInADay_...` (concerti e indie event), `ApplicationConfigTest`. Prove di mutazione: attesa
+  senza tetto → fallisce il test di `NominatimGeocodingServiceTest`; senza `consume` → falliscono i due test di creazione.
+- **S5, body JSON senza tetto:** `JsonLimitsConfig` limita il documento a 256 KB; oltre, 400 `VALIDATION_ERROR`. Test:
+  `JsonBodyLimitIntegrationTest` (poco oltre il tetto respinto, poco sotto letto, descrizione di 5000 caratteri accettata).
 
 ## Criticità aperte
 
 - La documentazione OpenAPI è pubblica anche in produzione (decisione 72): espone la forma delle API, non dati.
 - Frontend: nessuna sanificazione lato backend del testo libero (vedi XSS).
 - Il limite sui login è in memoria (si azzera al riavvio) e blocca l'email, non l'indirizzo IP.
-- Manca `Retry-After` sulle risposte 429.
+- Manca `Retry-After` sulle risposte 429 (S9).
+- Raffica di richieste sugli endpoint pubblici con email sempre diverse (S7): quota di Brevo e CPU di BCrypt, senza limite
+  per IP (decisione 48).
+- Caratteri NUL, bidi o di controllo nei testi (S6), connessioni e SUBSCRIBE WebSocket senza limite (S8) e dettagli di
+  PostgreSQL nel log di Hibernate (S10): rischi accettati nella decisione 76.
+- Header `Content-Security-Policy` sugli script (S4): previsto in FE-11, da provare con il frontend compilato.
 
 ## Non eseguito
 

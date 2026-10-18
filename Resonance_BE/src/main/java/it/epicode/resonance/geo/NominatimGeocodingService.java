@@ -20,6 +20,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -45,8 +46,11 @@ public class NominatimGeocodingService implements GeocodingService {
     private final String userAgent;
     private final Clock clock;
     private final Pause pause;
+    private final Duration maxWait;
     // Un solo lock per tutte le chiamate: chi arriva prima del secondo attende il proprio turno (una sola
     // istanza dell'applicazione, progettazione sezione 10.1). Resta preso anche durante la richiesta HTTP.
+    // L'attesa e' limitata da app.geocoding.max-wait: senza, le creazioni in coda occuperebbero tutti i thread
+    // di Tomcat e fermerebbero il servizio (decisione 76, S3).
     private final ReentrantLock turn = new ReentrantLock();
     private Instant lastRequestAt;
 
@@ -55,19 +59,22 @@ public class NominatimGeocodingService implements GeocodingService {
                                      @Value("${app.geocoding.contact}") String contact,
                                      @Value("${app.geocoding.connect-timeout}") Duration connectTimeout,
                                      @Value("${app.geocoding.read-timeout}") Duration readTimeout,
+                                     @Value("${app.geocoding.max-wait}") Duration maxWait,
                                      Clock clock) {
         this(RestClient.builder().requestFactory(requestFactory(connectTimeout, readTimeout)), url, contact,
-                clock, duration -> Thread.sleep(duration));
+                clock, maxWait, duration -> Thread.sleep(duration));
     }
 
     // Per i test: un builder legato a MockRestServiceServer, orologio e pausa finti.
-    NominatimGeocodingService(RestClient.Builder builder, String url, String contact, Clock clock, Pause pause) {
+    NominatimGeocodingService(RestClient.Builder builder, String url, String contact, Clock clock, Duration maxWait,
+                              Pause pause) {
         this.restClient = builder.baseUrl(url).build();
         this.userAgent = contact == null || contact.isBlank()
                 ? "Resonance/1.0"
                 : "Resonance/1.0 (" + contact.strip() + ")";
         this.clock = clock;
         this.pause = pause;
+        this.maxWait = maxWait;
     }
 
     private static JdkClientHttpRequestFactory requestFactory(Duration connectTimeout, Duration readTimeout) {
@@ -82,7 +89,7 @@ public class NominatimGeocodingService implements GeocodingService {
         if (address == null || address.isBlank()) {
             throw addressNotFound();
         }
-        turn.lock();
+        acquireTurn();
         try {
             waitForTurn();
             List<Place> places = search(address.strip());
@@ -92,6 +99,18 @@ public class NominatimGeocodingService implements GeocodingService {
             return toPoint(places.get(0));
         } finally {
             turn.unlock();
+        }
+    }
+
+    // Attende il turno al massimo maxWait: oltre, 502 senza chiamare Nominatim (decisione 55 e 76).
+    private void acquireTurn() {
+        try {
+            if (!turn.tryLock(maxWait.toNanos(), TimeUnit.NANOSECONDS)) {
+                throw unavailable("attesa del turno scaduta");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw unavailable("attesa interrotta");
         }
     }
 

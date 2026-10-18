@@ -42,6 +42,7 @@ class ApplicationConfigTest {
             assertLimit(binder, "friend-requests", 20, Duration.ofHours(24));
             assertLimit(binder, "user-search", 30, Duration.ofMinutes(1));
             assertLimit(binder, "event-contacts", 10, Duration.ofHours(24));
+            assertLimit(binder, "events-created", 20, Duration.ofHours(24));
         });
     }
 
@@ -56,6 +57,8 @@ class ApplicationConfigTest {
                     .isEqualTo(Duration.ofSeconds(2));
             assertThat(binder.bind("app.geocoding.read-timeout", Duration.class).get())
                     .isEqualTo(Duration.ofSeconds(3));
+            assertThat(binder.bind("app.geocoding.max-wait", Duration.class).get())
+                    .isEqualTo(Duration.ofSeconds(10));
             // Senza GEOCODING_CONTACT il valore e' vuoto, ma la chiave deve esistere.
             assertThat(context.getEnvironment().containsProperty("app.geocoding.contact")).isTrue();
         });

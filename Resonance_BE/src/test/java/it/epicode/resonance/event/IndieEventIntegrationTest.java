@@ -648,6 +648,23 @@ class IndieEventIntegrationTest extends IntegrationTest {
         return events.save(event);
     }
 
+    @Test
+    void create_twentyOneCreationsInADay_returns429AndTheWindowSlides() throws Exception {
+        User musician = userWith("musicista-limite@example.com", Role.FAN, Role.MUSICIAN);
+        for (int i = 0; i < 20; i++) {
+            create(musician, body(StubGeocodingConfig.FLORENCE_ADDRESS)).andExpect(status().isCreated());
+        }
+
+        create(musician, body(StubGeocodingConfig.FLORENCE_ADDRESS))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.code").value("TOO_MANY_REQUESTS"));
+        assertThat(events.count()).isEqualTo(20);
+
+        // Passate le 24 ore si puo' creare di nuovo (il bearer si riemette: quello vecchio e' scaduto).
+        clock.advance(Duration.ofHours(25));
+        create(musician, body(StubGeocodingConfig.FLORENCE_ADDRESS)).andExpect(status().isCreated());
+    }
+
     private ResultActions create(User user, String json) throws Exception {
         return mockMvc.perform(post("/api/indie-events")
                 .header("Authorization", bearer(user))

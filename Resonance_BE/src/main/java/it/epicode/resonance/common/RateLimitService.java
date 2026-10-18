@@ -21,8 +21,8 @@ import java.util.concurrent.TimeUnit;
  * id utente) si tengono gli istanti degli eventi dentro la finestra, che scorre. Si azzerano a ogni
  * riavvio: accettabile con una sola istanza.
  *
- * Uso tipico: consume() nel punto in cui deve scattare il 429. Il login usa invece
- * check/record/reset, perche' contano solo i tentativi falliti.
+ * Uso tipico: consume() nel punto in cui deve scattare il 429. Il login prenota il tentativo con consume()
+ * prima di BCrypt e lo azzera (reset) o lo restituisce (release) se non e' un fallimento.
  */
 @Service
 public class RateLimitService {
@@ -101,6 +101,20 @@ public class RateLimitService {
                 recent.pollFirst();
             }
             return recent;
+        });
+    }
+
+    /**
+     * Toglie l'ultimo evento di una chiave: restituisce il posto preso da consume() quando il caso non deve
+     * contare (es. password giusta con email non verificata o account sospeso, decisione 48).
+     */
+    public void release(RateLimit limit, String key) {
+        Instant now = clock.instant();
+        Rule rule = rules.get(limit);
+        registries.get(limit).computeIfPresent(key, (k, events) -> {
+            Deque<Instant> recent = recent(events, now, rule);
+            recent.pollLast();
+            return recent.isEmpty() ? null : recent;
         });
     }
 

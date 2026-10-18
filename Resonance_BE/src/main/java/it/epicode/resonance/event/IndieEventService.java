@@ -7,6 +7,8 @@ import it.epicode.resonance.common.AppException;
 import it.epicode.resonance.common.ErrorCode;
 import it.epicode.resonance.common.PageParams;
 import it.epicode.resonance.common.PageResponse;
+import it.epicode.resonance.common.RateLimit;
+import it.epicode.resonance.common.RateLimitService;
 import it.epicode.resonance.event.dto.ContactResponse;
 import it.epicode.resonance.event.dto.CreateIndieEventRequest;
 import it.epicode.resonance.event.dto.IndieEventResponse;
@@ -44,17 +46,19 @@ public class IndieEventService {
     private final TransactionTemplate transactions;
     private final UserAccessService userAccess;
     private final EventContactService contacts;
+    private final RateLimitService rateLimits;
     private final Clock clock;
 
     public IndieEventService(IndieEventRepository events, UserRepository users, GeocodingService geocoding,
                              TransactionTemplate transactions, UserAccessService userAccess,
-                             EventContactService contacts, Clock clock) {
+                             EventContactService contacts, RateLimitService rateLimits, Clock clock) {
         this.events = events;
         this.users = users;
         this.geocoding = geocoding;
         this.transactions = transactions;
         this.userAccess = userAccess;
         this.contacts = contacts;
+        this.rateLimits = rateLimits;
         this.clock = clock;
     }
 
@@ -64,6 +68,8 @@ public class IndieEventService {
      * (progettazione, sezione 10.1); la transazione si apre solo per il salvataggio.
      */
     public IndieEventResponse create(UUID musicianId, CreateIndieEventRequest request) {
+        // Prima della geocodifica: un utente non puo' consumare Nominatim e i thread oltre il limite (decisione 76, S3).
+        rateLimits.consume(RateLimit.EVENTS_CREATED, musicianId.toString());
         GeoPoint point = geocoding.geocode(request.address());
         return transactions.execute(status -> save(musicianId, request, point));
     }

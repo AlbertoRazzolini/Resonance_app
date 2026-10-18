@@ -19,7 +19,14 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -223,6 +230,55 @@ class LoginRefreshLogoutIntegrationTest extends IntegrationTest {
         // Passata la finestra di 15 minuti si puo' riprovare.
         clock.advance(Duration.ofMinutes(16));
         login(email, PASSWORD).andExpect(status().isOk());
+    }
+
+    @Test
+    void login_twentyParallelFailures_areExactlyTenUnauthorizedAndTenTooManyRequests() throws Exception {
+        verifiedUser(email);
+        int attempts = 20;
+        ExecutorService pool = Executors.newFixedThreadPool(attempts);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            List<Future<Integer>> results = new ArrayList<>();
+            for (int i = 0; i < attempts; i++) {
+                results.add(pool.submit(() -> {
+                    start.await();
+                    return login(email, "password-sbagliata").andReturn().getResponse().getStatus();
+                }));
+            }
+            start.countDown();
+            List<Integer> statuses = new ArrayList<>();
+            for (Future<Integer> result : results) {
+                statuses.add(result.get(60, TimeUnit.SECONDS));
+            }
+
+            // Il tentativo si prenota prima di BCrypt (S2, decisione 76): con check + record passerebbero quasi tutti.
+            assertThat(statuses.stream().filter(code -> code == 401).count()).isEqualTo(10);
+            assertThat(statuses.stream().filter(code -> code == 429).count()).isEqualTo(10);
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void login_withCorrectPasswordButUnverifiedEmail_neverCountsAsFailure() throws Exception {
+        User user = verifiedUser(email);
+        user.setEmailVerified(false);
+        users.save(user);
+
+        // Piu' dei 10 tentativi consentiti: il tentativo prenotato si restituisce (release, decisione 48).
+        for (int i = 0; i < 12; i++) {
+            login(email, PASSWORD).andExpect(status().isForbidden());
+        }
+    }
+
+    @Test
+    void login_withCorrectPasswordWhileSuspended_neverCountsAsFailure() throws Exception {
+        suspend(verifiedUser(email), null);
+
+        for (int i = 0; i < 12; i++) {
+            login(email, PASSWORD).andExpect(status().isForbidden());
+        }
     }
 
     @Test

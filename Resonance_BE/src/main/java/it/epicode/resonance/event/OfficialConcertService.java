@@ -7,6 +7,8 @@ import it.epicode.resonance.common.AppException;
 import it.epicode.resonance.common.ErrorCode;
 import it.epicode.resonance.common.PageParams;
 import it.epicode.resonance.common.PageResponse;
+import it.epicode.resonance.common.RateLimit;
+import it.epicode.resonance.common.RateLimitService;
 import it.epicode.resonance.event.dto.ContactResponse;
 import it.epicode.resonance.event.dto.CreateOfficialConcertRequest;
 import it.epicode.resonance.event.dto.OfficialConcertResponse;
@@ -43,17 +45,19 @@ public class OfficialConcertService {
     private final TransactionTemplate transactions;
     private final UserAccessService userAccess;
     private final EventContactService contacts;
+    private final RateLimitService rateLimits;
     private final Clock clock;
 
     public OfficialConcertService(OfficialConcertRepository concerts, UserRepository users,
                                   GeocodingService geocoding, TransactionTemplate transactions,
-                                  UserAccessService userAccess, EventContactService contacts, Clock clock) {
+                                  UserAccessService userAccess, EventContactService contacts, RateLimitService rateLimits, Clock clock) {
         this.concerts = concerts;
         this.users = users;
         this.geocoding = geocoding;
         this.transactions = transactions;
         this.userAccess = userAccess;
         this.contacts = contacts;
+        this.rateLimits = rateLimits;
         this.clock = clock;
     }
 
@@ -63,6 +67,8 @@ public class OfficialConcertService {
      * si apre solo per il salvataggio. Se la geocodifica fallisce non si salva nulla.
      */
     public OfficialConcertResponse create(UUID hostId, CreateOfficialConcertRequest request) {
+        // Prima della geocodifica: un utente non puo' consumare Nominatim e i thread oltre il limite (decisione 76, S3).
+        rateLimits.consume(RateLimit.EVENTS_CREATED, hostId.toString());
         GeoPoint point = geocoding.geocode(request.address());
         return transactions.execute(status -> save(hostId, request, point));
     }

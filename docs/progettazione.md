@@ -643,18 +643,23 @@ l'utente esiste, non è verificato ed è ACTIVE.
 
 `POST /api/auth/login` `{email, password}` → 200 `LoginResponse` + cookie.
 
-1. Limite `LOGIN_FAILED` per email (10 fallimenti in 15 minuti) → 429.
-2. Utente inesistente o password errata → 401 `INVALID_CREDENTIALS` (stessa risposta, registra il
-   fallimento). Per un'email sconosciuta si esegue comunque un confronto BCrypt con un hash fittizio, dello
+1. Limite `LOGIN_FAILED` per email (10 fallimenti in 15 minuti) → 429. Il tentativo si prenota subito con
+   `consume` (controllo e registrazione in un passo atomico), prima di BCrypt: richieste parallele non possono
+   passare tutte il controllo prima che una registri il fallimento (decisione 76).
+2. Utente inesistente o password errata → 401 `INVALID_CREDENTIALS` (stessa risposta, il tentativo già
+   prenotato resta come fallimento). Per un'email sconosciuta si esegue comunque un confronto BCrypt con un hash fittizio, dello
    stesso costo, così il tempo di risposta non rivela se l'email esiste (decisione 48). Password oltre 72
    byte → trattata come errata senza chiamare BCrypt.
 3. Email non verificata → 403 `EMAIL_NOT_VERIFIED`.
 4. Sospeso: se `suspended_until` è passato → riattivazione pigra (5.5) e si prosegue; altrimenti
    403 `ACCOUNT_SUSPENDED` con `details` `{suspensionReason, suspendedUntil}`.
-5. Azzera i fallimenti; crea una riga `refresh_tokens`; firma l'access token; risponde con
+5. Blocca la riga dell'utente e controlla che l'hash della password sia ancora quello confrontato (BCrypt gira
+   fuori dal lock, per non tenere bloccata la riga durante l'hash): se un reset si è concluso nel frattempo →
+   401 `INVALID_CREDENTIALS`. Azzera i fallimenti; crea una riga `refresh_tokens`; firma l'access token; risponde con
    `LoginResponse {accessToken, accessTokenExpiresAt, user: MeResponse}` e `Set-Cookie`.
 
-I controlli 3 e 4 avvengono solo dopo una password corretta, così non rivelano quali email esistono.
+I controlli 3 e 4 avvengono solo dopo una password corretta, così non rivelano quali email esistono; in
+questi due casi il tentativo prenotato si restituisce (`release`), perché non è un fallimento (decisione 48).
 
 ### 4.8 Refresh con rotazione
 
@@ -667,8 +672,10 @@ I controlli 3 e 4 avvengono solo dopo una password corretta, così non rivelano 
    "Invalid CORS request", prima dei nostri handler, quindi non ha il codice `ACCESS_DENIED` (il controllo
    nel controller resta come seconda difesa).
 2. Cookie assente → 401 `REFRESH_TOKEN_INVALID` + cancellazione del cookie.
-3. Hash del valore; `SELECT ... FOR UPDATE` per `token_hash`. Non trovato → 401
-   `REFRESH_TOKEN_INVALID` + cancellazione.
+3. Hash del valore; si legge l'utente del token (senza lock), si blocca la riga dell'utente
+   (`SELECT ... FOR UPDATE`) e poi quella del token per `token_hash`. Token non trovato → 401
+   `REFRESH_TOKEN_INVALID` + cancellazione. L'ordine dei lock è sempre utente → token, come in reset e sospensione,
+   così non nascono deadlock (decisione 76).
 4. Token revocato:
    - se `replaced_by` è valorizzato e `now − revoked_at ≤ 10 s` (`app.auth.refresh-grace`) → 409
      `REFRESH_CONFLICT`, **senza** emettere token, **senza** revocare nulla e **senza** cancellare il
@@ -685,8 +692,10 @@ Le revoche dei passi 4 e 6 devono restare salvate anche se la richiesta termina 
 service restituisce un esito e il controller lo traduce nella risposta, invece di lanciare
 un'eccezione che annullerebbe la transazione (in alternativa `noRollbackFor`, come in NoseY).
 
-**Concorrenza.** Due refresh simultanei con lo stesso cookie (due schede) vengono serializzati dal
-lock di riga: il primo ruota, il secondo trova il token appena sostituito e riceve 409. Il frontend
+**Concorrenza.** Il lock sulla riga dell'utente serializza la rotazione con il reset della password: senza,
+l'`UPDATE` del reset non vedrebbe il token inserito da una rotazione non ancora conclusa, che resterebbe valido
+e si rinnoverebbe all'infinito (decisione 76). Due refresh simultanei con lo stesso cookie (due schede) vengono
+serializzati dal lock di riga: il primo ruota, il secondo trova il token appena sostituito e riceve 409. Il frontend
 ritenta una volta dopo un breve intervallo e il browser invia il cookie nuovo. Un attaccante che
 presenta il token rubato entro i 10 secondi non ottiene comunque alcun token; oltre i 10 secondi
 scatta la revoca totale.
@@ -717,6 +726,9 @@ emesso resta valido fino alla scadenza (massimo 15 minuti, D4): il frontend lo e
 | Reset della password | tutti | cancellato nella risposta | email di avviso |
 | Sospensione | tutti | (non c'è richiesta dell'utente) | chiusura delle sessioni WebSocket dopo il commit |
 | Riuso di un token revocato | tutti | cancellato | log di warning |
+
+Reset della password, sospensione, rotazione e login bloccano la riga dell'utente prima di toccare i token: una
+sessione aperta mentre si fa il reset non può sopravvivere alla revoca totale (decisione 76).
 
 Pulizia: `@Scheduled(fixedDelay = 24h)` cancella i refresh token scaduti da più di un giorno
 (`fixedDelay` gira anche all'avvio, utile perché su Render il servizio si sospende).
@@ -1380,6 +1392,11 @@ testo libero è salvato com'è e restituito come JSON: la sanificazione in visua
 frontend (DOMPurify); il backend non produce HTML, tranne le email, dove Thymeleaf fa l'escape con
 `th:text`. Query solo con parametri legati (JPQL o native con `:param`), mai concatenazioni.
 
+**Tetto del body JSON:** 256 KB (`JsonLimitsConfig`, `StreamReadConstraints.maxDocumentLength` sulla factory di
+Jackson). Oltre, la lettura si interrompe e la risposta è il 400 `VALIDATION_ERROR` "Corpo della richiesta non
+leggibile". Il limite di Tomcat vale per i form, non per il JSON; il body legittimo più grande sta sotto i 40 KB
+(decisione 76).
+
 ### 8.7 Immagini
 
 Solo URL (D2). Nessun upload, nessun controllo dei byte nell'MVP; il controllo dei primi byte di
@@ -1399,8 +1416,15 @@ riavvio: accettabile con una sola istanza). Valori in `application.yml` (`app.ra
 | `FRIEND_REQUESTS` | 20 in 24 ore | utente |
 | `USER_SEARCH` | 30 al minuto | utente |
 | `EVENT_CONTACTS` | 10 in 24 ore | utente |
+| `EVENTS_CREATED` | 20 in 24 ore | utente |
+
+`EVENTS_CREATED` è unico per concerti ufficiali e indie event insieme e si consuma prima della geocodifica
+(sezione 10.1; decisione 76).
 
 I limiti sui codici email sono nel database (sezione 4.6), quindi sopravvivono ai riavvii.
+
+`LOGIN_FAILED` si prenota con `consume` prima di BCrypt; un login riuscito lo azzera (`reset`) e una password
+giusta con email non verificata o account sospeso lo restituisce (`release`).
 
 `LOGIN_FAILED` ha come chiave l'email: chi invia 10 login falliti con l'email di un altro può impedirgli di
 accedere per 15 minuti (conseguenza accettata, decisione 48).
@@ -1458,7 +1482,10 @@ richiesta.
   header `User-Agent: Resonance/1.0 (<GEOCODING_CONTACT>)` e `Accept-Language: it`.
 - `RestClient` con client JDK: timeout di connessione 2 s e di lettura 3 s.
 - **Una richiesta al secondo**: un lock condiviso garantisce almeno 1 secondo fra due chiamate (una
-  sola istanza dell'applicazione); chi arriva prima del secondo attende il proprio turno.
+  sola istanza dell'applicazione); chi arriva prima del secondo attende il proprio turno, ma al massimo
+  `app.geocoding.max-wait` (10 s): oltre, 502 `GEOCODING_UNAVAILABLE` senza chiamare Nominatim. Senza tetto, le
+  creazioni in coda occuperebbero i thread di Tomcat e fermerebbero tutto il servizio (decisione 76). Prima della
+  geocodifica si consuma anche il limite `EVENTS_CREATED` (sezione 8.8).
 - Esiti: lista vuota → 400 `ADDRESS_NOT_FOUND` (`fields.address`); timeout, errore di rete, risposta
   5xx o 429 → 502 `GEOCODING_UNAVAILABLE`. In entrambi i casi l'evento non viene salvato.
 - La chiamata HTTP avviene **fuori** dalla transazione del database: prima si geocodifica, poi si

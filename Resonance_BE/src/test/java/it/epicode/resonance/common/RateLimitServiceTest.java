@@ -148,6 +148,25 @@ class RateLimitServiceTest {
     }
 
     @Test
+    void release_removesTheLastEventOfTheKey() {
+        for (int i = 0; i < 3; i++) {
+            service.consume(RateLimit.LOGIN_FAILED, KEY);
+        }
+        assertTooManyRequests(() -> service.consume(RateLimit.LOGIN_FAILED, KEY));
+
+        service.release(RateLimit.LOGIN_FAILED, KEY);
+
+        // Il posto restituito si puo' riprendere, ma uno solo: gli altri due eventi restano.
+        assertThatCode(() -> service.consume(RateLimit.LOGIN_FAILED, KEY)).doesNotThrowAnyException();
+        assertTooManyRequests(() -> service.consume(RateLimit.LOGIN_FAILED, KEY));
+    }
+
+    @Test
+    void release_withoutEvents_doesNothing() {
+        assertThatCode(() -> service.release(RateLimit.LOGIN_FAILED, KEY)).doesNotThrowAnyException();
+    }
+
+    @Test
     void cleanExpired_keepsRecentEventsAndDropsOldOnes() {
         for (int i = 0; i < 3; i++) {
             service.consume(RateLimit.CHAT_MESSAGES, KEY);

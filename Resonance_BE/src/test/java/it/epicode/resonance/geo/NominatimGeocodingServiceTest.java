@@ -17,6 +17,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -43,6 +48,8 @@ class NominatimGeocodingServiceTest {
     // Il matcher confronta il parametro grezzo: spazio e virgola devono arrivare codificati.
     private static final String ENCODED_ADDRESS = "Piazza%20della%20Signoria%2C%20Firenze";
     private static final String FOUND = "[{\"place_id\":1,\"lat\":\"43.7696\",\"lon\":\"11.2558\",\"display_name\":\"x\"}]";
+
+    private static final Duration MAX_WAIT = Duration.ofMillis(200);
 
     private MockRestServiceServer server;
     private RestClient.Builder builder;
@@ -211,7 +218,7 @@ class NominatimGeocodingServiceTest {
         // Una sola richiesta attesa: la seconda chiamata si interrompe nell'attesa, prima di partire.
         server.expect(requestTo(URL + "/search?q=Roma&format=jsonv2&limit=1"))
                 .andRespond(withSuccess(FOUND, MediaType.APPLICATION_JSON));
-        NominatimGeocodingService service = new NominatimGeocodingService(builder, URL, "", clock, pause -> {
+        NominatimGeocodingService service = new NominatimGeocodingService(builder, URL, "", clock, MAX_WAIT, pause -> {
             throw new InterruptedException();
         });
 
@@ -219,6 +226,40 @@ class NominatimGeocodingServiceTest {
         assertUnavailable(() -> service.geocode("Roma"));
 
         assertThat(Thread.currentThread().isInterrupted()).isTrue();
+    }
+
+    @Test
+    void geocode_whenTheTurnStaysBusyLongerThanTheMaxWait_throwsUnavailableWithoutCallingNominatim()
+            throws Exception {
+        // Il primo turno (nel thread "occupante") resta fermo nella pausa e tiene il lock; il secondo non aspetta
+        // oltre l'attesa massima e non arriva a Nominatim (decisione 76, S3).
+        expectTwoSuccessfulCalls();
+        CountDownLatch holderInside = new CountDownLatch(1);
+        CountDownLatch releaseHolder = new CountDownLatch(1);
+        NominatimGeocodingService service = new NominatimGeocodingService(builder, URL, "", clock, MAX_WAIT, pause -> {
+            holderInside.countDown();
+            releaseHolder.await(10, TimeUnit.SECONDS);
+        });
+        service.geocode("Roma");
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        try {
+            // Seconda chiamata a orologio fermo: deve attendere un secondo, quindi entra nella pausa bloccata.
+            Future<GeoPoint> holder = pool.submit(() -> service.geocode("Roma"));
+            assertThat(holderInside.await(10, TimeUnit.SECONDS)).isTrue();
+
+            long startedAt = System.nanoTime();
+            assertUnavailable(() -> service.geocode("Roma"));
+            Duration waited = Duration.ofNanos(System.nanoTime() - startedAt);
+
+            assertThat(waited).isLessThan(Duration.ofSeconds(5));
+            releaseHolder.countDown();
+            assertThat(holder.get(10, TimeUnit.SECONDS)).isNotNull();
+        } finally {
+            releaseHolder.countDown();
+            pool.shutdownNow();
+        }
+        // Due sole richieste a Nominatim: quella del primo turno e quella del thread occupante.
+        server.verify();
     }
 
     private void expectTwoSuccessfulCalls() {
@@ -235,6 +276,6 @@ class NominatimGeocodingServiceTest {
 
     // La pausa finta registra l'attesa richiesta senza dormire.
     private NominatimGeocodingService service(String contact) {
-        return new NominatimGeocodingService(builder, URL, contact, clock, pauses::add);
+        return new NominatimGeocodingService(builder, URL, contact, clock, MAX_WAIT, pauses::add);
     }
 }

@@ -12,7 +12,8 @@ public enum RateLimit {
     COLLAB_APPLICATIONS,
     FRIEND_REQUESTS,
     USER_SEARCH,
-    EVENT_CONTACTS;
+    EVENT_CONTACTS,
+    EVENTS_CREATED;
 
     /**
      * Nome della chiave di configurazione sotto app.rate-limits.

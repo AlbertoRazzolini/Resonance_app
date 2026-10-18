@@ -201,12 +201,14 @@ public class AuthService {
     /**
      * Login nell'ordine di NoseY (progettazione, sezione 4.7): limite dei fallimenti, credenziali, e solo con
      * la password giusta email verificata e sospensione, cosi' questi due controlli non rivelano quali email
-     * esistono. Il limite e' in memoria: il rollback di un errore non annulla i fallimenti registrati.
+     * esistono. Il limite e' in memoria: il rollback di un errore non annulla i fallimenti registrati. Il
+     * tentativo si prenota prima di BCrypt con consume (atomico), non con check + record: richieste parallele
+     * non possono passare tutte il controllo prima che una registri il fallimento (decisione 76, S2).
      */
     @Transactional
     public AuthSession login(LoginRequest request) {
         String email = request.email();
-        rateLimits.check(RateLimit.LOGIN_FAILED, email);
+        rateLimits.consume(RateLimit.LOGIN_FAILED, email);
 
         // Email sconosciuta: si confronta comunque con un hash fittizio, dello stesso costo di quelli veri, cosi'
         // il tempo di risposta non rivela se l'email esiste (decisione 48). Il risultato si scarta.
@@ -215,18 +217,33 @@ public class AuthService {
                 found.map(User::getPasswordHash).orElse(dummyHash));
         User user = found.filter(candidate -> passwordCorrect).orElse(null);
         if (user == null) {
-            // Utente inesistente e password errata: stessa risposta, e il fallimento conta in entrambi i casi.
-            rateLimits.record(RateLimit.LOGIN_FAILED, email);
+            // Utente inesistente e password errata: stessa risposta, e il tentativo gia' prenotato resta come
+            // fallimento in entrambi i casi.
             throw new AppException(ErrorCode.INVALID_CREDENTIALS, "Email o password errate");
         }
 
         // resolve applica anche la riattivazione pigra: una sospensione scaduta lascia entrare l'utente.
         UserAccess access = userAccess.resolve(user.getId());
         switch (access.status()) {
-            case NOT_VERIFIED -> throw new AppException(ErrorCode.EMAIL_NOT_VERIFIED, "Email non ancora verificata");
-            case SUSPENDED -> throw suspended(access);
+            // Password giusta ma accesso negato: non e' un fallimento, si restituisce il tentativo (decisione 48).
+            case NOT_VERIFIED -> {
+                rateLimits.release(RateLimit.LOGIN_FAILED, email);
+                throw new AppException(ErrorCode.EMAIL_NOT_VERIFIED, "Email non ancora verificata");
+            }
+            case SUSPENDED -> {
+                rateLimits.release(RateLimit.LOGIN_FAILED, email);
+                throw suspended(access);
+            }
             case NOT_FOUND -> throw new AppException(ErrorCode.INVALID_CREDENTIALS, "Email o password errate");
             case ACTIVE -> { }
+        }
+
+        // BCrypt e' finito fuori dal lock. Prima di creare il token si blocca la riga dell'utente (come il reset) e
+        // si controlla che la password non sia cambiata nel frattempo: un reset concluso dopo la lettura darebbe
+        // un token valido a chi conosceva la vecchia password (progettazione, sezione 4.7; decisione 76, S1).
+        String currentHash = users.lockAndReadPasswordHashById(user.getId()).orElse(null);
+        if (!user.getPasswordHash().equals(currentHash)) {
+            throw new AppException(ErrorCode.INVALID_CREDENTIALS, "Email o password errate");
         }
 
         rateLimits.reset(RateLimit.LOGIN_FAILED, email);

@@ -2123,6 +2123,15 @@ Limiti dei servizi esterni, che nessuna scelta di codice rimuove:
   PostgreSQL nel log di Hibernate. Post-V1: CAPTCHA o limite combinato (decisione 48).
 - **Verifica:** TDD, con un test che fallisce sul codice attuale per ogni voce; prove di mutazione su S1 e S2; collection
   Postman in locale a fine card con gli stessi esiti di F7-02. Nessun endpoint nuovo e nessuna migrazione.
+- **Esito (F7-03, 18 ottobre):** le quattro correzioni sono realizzate come descritto. Dettagli di realizzazione:
+  nel login il lock sull'utente è una query nativa `select password_hash ... for update`
+  (`UserRepository.lockAndReadPasswordHashById`), perché `findWithLockById` restituirebbe l'entity già caricata, con
+  l'hash vecchio; nella rotazione l'id dell'utente si legge con una query scalare
+  (`RefreshTokenRepository.findUserIdByTokenHash`) prima dei lock, per non portare in memoria un token che dopo
+  l'attesa risulterebbe superato. Il tetto del body è un `JsonFactoryBuilderCustomizer` (in Jackson 3 le costanti di
+  lettura stanno sulla factory, non sul mapper). Il limite delle creazioni conta anche i tentativi respinti dalla
+  geocodifica (indirizzo non trovato), perché è proprio la geocodifica che protegge. Test, prove di mutazione ed
+  esiti sono nel report di sicurezza.
 
 ### Motivazione
 
