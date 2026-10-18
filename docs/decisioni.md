@@ -1,6 +1,6 @@
 # Resonance - Decisioni tecniche
 
-Registro delle decisioni tecniche del backend. Ogni voce ha tre parti fisse: **Scelta**,
+Registro delle decisioni tecniche del progetto (backend e, dalla decisione 77, frontend). Ogni voce ha tre parti fisse: **Scelta**,
 **Motivazione**, **Alternative scartate**. Le nuove decisioni si aggiungono nello stesso sotto-task
 in cui vengono prese. Riferimento principale: `docs/progettazione.md`.
 
@@ -2166,3 +2166,134 @@ Limiti dei servizi esterni, che nessuna scelta di codice rimuove:
 - **Limite per IP sugli endpoint pubblici (S7):** falsi positivi dietro lo stesso IP (la demo in aula) e aggirabile con
   più indirizzi, come già osservato nella decisione 48.
 - **CSP subito in F7-03:** senza frontend la prova sarebbe parziale e una violazione si scoprirebbe solo al deploy.
+
+## Decisione 77: elenchi dei contenuti dell'utente nell'MVP (richiesta dello studente, card F7-04)
+
+### Scelta
+
+- Durante la pianificazione del frontend (18 ottobre) è emerso che il backend ha un solo elenco dei contenuti
+  creati da un utente, `GET /api/indie-events/mine` (decisione 57): mancano concerti, annunci collab e post del
+  feed. Lo studente li porta nell'MVP con la card **F7-04**, eseguita prima di FE-01.
+- Endpoint: `GET /api/official-concerts/mine`, `GET /api/collab-posts/mine`, `GET /api/feed-posts/mine`, con le
+  regole di `indie-events/mine`: autenticato senza ruolo richiesto; contenuti del chiamante non nascosti (né dal
+  proprietario né da un admin), compresi concerti passati e annunci chiusi; ordine `created_at desc, id desc`;
+  `PageParams`; stessi DTO di risposta degli endpoint esistenti (nel feed `likedByMe` calcolato, `distanceKm`
+  nullo). In `SecurityConfig` ogni `/mine` precede `/{id}`.
+- Nel frontend la pagina "Area personale" (FE-04) mostra una scheda per tipo di contenuto.
+- Solo i contenuti **creati** dall'utente. La partecipazione agli eventi ("parteciperò") non esiste nell'MVP: va in
+  Post-V1, accanto ai `tickets` (progettazione, sezione 15).
+
+### Motivazione
+
+- Senza questi elenchi HOST e MUSICIAN ritrovano i propri concerti e annunci solo nelle liste pubbliche: la
+  ricerca dei concerti richiede una posizione e un raggio massimo di 200 km, la bacheca collab mostra solo gli
+  annunci aperti, quindi un annuncio chiuso o un concerto lontano non si ritrovano più.
+- Le stesse regole di un endpoint già esistente e testato rendono la card prevedibile e a basso rischio.
+- La partecipazione è una funzione nuova (tabella, endpoint, pulsante) e la versione gratuita dei biglietti, già
+  previsti in Post-V1.
+
+### Alternative scartate
+
+- **Solo frontend, con il limite dichiarato:** nessun lavoro sul backend, ma niente area personale.
+- **Anche i contenuti pubblici degli altri nel profilo (`/api/users/{id}/...`):** quattro endpoint pubblici in più,
+  circa 4,5 h di backend; il margine del calendario scenderebbe a zero.
+- **Parametro `?mine=true` sugli elenchi esistenti:** lo stesso endpoint cambierebbe regole (pubblico o
+  autenticato, annunci chiusi solo per sé), più difficile da proteggere e da testare.
+- **Partecipazione agli eventi nell'MVP o in Post-V2:** nell'MVP è troppo grande; in Post-V2 aspetterebbe i
+  pagamenti, che non le servono.
+
+## Decisione 78: piano del frontend (brainstorming del 18 ottobre, brief sezione 12)
+
+### Scelta
+
+Scelte dello studente, una per una, durante il brainstorming del piano
+`docs/superpowers/plans/2026-10-18-resonance-frontend.md`:
+
+- **Schermate irrinunciabili** oltre a quelle della demo (§14): registrazione e verifica, profilo e ruoli,
+  pubblicazione degli eventi, password dimenticata e reset.
+- **Interfaccia curata su base Bootstrap**, con identità visiva propria nelle CSS custom properties; **react-bootstrap**
+  per i componenti interattivi (tipizzati, guidati dallo stato di React).
+- **Dati del server con RTK Query** (parte di Redux Toolkit, già usato in NoseY); slice scritti a mano solo per
+  sessione e notifiche.
+- **Mappa:** MapLibre GL + react-map-gl + OpenFreeMap, riusata da NoseY (decisione 8 di NoseY) con gli stili riscritti.
+- **Riuso selettivo della logica del frontend di NoseY**, mai gli stili Tailwind, con nomi in inglese; mappa in
+  `docs/riuso-nosey.md` (FE-01).
+- **Responsive mobile-first** in ogni card, con controllo a 375, 768 e 1280 px.
+- **Test:** Vitest + React Testing Library + MSW sulle parti critiche (circa 30 test) e checklist manuale a fine card.
+- **Strumenti del brief:** Google Stitch usato dallo studente come solo riferimento visivo; skill impeccable per i
+  token in FE-01 e per la revisione in FE-12; ReactBits (2–3 componenti senza WebGL) in FE-12.
+- **Fasi e card:** A (FE-01–FE-03), B (FE-04–FE-08), C (FE-09a, FE-09b, FE-10), D (FE-12, FE-11); la FE-09 originale è
+  divisa in FE-09a (amicizie e ricerca) e FE-09b (chat, notifiche e contatto) senza rinumerare le card.
+- **Ordine dei tagli:** ReactBits → notifiche live → contatto degli eventi → bacheca collab → revisione con impeccable.
+- **Struttura delle cartelle "a forma fissa":** ogni area di `features/` con `api/`, `components/`, `pages/`; parti
+  condivise in `lib/`, `hooks/`, `components/`, `types/`; percorsi in `app/routes.ts`; test accanto al file; nessun
+  file barile. Una funzione nuova (per esempio quelle di Post-V1) è una cartella nuova con la stessa forma.
+- **Ricerca nelle vicinanze:** raggio a livelli 5, 15, 25, 50 e 100 km (iniziale 15); centro dalla posizione del
+  browser, poi dal profilo, altrimenti Firenze con un avviso.
+- **Due icone in barra:** messaggi (somma degli `unreadCount` del server, aggiornata a ogni `NEW_MESSAGE`) e
+  campanella (richieste di amicizia in attesa più le notifiche live della sessione). Il conteggio delle richieste si
+  ricarica all'apertura, al ritorno sulla scheda e dopo ogni azione, **senza polling**: le notifiche live delle
+  amicizie sono fuori dall'MVP (decisione 59) e un aggiornamento periodico le imiterebbe.
+- **Contatto per i ricorsi** (questione aperta della progettazione, sezione 1.4): costante in `src/config.ts`.
+- **Sessione:** rinnovo anticipato dell'access token 60 s prima della scadenza, con riconnessione STOMP, oltre al
+  refresh su 401.
+- **Rilascio:** merge `develop → main` a fine di F7-04 e di ogni fase del frontend, per provare presto su Render
+  cookie, fallback SPA e Dockerfile.
+- **Strumenti di sviluppo:** Node 24 LTS, npm, React 19, TypeScript `strict`, ESLint e Prettier; tipi dei DTO scritti a
+  mano dal codice del backend; la CSP della decisione 76 anche in `vite preview` da FE-01.
+- **Lingue:** interfaccia e percorsi in italiano, codice in inglese, commenti in italiano (decisione 42).
+
+### Motivazione
+
+- Ogni scelta è stata presa dallo studente fra alternative con pro, contro e impatto sulle stime; il calendario
+  (circa 56 h dal 19 al 23 ottobre, demo il 24) lascia come margine solo la mattina del 24 e l'ordine dei tagli.
+- Riuso e librerie già conosciute da NoseY riducono il rischio; la forma fissa delle cartelle rende prevedibile dove
+  va ogni file e lascia crescere il frontend dopo l'MVP.
+- Il conteggio delle amicizie senza polling rispetta la decisione 59 senza anticipare una funzione Post-V1.
+
+### Alternative scartate
+
+- **Bootstrap essenziale o design tutto su misura:** il primo generico, il secondo circa +15 h.
+- **`createAsyncThunk` e `fetch` a mano:** circa +4 h di codice ripetitivo e più ricariche da ricordare.
+- **Bootstrap con il suo JavaScript originale:** stato dei componenti fuori da React e attributi non controllati da
+  TypeScript.
+- **Leaflet:** da scrivere da zero, tessere raster con limiti d'uso più stretti.
+- **Tailwind per riusare NoseY così com'è:** vietato dal brief e mai usato dallo studente.
+- **Playwright sulla demo:** circa +7 h, fragile con i codici email.
+- **FE-09 intera o card rinumerate:** una card da 9 h oppure card Trello da rinominare.
+- **Slider continuo del raggio:** più valori diversi e quindi più chiamate; i livelli restano in cache.
+- **Polling delle richieste di amicizia:** anticipa la funzione Post-V1 delle notifiche live delle amicizie.
+- **Cartelle per tipo di file o aree piatte:** file di una stessa area sparsi, oppure 10–15 file nella stessa cartella.
+
+## Decisione 79: testo degli utenti come elementi React, senza DOMPurify (piano del frontend, sostituisce DOMPurify dello stack del brief)
+
+### Scelta
+
+- Ogni testo scritto da un utente (descrizioni, post, annunci, messaggi, bio) passa dal componente `UserText`, che lo
+  mostra con l'escape di React e trasforma gli URL `http`/`https` in elementi React `<a>` con
+  `rel="noopener noreferrer"`. Al clic una modale mostra il dominio di destinazione e chiede conferma prima di aprire
+  la scheda.
+- `dangerouslySetInnerHTML` è vietato in tutto il frontend da una regola ESLint.
+- DOMPurify, citato nello stack del brief (sezione 12), non si installa; la progettazione, sezione 8.6, è corretta di
+  conseguenza.
+- Post-V1: testo ricco (grassetto, menzioni, markdown); DOMPurify rientra con una lista di tag ammessi, solo in
+  `UserText`.
+
+### Motivazione
+
+- Nessun testo degli utenti diventa HTML, quindi non c'è una superficie XSS da sanificare (riduzione della superficie
+  d'attacco). React fa l'escape del testo e blocca gli `href` `javascript:`; la CSP `script-src 'self'` (decisione 76)
+  resta come seconda barriera.
+- DOMPurify su un testo che React mostra già come testo non cambierebbe mai il risultato: sarebbe codice morto.
+- La conferma con il dominio riduce il rischio di phishing dei link inviati da sconosciuti (candidature e contatti).
+
+### Alternative scartate
+
+- **DOMPurify sul testo semplice:** non cambia mai il risultato (codice morto).
+- **Link generati come HTML e puliti da DOMPurify:** uso reale della libreria, ma crea la superficie che poi deve
+  chiudere.
+- **Escape scritti a mano e `innerHTML`:** fragili (ordine delle sostituzioni, virgolette negli attributi, `&` negli
+  URL) e contrari alle linee guida OWASP.
+- **URL non cliccabili, eventualmente con aspetto da link:** sicuri, ma meno utili; con l'aspetto da link sembrano un
+  difetto.
+- **`href="javascript:void(0)"`:** bloccato dalla CSP e da React, ed è proprio il tipo di link che si vuole evitare.

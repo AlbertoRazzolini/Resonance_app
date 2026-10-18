@@ -124,7 +124,8 @@ Proposte nel documento di design e approvate insieme al documento (13 ottobre).
 ### 1.4 Questioni ancora aperte (non bloccanti per F0–F5)
 
 - **Indirizzo di contatto per i ricorsi** mostrato dal frontend agli utenti sospesi: è una
-  configurazione del frontend; il backend non lo espone.
+  configurazione del frontend; il backend non lo espone. Chiusa dalla decisione 78: costante in
+  `Resonance_FE/src/config.ts`, scelta dallo studente in FE-03.
 - **Versione di springdoc-openapi** compatibile con Spring Boot 4.1.1: da verificare all'inizio di F6.
 - **Plugin Strix** per la verifica dinamica: disponibilità da verificare in F6.
 - **Rischio di tempo**: il brief assegna F0 e F1 allo stesso giorno (14 ottobre). Il calendario
@@ -1388,8 +1389,9 @@ canale.
 
 Bean Validation sui DTO (lunghezze, formati, range); normalizzazione nel costruttore dei record;
 URL validati con `@HttpUrl` (solo `http`/`https`, massimo 2048): blocca gli URL `javascript:`. Il
-testo libero è salvato com'è e restituito come JSON: la sanificazione in visualizzazione spetta al
-frontend (DOMPurify); il backend non produce HTML, tranne le email, dove Thymeleaf fa l'escape con
+testo libero è salvato com'è e restituito come JSON: la visualizzazione sicura spetta al frontend,
+che lo mostra solo come elementi React (escape automatico, link `http`/`https` con conferma, nessun
+`dangerouslySetInnerHTML`; decisione 79, che sostituisce DOMPurify); il backend non produce HTML, tranne le email, dove Thymeleaf fa l'escape con
 `th:text`. Query solo con parametri legati (JPQL o native con `:param`), mai concatenazioni.
 
 **Tetto del body JSON:** 256 KB (`JsonLimitsConfig`, `StreamReadConstraints.maxDocumentLength` sulla factory di
@@ -1818,12 +1820,15 @@ in chat e sblocco, senza notifica).
 | F7-01 · Valutazione dell'ottimizzazione del backend | Sessione di brainstorming (superpowers, Opus 5.5) su ciò che si può alleggerire o riorganizzare senza cambiare il comportamento; misure dei punti lenti; documento di proposte con rischio e beneficio | `docs/ottimizzazione.md` con le proposte; nessun file di codice modificato; decisione dello studente se e come realizzarle (decisione 71) |
 | F7-02 · Realizzazione delle proposte di ottimizzazione | Le cinque proposte ammesse di `docs/ottimizzazione.md` (O1–O5), senza cambi di comportamento; O3 per ultima, primo taglio | `./mvnw -q verify` verde con gli stessi test; collection Postman con gli stessi esiti prima e dopo; prove di copertura su O1 e O3; documento aggiornato con le proposte realizzate (decisione 75) |
 | F7-03 · Rinforzo di sicurezza: login, sessioni, geocodifica e body | Dall'analisi di sicurezza del 18 ottobre: limite dei login falliti prenotato in modo atomico (S2), reset della password serializzato con refresh e login sulla riga dell'utente (S1), attesa massima della geocodifica e limite `EVENTS_CREATED` (S3), tetto del body JSON (S5, primo taglio) | `./mvnw -q verify` verde; prove di mutazione di S1 e S2 intercettate da test con nome; Postman con gli stessi esiti di F7-02; report di sicurezza e decisione 76 aggiornati |
+| F7-04 · Elenchi dei contenuti dell'utente | `GET /mine` per concerti ufficiali, annunci collab e post del feed, con le regole di `indie-events/mine` (decisione 77), per l'area personale del frontend; prima di FE-01 | `./mvnw -q verify` verde; Postman con i tre elenchi (200 e 401); sezioni 6.6–6.8 e decisione 77 aggiornate; promemoria merge |
 
 F7 non fa parte del calendario del 25 ottobre: parte solo se dopo F6-03 resta tempo e il frontend ha la
 precedenza dal 18 ottobre, dopo F7-03. Se manca tempo si salta senza conseguenze sulle funzionalità. Dopo F7-01 lo studente ha
 scelto di realizzare tutte le proposte in F7-02 (decisione 75; prevista il 19 ottobre, realizzata il 18). Dopo l'analisi di sicurezza del 18
 ottobre ha aggiunto F7-03 (circa 4 ore, prima del frontend), con le correzioni S1, S2, S3 e S5; la CSP (S4) passa a
-FE-11 e le altre voci restano rischi accettati (decisione 76).
+FE-11 e le altre voci restano rischi accettati (decisione 76). Durante la pianificazione del frontend ha aggiunto
+F7-04 (circa 3 ore, il 19 ottobre prima di FE-01): gli elenchi dei contenuti dell'utente entrano nell'MVP
+(decisione 77).
 
 Ordine dei tagli in caso di ritardo (brief 1-BIS, aggiornato dalla decisione 59): verifica dinamica
 del report → Swagger → notifiche live → contatto degli eventi (F5-04) → bacheca collab. Mai tagliati:
@@ -1838,15 +1843,27 @@ chat (F5-02) richiede le amicizie; le candidature (F5-03) richiedono chat (F5-02
 contatto degli eventi (F5-04) richiede la chat e gli eventi (F3); le notifiche dei like richiedono il
 feed (F4-02); la chiusura delle sessioni (F5-01) completa la sospensione di F2-02.
 
-### Card FE (lista "FE in attesa", non sviluppate ora)
+### Card FE (lista "FE in attesa")
 
-FE-01 Setup Vite/TS/Redux/Router/Bootstrap, proxy Vite verso `localhost:8080` e stage Node nel
-Dockerfile · FE-02 Client API e refresh silenzioso · FE-03
-Registrazione, verifica e login · FE-04 Profilo e ruoli · FE-05 Eventi vicini e mappa · FE-06
-Pubblicazione eventi · FE-07 Feed e like · FE-08 Collab e candidature · FE-09 Chat e notifiche
-STOMP, ricerca utenti e amicizie (decisione 59) · FE-10 Area di moderazione · FE-11 Deploy integrato (stesso servizio), `Content-Security-Policy` sugli script provata con il
-frontend compilato (decisione 76) e prova della demo. Vincolo per tutte le card FE: niente script inline, script da
-CDN o `eval`.
+Piano dettagliato in `docs/superpowers/plans/2026-10-18-resonance-frontend.md` (fonte di verità per sotto-task,
+stime e test); scelte del piano nella decisione 78.
+
+| Fase | Card | Stima |
+|---|---|---|
+| A · Fondamenta (19–20 ott) | FE-01 Setup, build integrata, token e riuso · FE-02 Client API e refresh silenzioso · FE-03 Registrazione, verifica, login e password | 4 h · 4 h · 5 h |
+| B · Contenuti (20–21 ott) | FE-04 Profilo, ruoli e area personale · FE-05 Eventi vicini e mappa · FE-06 Pubblicazione eventi · FE-07 Feed, like e testo degli utenti · FE-08 Collab e candidature | 4 h · 4 h · 3,5 h · 4,5 h · 3 h |
+| C · Social e admin (22–23 ott) | FE-09a Amicizie e ricerca utenti · FE-09b Chat, notifiche e contatto · FE-10 Area di moderazione | 3,5 h · 6 h · 4 h |
+| D · Rilascio (23 ott) | FE-12 Rifinitura (impeccable e ReactBits) · FE-11 Deploy integrato, `Content-Security-Policy` (decisione 76) e prova della demo | 3 h · 4 h |
+
+Calendario: 19 ottobre F7-04, FE-01, FE-02; 20 FE-03, FE-04, FE-05; 21 FE-06, FE-07, FE-08; 22 FE-09a, FE-09b; 23
+FE-10, FE-12, FE-11; demo il 24, con la mattina come unico margine. Merge `develop → main` a fine di F7-04 e di ogni
+fase del frontend.
+
+Ordine dei tagli del frontend: ReactBits (in FE-12) → notifiche live → contatto degli eventi → bacheca collab →
+revisione con impeccable (in FE-12). Mai tagliati, oltre a quelli del backend: registrazione e verifica, password
+dimenticata, profilo, ruoli e area personale, pubblicazione degli eventi, responsive sui tre breakpoint, test mirati.
+Vincolo per tutte le card FE: niente script inline, script da CDN o `eval`; testo degli utenti solo come elementi
+React (decisione 79).
 
 ### Demo finale
 
@@ -1879,6 +1896,8 @@ modifiche distruttive.
 | `indie_events.official_concert_id` | colonna nullable aggiunta con una nuova migrazione |
 | Appeal delle sospensioni | i campi di sospensione esistono già |
 | Upload immagini | oggi solo URL |
+| Partecipazione agli eventi ("parteciperò") ed elenco degli eventi a cui si partecipa | tabella con chiave composta (utente, evento) per concerti e indie event, base per i `tickets`; gli elenchi dei contenuti creati sono già nell'MVP (decisione 77) |
+| Testo ricco nei contenuti (grassetto, menzioni, markdown) | `UserText` è l'unico punto di visualizzazione: DOMPurify rientra lì con una lista di tag ammessi (decisione 79) |
 
 ### Post-V2
 

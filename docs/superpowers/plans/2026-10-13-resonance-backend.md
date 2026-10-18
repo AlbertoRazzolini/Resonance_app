@@ -485,12 +485,13 @@ dominio X").
 
 ---
 
-# F7 — Valutazione dell'ottimizzazione (condizionata, dopo F6-03)
+# F7 — Valutazione, rinforzo e integrazioni (dopo F6-03)
 
-Fase facoltativa: parte solo se dopo F6-03 resta tempo (il frontend ha la precedenza dal 18 ottobre, dopo F7-03, consegna
+Fase facoltativa: parte solo se dopo F6-03 resta tempo (il frontend ha la precedenza dal 19 ottobre, dopo F7-04, consegna
 il 25). F7-01 è solo analisi e documento, senza modifiche al codice; se manca tempo si salta (decisione 71). Lo studente
 ha scelto di realizzare tutte le proposte ammesse in F7-02 (decisione 75). Dopo l'analisi di sicurezza del 18 ottobre ha
-aggiunto F7-03, con le correzioni scelte fra quelle proposte (decisione 76).
+aggiunto F7-03, con le correzioni scelte fra quelle proposte (decisione 76). Durante la pianificazione del frontend ha
+aggiunto F7-04, gli elenchi dei contenuti dell'utente (decisione 77), da chiudere prima di FE-01.
 
 ### Card F7-01 · Valutazione dell'ottimizzazione del backend — stima 2 h
 
@@ -610,20 +611,38 @@ tagli se il tempo stringe: prima il sotto-task 4, poi il limite delle creazioni 
 stessi esiti di F7-02; report e decisione 76 aggiornati.
 **Commit proposto:** `fix(security): chiude le gare su login e sessioni e limita geocodifica e body JSON`
 
+### Card F7-04 · Elenchi dei contenuti dell'utente — stima 3 h
+
+**Riferimenti:** decisione 77, decisione 57 (`indie-events/mine`, modello da seguire); §6.6–6.8, §8.4.
+**Sicurezza: sì**
+**File:** `event/OfficialConcertController`, `OfficialConcertService`, `OfficialConcertRepository`;
+`collab/CollabController`, `CollabService`, `CollabPostRepository`; `feed/FeedController`, `FeedService`,
+`FeedPostRepository`; `config/SecurityConfig`; test `OfficialConcertIntegrationTest`, `CollabIntegrationTest`,
+`FeedIntegrationTest`; Postman Events, Collab, Feed; `docs/progettazione.md`, `docs/decisioni.md` (77), questo piano.
+
+Regole comuni (decisione 77): autenticato senza ruolo richiesto; contenuti del chiamante non nascosti (né dal
+proprietario né da un admin), con passati e chiusi compresi; ordine `created_at desc, id desc`; `PageParams`; stessi DTO
+di risposta degli endpoint esistenti, autore già caricato nella query. In `SecurityConfig` ogni `/mine` precede `/{id}`,
+che altrimenti lo renderebbe pubblico.
+
+- [ ] **1. Concerti (50 min).** `GET /api/official-concerts/mine`. Test: solo i concerti del chiamante; passati compresi
+  (`advance` oltre `event_date`); nascosti dal proprietario e da un admin esclusi; 401 senza token; `size=1000` → 400
+  `VALIDATION_ERROR`; ordine dal più recente.
+- [ ] **2. Annunci collab (40 min).** `GET /api/collab-posts/mine`. Test: chiusi compresi, nascosti esclusi, solo i
+  propri, 401 senza token.
+- [ ] **3. Post del feed (45 min).** `GET /api/feed-posts/mine`, `likedByMe` calcolato per il chiamante, `distanceKm`
+  nullo. Test: solo i propri, nascosti esclusi, `likedByMe` vero dopo un like, 401 senza token.
+- [ ] **4. Documentazione, Postman e chiusura (45 min).** Righe nelle tabelle di §6.6, §6.7 e §6.8; decisione 77
+  completata con l'esito; questo piano. Postman: per ognuno 200 e 401. `./mvnw -q verify`; collection in locale con lo
+  script a segmenti.
+
+**Criterio:** `./mvnw -q verify` verde; Postman con i tre elenchi; fase F7 chiusa: promemoria merge `develop → main` e
+controlli su Render (log, `/api/health`, i tre `/mine` con l'environment `render`).
+**Commit proposto:** `feat(content): aggiunge gli elenchi dei contenuti dell'utente`
+
 ---
 
-# Card FE (lista "FE in attesa", non sviluppate ora)
+# Card FE (lista "FE in attesa")
 
-Checklist sintetiche, da dettagliare in un piano del frontend dal 18 ottobre, dopo F7-03.
-
-- **FE-01 · Setup e build integrata:** progetto Vite + React + TS (senza React Compiler); Redux Toolkit, React Router, Bootstrap, CSS custom properties; proxy Vite `/api` e `/ws` (`ws: true`) verso `localhost:8080`; stage Node nel Dockerfile e copia di `dist/` in `static/`.
-- **FE-02 · Client API e refresh silenzioso:** client con access token in Redux; refresh con `credentials: 'include'` e `X-Requested-With`; un refresh alla volta; retry su 409 `REFRESH_CONFLICT`; gestione di `ErrorResponse.code`.
-- **FE-03 · Registrazione, verifica e login:** form, codice a 6 cifre, reinvio, messaggio `ACCOUNT_SUSPENDED` con motivo, scadenza e contatto.
-- **FE-04 · Profilo e ruoli:** `PATCH` con le regole di §6.5, condivisione e rimozione della posizione, attivazione MUSICIAN/HOST.
-- **FE-05 · Eventi vicini e mappa:** posizione del browser, nearby di concerti e indie event, mappa, paginazione.
-- **FE-06 · Pubblicazione eventi:** form con indirizzo, errori `ADDRESS_NOT_FOUND`/`GEOCODING_UNAVAILABLE`, bozze e pubblicazione.
-- **FE-07 · Feed e like:** lista, filtro per raggio, like ottimistico, DOMPurify sul testo.
-- **FE-08 · Collab e candidature:** lista, dettaglio, chiusura, candidatura.
-- **FE-09 · Chat e notifiche STOMP:** stompjs con `beforeConnect` e riconnessione automatica, code messaggi/notifiche/errori, cursore dello storico; ricerca utenti e amicizie (richieste, accetta/rifiuta/annulla/rimuovi), casella di testo disattivata quando `canSend` è falso, contatto dell'organizzatore dalla pagina dell'evento (decisione 59).
-- **FE-10 · Area di moderazione:** visibile solo ad ADMIN/SUPERADMIN; sospensione, nomina ADMIN, hide/restore.
-- **FE-11 · Deploy integrato e prova della demo:** build nell'immagine unica, verifica su Render, prova completa della demo (24 ottobre); header `Content-Security-Policy` sugli script (`script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'`) in `SecurityConfig`, provato con il frontend compilato e con Swagger UI (decisione 76). Vincolo per tutte le card FE: niente script inline, script da CDN o `eval`.
+Piano dettagliato in `docs/superpowers/plans/2026-10-18-resonance-frontend.md` (fasi A–D, card FE-01–FE-12 con FE-09
+divisa in FE-09a e FE-09b, calendario dal 19 al 24 ottobre, tagli e rischi); scelte del piano nelle decisioni 78 e 79.
