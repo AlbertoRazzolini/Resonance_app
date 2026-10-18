@@ -26,6 +26,12 @@ public interface CollabPostRepository extends JpaRepository<CollabPost, UUID> {
     Page<CollabPost> findByModerationHiddenAtIsNotNull(Pageable pageable);
 
     /**
+     * Annunci non nascosti di un musicista, chiusi compresi, con l'autore gia' caricato (elenco "mine").
+     */
+    @EntityGraph(attributePaths = "musician")
+    Page<CollabPost> findByMusicianIdAndModerationHiddenAtIsNull(UUID musicianId, Pageable pageable);
+
+    /**
      * Annunci aperti e non nascosti, con l'autore gia' caricato (lista pubblica).
      */
     @EntityGraph(attributePaths = "musician")

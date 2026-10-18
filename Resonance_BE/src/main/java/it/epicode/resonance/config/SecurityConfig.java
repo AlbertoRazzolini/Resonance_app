@@ -89,6 +89,8 @@ public class SecurityConfig {
                         // cancellazione del proprietario richiede il login (anyRequest) e il controllo
                         // di proprieta' sta nel service.
                         .requestMatchers(HttpMethod.POST, "/api/official-concerts").hasRole("HOST")
+                        // "mine" (decisione 77) prima di {id}, che altrimenti lo renderebbe pubblico.
+                        .requestMatchers(HttpMethod.GET, "/api/official-concerts/mine").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/official-concerts/nearby",
                                 "/api/official-concerts/{id}").permitAll()
                         // Indie event (sezione 6.6): creazione solo MUSICIAN; "mine" prima di {id}, che altrimenti
@@ -101,10 +103,14 @@ public class SecurityConfig {
                         // Annunci collab (sezione 6.7): creazione solo MUSICIAN, lista e dettaglio pubblici;
                         // close e delete richiedono il login (anyRequest) e la proprieta' si controlla nel service.
                         .requestMatchers(HttpMethod.POST, "/api/collab-posts").hasRole("MUSICIAN")
+                        // "mine" (decisione 77) prima di {id}, che altrimenti lo renderebbe pubblico.
+                        .requestMatchers(HttpMethod.GET, "/api/collab-posts/mine").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/collab-posts",
                                 "/api/collab-posts/{id}").permitAll()
                         // Feed (sezione 6.8): lista e dettaglio pubblici (likedByMe solo se autenticato); creazione,
                         // like e delete richiedono il login (anyRequest) e la proprieta' si controlla nel service.
+                        // "mine" (decisione 77) prima di {id}, che altrimenti lo renderebbe pubblico.
+                        .requestMatchers(HttpMethod.GET, "/api/feed-posts/mine").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/feed-posts",
                                 "/api/feed-posts/{id}").permitAll()
                         // /ws: l'autenticazione avviene al CONNECT (sezione 7.2).

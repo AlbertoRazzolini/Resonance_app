@@ -18,6 +18,7 @@ import it.epicode.resonance.geo.NearbyQuery;
 import it.epicode.resonance.geo.NearbyRow;
 import it.epicode.resonance.user.User;
 import it.epicode.resonance.user.UserRepository;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -105,6 +106,18 @@ public class OfficialConcertService {
                 .map(row -> OfficialConcertResponse.from(byId.get(row.getId()), row.getDistanceKm()))
                 .toList();
         return PageResponse.from(new PageImpl<>(content, params.toPageable(Sort.unsorted()), total));
+    }
+
+    /**
+     * Concerti del chiamante, passati compresi, dal piu' recente; i nascosti no, nemmeno per il proprietario
+     * (sezione 6.6, decisione 77).
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<OfficialConcertResponse> mine(UUID hostId, PageParams params) {
+        Sort order = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
+        Page<OfficialConcert> page = concerts.findByHostIdAndModerationHiddenAtIsNull(hostId,
+                params.toPageable(order));
+        return PageResponse.from(page.map(concert -> OfficialConcertResponse.from(concert, null)));
     }
 
     /**

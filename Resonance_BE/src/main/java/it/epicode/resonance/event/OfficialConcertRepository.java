@@ -43,6 +43,12 @@ public interface OfficialConcertRepository extends JpaRepository<OfficialConcert
     Page<OfficialConcert> findByModerationHiddenAtIsNotNull(Pageable pageable);
 
     /**
+     * Concerti non nascosti di un organizzatore, passati compresi, con l'autore gia' caricato (elenco "mine").
+     */
+    @EntityGraph(attributePaths = "host")
+    Page<OfficialConcert> findByHostIdAndModerationHiddenAtIsNull(UUID hostId, Pageable pageable);
+
+    /**
      * Concerti con i loro autori, per comporre la pagina di una ricerca nelle vicinanze.
      */
     @EntityGraph(attributePaths = "host")

@@ -2457,6 +2457,80 @@
           "response": []
         },
         {
+          "name": "I miei concerti (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con il concerto appena creato', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.all.keys('content', 'page', 'size', 'totalElements', 'totalPages');",
+                  "    const ids = body.content.map(function (e) { return e.id; });",
+                  "    pm.expect(ids).to.include(pm.environment.get('concertId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/official-concerts/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "official-concerts",
+                "mine"
+              ]
+            },
+            "description": "Richiede il login (accessToken), nessun ruolo. Concerti del chiamante, passati compresi, dal piu' recente; i nascosti no. Paginazione con page e size."
+          },
+          "response": []
+        },
+        {
+          "name": "I miei concerti senza token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 UNAUTHENTICATED', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().code).to.eql('UNAUTHENTICATED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/official-concerts/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "official-concerts",
+                "mine"
+              ]
+            },
+            "description": "Errore significativo. L'elenco personale richiede il login."
+          },
+          "response": []
+        },
+        {
           "name": "Dettaglio concerto (200)",
           "event": [
             {
@@ -3583,6 +3657,80 @@
           "response": []
         },
         {
+          "name": "I miei annunci (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con l\\'annuncio appena creato', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.all.keys('content', 'page', 'size', 'totalElements', 'totalPages');",
+                  "    const ids = body.content.map(function (e) { return e.id; });",
+                  "    pm.expect(ids).to.include(pm.environment.get('collabPostId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/collab-posts/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "collab-posts",
+                "mine"
+              ]
+            },
+            "description": "Richiede il login (accessToken), nessun ruolo. Annunci del chiamante, chiusi compresi, dal piu' recente; i nascosti no. Paginazione con page e size."
+          },
+          "response": []
+        },
+        {
+          "name": "I miei annunci senza token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 UNAUTHENTICATED', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().code).to.eql('UNAUTHENTICATED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/collab-posts/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "collab-posts",
+                "mine"
+              ]
+            },
+            "description": "Errore significativo. L'elenco personale richiede il login."
+          },
+          "response": []
+        },
+        {
           "name": "Dettaglio annuncio (200)",
           "event": [
             {
@@ -4290,6 +4438,82 @@
               ]
             },
             "description": "Errore significativo. Con solo lat mancano lng e radiusKm: 400 con i campi mancanti."
+          },
+          "response": []
+        },
+        {
+          "name": "I miei post (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con il post appena creato', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.all.keys('content', 'page', 'size', 'totalElements', 'totalPages');",
+                  "    const mine = body.content.filter(function (e) { return e.id === pm.environment.get('feedPostId'); });",
+                  "    pm.expect(mine).to.have.lengthOf(1);",
+                  "    pm.expect(mine[0].likedByMe).to.be.a('boolean');",
+                  "    pm.expect(mine[0].distanceKm).to.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/feed-posts/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feed-posts",
+                "mine"
+              ]
+            },
+            "description": "Richiede il login (accessToken), nessun ruolo. Post del chiamante dal piu' recente, con likedByMe; i nascosti no. Paginazione con page e size."
+          },
+          "response": []
+        },
+        {
+          "name": "I miei post senza token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 UNAUTHENTICATED', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().code).to.eql('UNAUTHENTICATED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/feed-posts/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feed-posts",
+                "mine"
+              ]
+            },
+            "description": "Errore significativo. L'elenco personale richiede il login."
           },
           "response": []
         },

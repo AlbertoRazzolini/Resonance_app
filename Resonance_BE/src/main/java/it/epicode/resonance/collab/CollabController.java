@@ -56,6 +56,15 @@ public class CollabController {
     }
 
     /**
+     * Annunci del chiamante, chiusi compresi (decisione 77). Prima di {@code /{id}} in {@code SecurityConfig}.
+     */
+    @GetMapping("/mine")
+    public PageResponse<CollabPostResponse> mine(@AuthenticationPrincipal AuthenticatedUser user,
+                                                 @Valid PageParams params) {
+        return collabService.mine(user.id(), params);
+    }
+
+    /**
      * Dettaglio pubblico, anche di un annuncio chiuso; 404 se e' nascosto.
      */
     @GetMapping("/{id}")

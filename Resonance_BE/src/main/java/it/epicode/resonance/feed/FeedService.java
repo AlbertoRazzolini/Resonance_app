@@ -89,6 +89,18 @@ public class FeedService {
     }
 
     /**
+     * Post del chiamante dal piu' recente; i nascosti no, nemmeno per il proprietario (sezione 6.8, decisione 77).
+     * {@code likedByMe} e' calcolato per il chiamante e {@code distanceKm} resta nullo.
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<FeedPostResponse> mine(UUID authorId, PageParams params) {
+        Sort order = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
+        Page<FeedPost> page = posts.findByAuthorIdAndModerationHiddenAtIsNull(authorId, params.toPageable(order));
+        Set<UUID> liked = likedAmong(authorId, page.getContent());
+        return PageResponse.from(page.map(post -> FeedPostResponse.from(post, liked.contains(post.getId()), null)));
+    }
+
+    /**
      * Dettaglio pubblico: un post nascosto e' un 404 per tutti (sezione 3.5).
      */
     @Transactional(readOnly = true)

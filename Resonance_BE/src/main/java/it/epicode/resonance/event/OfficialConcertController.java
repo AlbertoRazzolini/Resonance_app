@@ -60,6 +60,15 @@ public class OfficialConcertController {
     }
 
     /**
+     * Concerti del chiamante, passati compresi (decisione 77). Prima di {@code /{id}} in {@code SecurityConfig}.
+     */
+    @GetMapping("/mine")
+    public PageResponse<OfficialConcertResponse> mine(@AuthenticationPrincipal AuthenticatedUser user,
+                                                      @Valid PageParams params) {
+        return concertService.mine(user.id(), params);
+    }
+
+    /**
      * Dettaglio pubblico: 404 se il concerto non esiste o e' nascosto.
      */
     @GetMapping("/{id}")

@@ -61,6 +61,15 @@ public class FeedController {
     }
 
     /**
+     * Post del chiamante, con {@code likedByMe} (decisione 77). Prima di {@code /{id}} in {@code SecurityConfig}.
+     */
+    @GetMapping("/mine")
+    public PageResponse<FeedPostResponse> mine(@AuthenticationPrincipal AuthenticatedUser user,
+                                               @Valid PageParams params) {
+        return feedService.mine(user.id(), params);
+    }
+
+    /**
      * Dettaglio pubblico; 404 se il post e' nascosto.
      */
     @GetMapping("/{id}")

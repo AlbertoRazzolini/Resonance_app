@@ -82,6 +82,18 @@ public class CollabService {
     }
 
     /**
+     * Annunci del chiamante, chiusi compresi, dal piu' recente; i nascosti no, nemmeno per il proprietario
+     * (sezione 6.7, decisione 77).
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<CollabPostResponse> mine(UUID musicianId, PageParams params) {
+        Sort order = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
+        Page<CollabPost> page = posts.findByMusicianIdAndModerationHiddenAtIsNull(musicianId,
+                params.toPageable(order));
+        return PageResponse.from(page.map(CollabPostResponse::from));
+    }
+
+    /**
      * Dettaglio pubblico: vale anche per gli annunci chiusi, mentre uno nascosto e' un 404 per tutti (sezione 3.5).
      */
     @Transactional(readOnly = true)

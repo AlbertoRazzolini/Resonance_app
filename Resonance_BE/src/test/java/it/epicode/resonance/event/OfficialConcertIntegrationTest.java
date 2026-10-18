@@ -19,6 +19,8 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -28,7 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Concerti ufficiali via HTTP (progettazione, sezione 6.6): creazione riservata agli HOST con geocodifica
- * dell'indirizzo, dettaglio pubblico e cancellazione del proprietario (sezione 5.7).
+ * dell'indirizzo, dettaglio pubblico, cancellazione del proprietario (sezione 5.7) ed elenco "mine" (decisione 77).
  */
 class OfficialConcertIntegrationTest extends IntegrationTest {
 
@@ -434,6 +436,80 @@ class OfficialConcertIntegrationTest extends IntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    // ---- elenco "mine" (decisione 77) ----
+
+    @Test
+    void mine_returnsOnlyOwnConcerts_pastIncluded_hiddenExcluded() throws Exception {
+        User host = userWith("host@example.com", Role.FAN, Role.HOST);
+        User other = userWith("altro@example.com", Role.FAN, Role.HOST);
+        saved(host, "Mio futuro");
+        // Un concerto gia' passato resta nell'elenco: serve a ritrovare lo storico.
+        concerts.save(new OfficialConcert(host, "Mio passato", "Teatro Test", StubGeocodingConfig.FLORENCE_ADDRESS,
+                StubGeocodingConfig.FLORENCE.latitude(), StubGeocodingConfig.FLORENCE.longitude(),
+                Instant.now().minus(Duration.ofDays(5))));
+        saved(other, "Altrui");
+        OfficialConcert hidden = saved(host, "Mio nascosto dal proprietario");
+        hidden.getModeration().hide(host.getId(), null, Instant.now());
+        concerts.save(hidden);
+        OfficialConcert moderated = saved(host, "Mio nascosto da un admin");
+        moderated.getModeration().hide(userWith("admin@example.com", Role.FAN, Role.ADMIN).getId(), "spam",
+                Instant.now());
+        concerts.save(moderated);
+
+        mockMvc.perform(get("/api/official-concerts/mine").header("Authorization", bearer(host)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[*].title", containsInAnyOrder("Mio futuro", "Mio passato")))
+                .andExpect(jsonPath("$.content[0].host.id").value(host.getId().toString()))
+                .andExpect(jsonPath("$.content[0].distanceKm").value(nullValue()));
+    }
+
+    @Test
+    void mine_isOrderedFromMostRecentlyCreated() throws Exception {
+        User host = userWith("host@example.com", Role.FAN, Role.HOST);
+        saved(host, "Primo");
+        pause();
+        saved(host, "Secondo");
+        pause();
+        saved(host, "Terzo");
+
+        mockMvc.perform(get("/api/official-concerts/mine").header("Authorization", bearer(host)))
+                .andExpect(jsonPath("$.content[*].title", contains("Terzo", "Secondo", "Primo")));
+    }
+
+    @Test
+    void mine_paginatesAndRejectsOutOfRangeSize() throws Exception {
+        User host = userWith("host@example.com", Role.FAN, Role.HOST);
+        saved(host, "Uno");
+        saved(host, "Due");
+
+        mockMvc.perform(get("/api/official-concerts/mine?page=0&size=1").header("Authorization", bearer(host)))
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.totalPages").value(2));
+        mockMvc.perform(get("/api/official-concerts/mine?size=1000").header("Authorization", bearer(host)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void mine_withoutHostRole_returns200Empty() throws Exception {
+        // Nessun ruolo richiesto: un FAN autenticato riceve un elenco vuoto, non un 403.
+        User fan = userWith("fan@example.com", Role.FAN);
+
+        mockMvc.perform(get("/api/official-concerts/mine").header("Authorization", bearer(fan)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
+    void mine_withoutToken_returns401() throws Exception {
+        // "mine" non deve finire nella regola pubblica di {id}.
+        mockMvc.perform(get("/api/official-concerts/mine"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    }
+
     // ---- supporto ----
 
     private ResultActions create(User user, String json) throws Exception {
@@ -468,6 +544,15 @@ class OfficialConcertIntegrationTest extends IntegrationTest {
         return concerts.save(new OfficialConcert(host, title, "Teatro Test", StubGeocodingConfig.FLORENCE_ADDRESS,
                 StubGeocodingConfig.FLORENCE.latitude(), StubGeocodingConfig.FLORENCE.longitude(),
                 Instant.now().plus(Duration.ofDays(30))));
+    }
+
+    // Una pausa evita date di creazione identiche, che renderebbero ambiguo l'ordine.
+    private void pause() {
+        try {
+            Thread.sleep(Duration.ofMillis(5));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private User userWith(String email, Role... userRoles) {

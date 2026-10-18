@@ -999,6 +999,7 @@ mai nel profilo pubblico.
 |---|---|---|
 | `POST /api/official-concerts` | `hasRole("HOST")` | 201 `OfficialConcertResponse`; geocodifica di `address` |
 | `GET /api/official-concerts/nearby?lat&lng&radiusKm&page&size` | pubblico | solo futuri e non nascosti; per distanza, poi data |
+| `GET /api/official-concerts/mine?page&size` | autenticato | concerti del chiamante, passati compresi, non nascosti; dal più recente (decisione 77) |
 | `GET /api/official-concerts/{id}` | pubblico | 404 se nascosto |
 | `DELETE /api/official-concerts/{id}` | proprietario | soft delete (5.7) |
 | `POST /api/indie-events` | `hasRole("MUSICIAN")` | 201; `status` facoltativo, default `PUBLISHED` |
@@ -1039,6 +1040,7 @@ Parametri nearby: `lat` −90..90, `lng` −180..180 (obbligatori), `radiusKm` 0
 |---|---|---|
 | `POST /api/collab-posts` | `hasRole("MUSICIAN")` | `{title, description, roleNeeded, genreTags, location?}` → 201 |
 | `GET /api/collab-posts?page&size` | pubblico | solo aperti e non nascosti, dal più recente |
+| `GET /api/collab-posts/mine?page&size` | autenticato | annunci del chiamante, chiusi compresi, non nascosti; dal più recente (decisione 77) |
 | `GET /api/collab-posts/{id}` | pubblico | anche chiusi; 404 se nascosto |
 | `PATCH /api/collab-posts/{id}/close` | proprietario | `is_open = false`, idempotente → 200 |
 | `DELETE /api/collab-posts/{id}` | proprietario | soft delete |
@@ -1060,6 +1062,7 @@ l'annuncio è aperto, non cancellato e non nascosto (sezione 6.9). Dopo il commi
 |---|---|---|
 | `POST /api/feed-posts` | autenticato | `{body (1–2000), imageUrl?, latitude?, longitude?}` → 201 |
 | `GET /api/feed-posts?lat&lng&radiusKm&page&size` | pubblico | dal più recente; con il filtro geografico (tutti e tre i parametri o nessuno) solo post con coordinate nel raggio |
+| `GET /api/feed-posts/mine?page&size` | autenticato | post del chiamante, non nascosti; dal più recente; `likedByMe` calcolato, `distanceKm` nullo (decisione 77) |
 | `GET /api/feed-posts/{id}` | pubblico | 404 se nascosto |
 | `DELETE /api/feed-posts/{id}` | proprietario | soft delete |
 | `PUT /api/feed-posts/{id}/like` | autenticato | 200 `{likesCount, likedByMe: true}`, idempotente |

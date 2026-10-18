@@ -50,6 +50,12 @@ public interface FeedPostRepository extends JpaRepository<FeedPost, UUID> {
     Page<FeedPost> findByModerationHiddenAtIsNull(Pageable pageable);
 
     /**
+     * Post non nascosti di un autore con l'autore gia' caricato (elenco "mine").
+     */
+    @EntityGraph(attributePaths = "author")
+    Page<FeedPost> findByAuthorIdAndModerationHiddenAtIsNull(UUID authorId, Pageable pageable);
+
+    /**
      * Post con i loro autori, per comporre la pagina di una lista con il filtro per raggio.
      */
     @EntityGraph(attributePaths = "author")

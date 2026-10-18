@@ -625,14 +625,14 @@ proprietario né da un admin), con passati e chiusi compresi; ordine `created_at
 di risposta degli endpoint esistenti, autore già caricato nella query. In `SecurityConfig` ogni `/mine` precede `/{id}`,
 che altrimenti lo renderebbe pubblico.
 
-- [ ] **1. Concerti (50 min).** `GET /api/official-concerts/mine`. Test: solo i concerti del chiamante; passati compresi
+- [x] **1. Concerti (50 min).** `GET /api/official-concerts/mine`. Test: solo i concerti del chiamante; passati compresi
   (`advance` oltre `event_date`); nascosti dal proprietario e da un admin esclusi; 401 senza token; `size=1000` → 400
   `VALIDATION_ERROR`; ordine dal più recente.
-- [ ] **2. Annunci collab (40 min).** `GET /api/collab-posts/mine`. Test: chiusi compresi, nascosti esclusi, solo i
+- [x] **2. Annunci collab (40 min).** `GET /api/collab-posts/mine`. Test: chiusi compresi, nascosti esclusi, solo i
   propri, 401 senza token.
-- [ ] **3. Post del feed (45 min).** `GET /api/feed-posts/mine`, `likedByMe` calcolato per il chiamante, `distanceKm`
+- [x] **3. Post del feed (45 min).** `GET /api/feed-posts/mine`, `likedByMe` calcolato per il chiamante, `distanceKm`
   nullo. Test: solo i propri, nascosti esclusi, `likedByMe` vero dopo un like, 401 senza token.
-- [ ] **4. Documentazione, Postman e chiusura (45 min).** Righe nelle tabelle di §6.6, §6.7 e §6.8; decisione 77
+- [x] **4. Documentazione, Postman e chiusura (45 min).** Righe nelle tabelle di §6.6, §6.7 e §6.8; decisione 77
   completata con l'esito; questo piano. Postman: per ognuno 200 e 401. `./mvnw -q verify`; collection in locale con lo
   script a segmenti.
 

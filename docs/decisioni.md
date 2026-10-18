@@ -2179,6 +2179,12 @@ Limiti dei servizi esterni, che nessuna scelta di codice rimuove:
   proprietario né da un admin), compresi concerti passati e annunci chiusi; ordine `created_at desc, id desc`;
   `PageParams`; stessi DTO di risposta degli endpoint esistenti (nel feed `likedByMe` calcolato, `distanceKm`
   nullo). In `SecurityConfig` ogni `/mine` precede `/{id}`.
+- **Esito (card F7-04, 19 ottobre):** i tre endpoint sono implementati come descritto, con una query derivata per
+  ciascuno (`findByHostId…`, `findByMusicianId…`, `findByAuthorId…` più `AndModerationHiddenAtIsNull`) e il grafo
+  dell'entity per caricare l'autore. Le regole di `SecurityConfig` per `/mine` precedono quelle di `/{id}`; un test
+  per endpoint (401 senza token) protegge l'ordine. Un utente senza il ruolo di creazione (per esempio un FAN su
+  `official-concerts/mine`) riceve 200 con elenco vuoto, non 403. `likedByMe` nel feed è calcolato con la stessa
+  query dei like usata dalla lista pubblica. Tabelle di progettazione 6.6, 6.7 e 6.8 aggiornate.
 - Nel frontend la pagina "Area personale" (FE-04) mostra una scheda per tipo di contenuto.
 - Solo i contenuti **creati** dall'utente. La partecipazione agli eventi ("parteciperò") non esiste nell'MVP: va in
   Post-V1, accanto ai `tickets` (progettazione, sezione 15).

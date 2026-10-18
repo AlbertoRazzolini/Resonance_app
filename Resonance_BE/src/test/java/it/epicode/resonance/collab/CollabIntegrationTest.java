@@ -18,6 +18,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -30,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Annunci di collaborazione via HTTP (progettazione, sezione 6.7, senza le candidature di F5-03): creazione
  * riservata ai MUSICIAN, lista pubblica dei soli annunci aperti e non nascosti, dettaglio anche dei chiusi,
- * chiusura idempotente e cancellazione del proprietario (sezione 5.7).
+ * chiusura idempotente, cancellazione del proprietario (sezione 5.7) ed elenco "mine" (decisione 77).
  */
 class CollabIntegrationTest extends IntegrationTest {
 
@@ -352,6 +353,68 @@ class CollabIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.fields.reason").exists());
         mockMvc.perform(delete("/api/collab-posts/{id}", post.getId())).andExpect(status().isUnauthorized());
         assertThat(posts.findById(post.getId()).orElseThrow().getModeration().isHidden()).isFalse();
+    }
+
+    // ---- elenco "mine" (decisione 77) ----
+
+    @Test
+    void mine_returnsOwnPostsClosedIncluded_notOthersNorHidden() throws Exception {
+        User owner = userWith("musicista@example.com", Role.FAN, Role.MUSICIAN);
+        User other = userWith("altro@example.com", Role.FAN, Role.MUSICIAN);
+        saved(owner, "Mio aperto");
+        // Un annuncio chiuso non e' nella lista pubblica ma il proprietario deve ritrovarlo.
+        CollabPost closed = saved(owner, "Mio chiuso");
+        closed.setOpen(false);
+        posts.save(closed);
+        saved(other, "Altrui");
+        CollabPost hidden = saved(owner, "Mio nascosto dal proprietario");
+        hidden.getModeration().hide(owner.getId(), null, Instant.now());
+        posts.save(hidden);
+        CollabPost moderated = saved(owner, "Mio nascosto da un admin");
+        moderated.getModeration().hide(userWith("admin@example.com", Role.FAN, Role.ADMIN).getId(), "spam",
+                Instant.now());
+        posts.save(moderated);
+
+        mockMvc.perform(get("/api/collab-posts/mine").header("Authorization", bearer(owner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[*].title", containsInAnyOrder("Mio aperto", "Mio chiuso")))
+                .andExpect(jsonPath("$.content[0].musician.id").value(owner.getId().toString()));
+    }
+
+    @Test
+    void mine_isOrderedFromMostRecentlyCreated_andPaginates() throws Exception {
+        User owner = userWith("musicista@example.com", Role.FAN, Role.MUSICIAN);
+        saved(owner, "Primo");
+        saved(owner, "Secondo");
+        saved(owner, "Terzo");
+
+        mockMvc.perform(get("/api/collab-posts/mine").header("Authorization", bearer(owner)))
+                .andExpect(jsonPath("$.content[*].title", contains("Terzo", "Secondo", "Primo")));
+        mockMvc.perform(get("/api/collab-posts/mine?page=1&size=2").header("Authorization", bearer(owner)))
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.totalElements").value(3));
+        mockMvc.perform(get("/api/collab-posts/mine?size=1000").header("Authorization", bearer(owner)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void mine_withoutMusicianRole_returns200Empty() throws Exception {
+        // Nessun ruolo richiesto: un FAN autenticato riceve un elenco vuoto, non un 403.
+        User fan = userWith("fan@example.com", Role.FAN);
+
+        mockMvc.perform(get("/api/collab-posts/mine").header("Authorization", bearer(fan)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
+    void mine_withoutToken_returns401() throws Exception {
+        // "mine" non deve finire nella regola pubblica di {id}.
+        mockMvc.perform(get("/api/collab-posts/mine"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
     }
 
     // ---- supporto ----

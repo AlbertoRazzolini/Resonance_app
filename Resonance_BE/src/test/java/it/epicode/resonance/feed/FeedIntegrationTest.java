@@ -33,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Feed via HTTP (progettazione, sezioni 3.4, 6.8 e 10.2): creazione di un utente qualsiasi con coordinate
  * facoltative (entrambe o nessuna), dettaglio e lista pubblici, filtro per raggio, like e unlike idempotenti e
- * cancellazione del proprietario (sezione 5.7). Il centro delle ricerche e' Firenze.
+ * cancellazione del proprietario (sezione 5.7) ed elenco "mine" (decisione 77). Il centro delle ricerche e' Firenze.
  */
 class FeedIntegrationTest extends IntegrationTest {
 
@@ -551,6 +551,72 @@ class FeedIntegrationTest extends IntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fields.reason").exists());
         assertThat(posts.findById(post.getId()).orElseThrow().getModeration().isHidden()).isFalse();
+    }
+
+    // ---- elenco "mine" (decisione 77) ----
+
+    @Test
+    void mine_returnsOwnPosts_notOthersNorHidden_withoutDistance() throws Exception {
+        User author = userWith("autore@example.com", Role.FAN);
+        User other = userWith("altro@example.com", Role.FAN);
+        saved(author, "Mio senza coordinate");
+        savedAt(author, "Mio con coordinate", FLORENCE_LAT, FLORENCE_LNG);
+        saved(other, "Altrui");
+        FeedPost hidden = saved(author, "Mio nascosto dal proprietario");
+        hidden.getModeration().hide(author.getId(), null, Instant.now());
+        posts.save(hidden);
+        FeedPost moderated = saved(author, "Mio nascosto da un admin");
+        moderated.getModeration().hide(userWith("admin@example.com", Role.FAN, Role.ADMIN).getId(), "spam",
+                Instant.now());
+        posts.save(moderated);
+
+        mockMvc.perform(get("/api/feed-posts/mine").header("Authorization", bearer(author)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                // Dal piu' recente; distanceKm esiste solo con il filtro per raggio.
+                .andExpect(jsonPath("$.content[*].body", contains("Mio con coordinate", "Mio senza coordinate")))
+                .andExpect(jsonPath("$.content[0].author.id").value(author.getId().toString()))
+                .andExpect(jsonPath("$.content[0].distanceKm").value(nullValue()));
+    }
+
+    @Test
+    void mine_likedByMeIsTrueAfterOwnLike_onlyForThoseLikedByTheCaller() throws Exception {
+        User author = userWith("autore@example.com", Role.FAN);
+        User other = userWith("altro@example.com", Role.FAN);
+        FeedPost liked = saved(author, "Piaciuto");
+        FeedPost notLiked = saved(author, "Non piaciuto");
+        like(author, liked).andExpect(status().isOk());
+        // Il like di un altro utente non conta per likedByMe del chiamante.
+        like(other, notLiked).andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/feed-posts/mine").header("Authorization", bearer(author)))
+                .andExpect(jsonPath("$.content[?(@.body == 'Piaciuto')].likedByMe").value(true))
+                .andExpect(jsonPath("$.content[?(@.body == 'Piaciuto')].likesCount").value(1))
+                .andExpect(jsonPath("$.content[?(@.body == 'Non piaciuto')].likedByMe").value(false))
+                .andExpect(jsonPath("$.content[?(@.body == 'Non piaciuto')].likesCount").value(1));
+    }
+
+    @Test
+    void mine_paginatesAndRejectsOutOfRangeSize() throws Exception {
+        User author = userWith("autore@example.com", Role.FAN);
+        saved(author, "Uno");
+        saved(author, "Due");
+        saved(author, "Tre");
+
+        mockMvc.perform(get("/api/feed-posts/mine?page=1&size=2").header("Authorization", bearer(author)))
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.totalElements").value(3));
+        mockMvc.perform(get("/api/feed-posts/mine?size=1000").header("Authorization", bearer(author)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void mine_withoutToken_returns401() throws Exception {
+        // "mine" non deve finire nella regola pubblica di {id}.
+        mockMvc.perform(get("/api/feed-posts/mine"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
     }
 
     // ---- supporto ----
