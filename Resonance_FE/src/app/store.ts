@@ -1,12 +1,28 @@
-import { configureStore } from '@reduxjs/toolkit'
+import { configureStore, createListenerMiddleware } from '@reduxjs/toolkit'
+import { authReducer, sessionEnded } from '@/features/auth/authSlice'
+import { api } from '@/lib/api/apiSlice'
+import { noticeReducer } from '@/lib/notices/noticeSlice'
 
 /**
- * Store Redux dell'app. Per ora senza dati: FE-02 aggiunge `api` (RTK Query) e `authSlice`, le card
- * successive `notificationsSlice`.
+ * Crea uno store nuovo: l'app ne usa uno solo (`store`), i test uno per prova. Alla chiusura della sessione
+ * (logout, refresh rifiutato, sospensione) la cache di `api` si svuota, così nessun dato dell'utente resta in memoria.
  */
-export const store = configureStore({
-  reducer: (state: Record<string, never> = {}) => state,
-})
+export function makeStore() {
+  const listener = createListenerMiddleware()
+  listener.startListening({
+    actionCreator: sessionEnded,
+    effect: (_action, listenerApi) => {
+      listenerApi.dispatch(api.util.resetApiState())
+    },
+  })
+  return configureStore({
+    reducer: { auth: authReducer, notice: noticeReducer, [api.reducerPath]: api.reducer },
+    middleware: (getDefault) => getDefault().prepend(listener.middleware).concat(api.middleware),
+  })
+}
 
-export type RootState = ReturnType<typeof store.getState>
-export type AppDispatch = typeof store.dispatch
+export const store = makeStore()
+
+export type AppStore = ReturnType<typeof makeStore>
+export type RootState = ReturnType<AppStore['getState']>
+export type AppDispatch = AppStore['dispatch']

@@ -3,6 +3,19 @@
 Backend Spring Boot in `Resonance_BE/` (capstone Epicode). Frontend in `Resonance_FE/` dal
 18 ottobre, dopo la card F7-03 (rinforzo di sicurezza): non toccarlo prima.
 
+## Regola fondamentale: le decisioni sono dello studente
+
+- **Ogni scelta che design e piano non fissano passa dallo studente PRIMA di scrivere test o codice.**
+  Nessuna eccezione, nemmeno per i dettagli che sembrano ovvi: testi per l'utente, nomi, ordine dei
+  controlli, forma delle risposte, comportamento negli errori, file o test in più, scelte di libreria.
+- Come: a inizio card, dopo aver letto design e piano, si elencano i punti aperti e ci si ferma. Ogni punto
+  si pone con `AskUserQuestion`, con per ogni opzione una spiegazione in parole semplici (pro e contro) e
+  la raccomandata per prima, con "(Recommended)" accanto al titolo. Si attende la risposta.
+- Se durante il lavoro emerge un punto nuovo: ci si ferma e si chiede, non si decide "per ora".
+- In `docs/decisioni.md` si registra solo ciò che lo studente ha approvato; mai una scelta presa da soli
+  e documentata dopo.
+- Vale sempre: anche con lo stile sintetico, nelle correzioni e a fine card.
+
 ## Inizio di ogni sessione
 
 Ogni card si fa in una sessione nuova: lo studente scrive `/clear` e poi `/prossima-card` (comando

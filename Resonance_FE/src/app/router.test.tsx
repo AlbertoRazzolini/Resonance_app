@@ -1,11 +1,18 @@
 import { render, screen } from '@testing-library/react'
+import { Provider } from 'react-redux'
 import { RouterProvider, createMemoryRouter } from 'react-router'
+import { makeStore } from './store'
 import { routes } from './router'
 import { ROUTES } from './routes'
 
 // Prova del router: pagina iniziale, pagina "non trovato" e barra con menu a scomparsa (sotto md).
+// Serve uno store: la barra degli avvisi dentro AppShell legge lo stato.
 function renderAt(path: string) {
-  render(<RouterProvider router={createMemoryRouter(routes, { initialEntries: [path] })} />)
+  render(
+    <Provider store={makeStore()}>
+      <RouterProvider router={createMemoryRouter(routes, { initialEntries: [path] })} />
+    </Provider>,
+  )
 }
 
 describe('router', () => {

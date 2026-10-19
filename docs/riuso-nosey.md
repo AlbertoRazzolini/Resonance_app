@@ -127,6 +127,9 @@ Bootstrap e le custom properties `--rs-*` (decisione 78).
 | struttura di `src/` (`App.tsx`, `router.tsx`, `main.tsx`) | `src/app/`, `src/components/layout/` | A | FE-01 | Cartelle "a forma fissa" (decisione 78); store in `app/store.ts`; rotte in `app/routes.ts`; pagine caricate in modo differito. |
 | `hooks/redux.ts` | `hooks/redux.ts` | R | FE-01 | `useAppDispatch` e `useAppSelector` tipizzati sullo store. |
 | `hooks/useMediaQuery.ts` | `hooks/useMediaQuery.ts` | R | FE-01 | Nomi in inglese. |
+| `store/apiSlice.ts` | `lib/api/apiSlice.ts`, `lib/api/baseQuery.ts`, `lib/api/tags.ts` | A | FE-02 | Si tiene lo schema (una sola `createApi`, endpoint aggiunti con `injectEndpoints`). Il `baseQuery` è nuovo: NoseY chiudeva la sessione al primo 401, Resonance rinnova il token con il refresh (uno alla volta, retry su 409, rinnovo anticipato). |
+| `lib/codiciErrore.ts`, `lib/errori.ts` | `lib/errors/errorMessages.ts`, `lib/errors/getErrorMessage.ts`, `components/ui/ErrorAlert.tsx`, `types/common.ts` | A | FE-02 | Si tiene l'idea: un testo per codice, decisione sempre sul codice e mai sul messaggio. Codici e testi nuovi dalla sezione 6.2; `ErrorResponse` con `code`, `fields`, `details`. Non si porta il catalogo italiano dei codici di NoseY. |
+| `components/layout/Protezioni.tsx` | `components/guards/RequireAuth.tsx`, `components/guards/RequireRole.tsx` | A | FE-02 | Si tiene l'idea (rotte che rimandano al login). La pagina richiesta passa nello stato del router, non in `?redirect=`; ruoli additivi, con SUPERADMIN che vale anche come ADMIN; chi non ha il ruolo vede una pagina "Accesso negato" (`components/ui/AccessDenied.tsx`), non un reindirizzamento. |
 
 **Non portato nel frontend:** stili e configurazione Tailwind, MSW nel browser (`mocks/`,
 `public/mockServiceWorker.js`: in Resonance MSW serve solo ai test), `qrcode.react` e le schermate dei

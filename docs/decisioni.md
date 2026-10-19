@@ -2374,3 +2374,76 @@ Scelte dello studente, una per una, durante il brainstorming del piano
 - **`--legacy-peer-deps` o `--force`:** installa, ma ignora un conflitto reale fra TypeScript e il lint.
 - **TypeScript 7.0.2 senza `typescript-eslint`:** si perderebbe il lint dei tipi e il divieto in ESLint resterebbe solo sulla sintassi.
 - **Stitch solo a mano, con screenshot:** nessuna configurazione, ma il contesto della schermata si perde.
+
+## Decisione 82: client API con refresh silenzioso (card FE-02, progettazione, sezioni 4.8 e 4.13)
+
+Ogni punto è stato proposto allo studente con alternative, pro, contro e raccomandazione, e approvato il 19 ottobre.
+
+### Scelta
+
+- **Pagina richiesta dopo il login:** `RequireAuth` manda a `ROUTES.login` (`/accesso`) con la pagina richiesta nello stato del
+  router (`{from}`), non nell'URL. FE-03 deve ricopiare lo stato fra login, registrazione e verifica.
+- **Refresh come endpoint RTK Query:** `api.endpoints.refresh` (mutazione `POST /api/auth/refresh`, con `X-Requested-With` e
+  `credentials: 'include'`), lanciato con `track: false` perché il risultato non resti nella cache. `refreshSession` (in
+  `lib/api/apiSlice.ts`) lo chiama una alla volta: più 401 in parallelo, l'avvio in StrictMode e il timer condividono la stessa
+  promessa. Gli endpoint `/api/auth/*` non attivano mai il refresh, e nemmeno un 401 senza sessione aperta.
+- **409 `REFRESH_CONFLICT`:** attesa di 1 secondo e un solo secondo tentativo.
+- **Richiesta ripetuta senza nuovo refresh:** se mentre una richiesta era in volo il token nello store è già cambiato, si ripete
+  con il token nuovo senza un secondo refresh.
+- **Tre esiti del refresh:** `refreshed`; `ended` (qualunque 401, oppure 403 `ACCOUNT_SUSPENDED` con i dettagli: sessione chiusa e
+  cache svuotata); `failed` (rete, 5xx, doppio 409): sessione lasciata aperta.
+- **Refresh fallito a sessione aperta:** la richiesta che era partita riceve un errore di rete (`FETCH_ERROR`, "Server non
+  raggiungibile"), non il 401 "sessione scaduta", che sarebbe falso.
+- **Refresh fallito all'avvio:** si prosegue da anonimi (le pagine pubbliche funzionano) e compare nella barra degli avvisi
+  "Non riesco a contattare il server: la tua sessione potrebbe essere ancora attiva" con il pulsante Riprova, che rifà il refresh;
+  se il server risponde (sessione ripresa o scaduta davvero) l'avviso sparisce.
+- **Rinnovo anticipato:** hook `useTokenRenewal`, montato da `SessionBootstrap`: rinnova 60 s prima della scadenza; se fallisce per
+  un errore passeggero ritenta una volta dopo 15 s. `onTokenRefreshed` avvisa i listener (STOMP, FE-09b).
+- **Barra degli avvisi unica** (`NoticeBar` in `AppShell`, stato in `lib/notices/noticeSlice.ts`): mostra uno alla volta
+  `serverUnreachable` e `logoutIncomplete`, chiudibile.
+- **Logout:** `authApi.logout` (`DELETE /api/auth/refresh`) chiude sempre la sessione nell'app; se il server non risponde mostra
+  l'avviso "Sei uscito da questo dispositivo, ma il server non ha risposto: la sessione potrebbe riaprirsi al prossimo
+  caricamento. Riprova a uscire quando la rete torna", perché il cookie resta valido. Il login lo scrive FE-03: in FE-02 non c'è
+  nel codice di produzione (il test usa un endpoint di prova).
+- **Protezioni:** `RequireRole` manda gli anonimi al login e a chi non ha il ruolo mostra la pagina "Accesso negato" allo stesso
+  indirizzo, con testo generico che non nomina ruoli.
+- **`selectHasRole('ADMIN')` vale anche per SUPERADMIN**, come la `RoleHierarchy` del backend (sezione 5.1): il SUPERADMIN creato
+  all'avvio ha solo FAN e SUPERADMIN. Gli altri ruoli non si ereditano.
+- **Errori:** `getErrorMessage` decide sul `code` (un testo italiano per ogni codice di §6.2, tutti approvati); con un codice
+  sconosciuto ripiega sul `message` del backend; `FETCH_ERROR`, 502/503/504 e risposte non JSON dicono "server non raggiungibile";
+  un errore tecnico non mostra mai il proprio testo. `WRONG_PASSWORD` (alla verifica) è generico, come `INVALID_CREDENTIALS`, e
+  dice di registrarsi di nuovo con la stessa email: "password dimenticata" non funziona per un account non verificato.
+  `getFieldErrors` legge `fields` solo per `VALIDATION_ERROR` e `ADDRESS_NOT_FOUND`.
+- **Base degli URL = `window.location.origin`:** equivale a un URL relativo nel browser (una sola origine, sezione 4.3) ma funziona
+  anche con la `fetch` di Node nei test.
+- **Store con `makeStore()`:** l'app usa `store`, i test uno per prova. Un listener su `sessionEnded` svuota la cache di `api`.
+- **Test oltre quelli del piano** (stato della sessione, rinnovo anticipato, logout, avvisi, `ErrorAlert`): tutti tenuti.
+
+### Motivazione
+
+- Un unico refresh per scheda evita 409 inutili e protegge la rotazione del token (decisione 10).
+- Un errore passeggero non deve far uscire l'utente: solo i rifiuti definitivi del backend chiudono la sessione, e il messaggio
+  all'utente dice la verità (server non raggiungibile, non sessione scaduta).
+- La pagina richiesta nello stato del router non si può falsificare con un link: nessun reindirizzamento aperto.
+- Il logout deve funzionare anche a server spento, ma l'utente deve sapere che il cookie può riaprire la sessione.
+- Svuotare la cache in un ascoltatore dello store rende impossibile dimenticarlo in un punto nuovo (privacy su computer condivisi).
+
+### Alternative scartate
+
+- **`?redirect=` nell'URL (come NoseY):** va validato a ogni uso, altrimenti è un reindirizzamento aperto. **Campo nello store:**
+  si perde al ricaricamento.
+- **Chiudere la sessione a ogni refresh fallito:** una caduta di rete farebbe uscire l'utente con una sessione valida.
+- **Schermata di errore bloccante all'avvio:** bloccherebbe anche chi vuole solo vedere gli eventi pubblici.
+- **Refresh con `fetch` diretta:** più semplice, ma fuori dal sistema di richieste dell'app.
+- **Attesa di 200 ms o nessuna attesa dopo il 409:** meno margine per il cookie nuovo.
+- **Rinnovare sempre a ogni 401:** più rotazioni del cookie del necessario e 409 evitabili.
+- **Nessun nuovo tentativo del rinnovo anticipato:** una connessione chat potrebbe restare con un token scaduto.
+- **"Non trovato" o "Home" per chi non ha il ruolo:** "non trovato" non spiega il motivo a chi ha perso un ruolo; la home senza
+  avviso lascia l'utente senza spiegazione.
+- **Ruoli letti alla lettera:** basta dimenticare SUPERADMIN in una pagina per lasciarlo fuori da un'area che il backend gli permette.
+- **Login in `authApi` già in FE-02:** anticipa FE-03.
+- **Logout in silenzio o che resta aperto con errore:** nel primo caso la sessione può riaprirsi senza che l'utente lo sappia, nel
+  secondo senza rete non si può uscire.
+- **Indirizzi relativi nel codice con i test adattati:** il codice di produzione resta pulito, ma serve un trucco nel setup dei test.
+- **Pulizia della cache esplicita in ogni punto che chiude la sessione:** una dimenticanza lascerebbe i dati in memoria.
+- **Solo i test del piano:** timer del rinnovo, logout e transizioni della sessione resterebbero senza un test dedicato.
