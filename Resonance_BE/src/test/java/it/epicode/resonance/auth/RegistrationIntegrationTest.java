@@ -104,14 +104,71 @@ class RegistrationIntegrationTest extends IntegrationTest {
 
     @Test
     void register_withMultibytePasswordOver72Bytes_returns400OnThePasswordField() throws Exception {
-        // 30 emoji: 30 caratteri (sotto il massimo di 72) ma 120 byte in UTF-8 (review focus 2).
-        register(EMAIL, "😀".repeat(30), "Mario")
+        // 40 "è": 40 caratteri (sotto il massimo di 72) ma 80 byte in UTF-8 (review focus 2). Non emoji, come dopo la
+        // decisione 84: il test prova il limite dei byte e non la regola sulle emoji.
+        register(EMAIL, "è".repeat(40), "Mario")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.fields.password").exists());
 
         assertThat(users.count()).isZero();
         assertThat(events.stream(VerificationCodeEmailEvent.class)).isEmpty();
+    }
+
+    // ------------------------------------------------- nome e password (decisione 84)
+
+    @Test
+    void register_withEmojiInThePassword_returns400OnThePasswordField() throws Exception {
+        // Sotto i 72 byte: a fermarla e' la regola sulle emoji, non quella dei byte.
+        register(EMAIL, "password-🎸-lunga", "Mario")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.fields.password").value("non può contenere emoji"))
+                .andExpect(content().string(not(containsString("password-🎸-lunga"))));
+
+        assertThat(users.count()).isZero();
+        assertThat(events.stream(VerificationCodeEmailEvent.class)).isEmpty();
+    }
+
+    @Test
+    void register_withEmojiInTheName_returns400OnTheDisplayNameField() throws Exception {
+        register(EMAIL, PASSWORD, "Mario 🎸")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.fields.displayName").value("non può contenere emoji"));
+
+        assertThat(users.count()).isZero();
+    }
+
+    @Test
+    void register_withAnInvisibleCharacterInTheName_returns400OnTheDisplayNameField() throws Exception {
+        // Spazio a larghezza zero e inversione del testo: nomi uguali a vista ma diversi.
+        register(EMAIL, PASSWORD, "Mario​Rossi")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.displayName").value("non può contenere caratteri invisibili"));
+        register(EMAIL, PASSWORD, "Mario‮oiram")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.displayName").exists());
+
+        assertThat(users.count()).isZero();
+    }
+
+    @Test
+    void register_withANameOf30Characters_isAccepted_andOf31Characters_isRejected() throws Exception {
+        register(EMAIL, PASSWORD, "x".repeat(30)).andExpect(status().isCreated());
+        assertThat(users.findByEmail(EMAIL).orElseThrow().getDisplayName()).isEqualTo("x".repeat(30));
+
+        register("altro@example.com", PASSWORD, "x".repeat(31))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.displayName").exists());
+        assertThat(users.findByEmail("altro@example.com")).isEmpty();
+    }
+
+    @Test
+    void register_withAccentedNameAndPassword_isAccepted() throws Exception {
+        register(EMAIL, "pässwörd-sicüra", "Zoë Società Già-Là!").andExpect(status().isCreated());
+
+        assertThat(users.findByEmail(EMAIL).orElseThrow().getDisplayName()).isEqualTo("Zoë Società Già-Là!");
     }
 
     @Test

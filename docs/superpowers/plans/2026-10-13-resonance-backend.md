@@ -83,7 +83,7 @@ Resonance_app/
     └── src/main/java/it/epicode/resonance/
         ├── ResonanceApplication.java
         ├── config/      SecurityConfig, CorsConfig, WebSocketConfig, AsyncConfig, SchedulingConfig, ClockConfig, DatabaseUrl, OpenApiConfig, JsonLimitsConfig
-        ├── common/      AppException, ErrorCode, ErrorResponse, GlobalExceptionHandler, StompErrorHandler, WebSocketExceptionHandler, WsError, PageResponse, PageParams, RateLimit, RateLimitService, HttpUrl(+Validator), NotBlankIfPresent
+        ├── common/      AppException, ErrorCode, ErrorResponse, GlobalExceptionHandler, StompErrorHandler, WebSocketExceptionHandler, WsError, PageResponse, PageParams, RateLimit, RateLimitService, HttpUrl(+Validator), NotBlankIfPresent, NoEmoji(+Validator), NoInvisibleChars(+Validator)
         ├── auth/        AuthController, AuthService, AccessTokenService, RefreshTokenService, RefreshToken(+Repository), RefreshCookieFactory, RefreshOutcome, EmailCode(+Repository), EmailCodeService, EmailCodePurpose, JwtFilter, JwtChannelInterceptor, AuthenticatedUser, UserAccessService, UserAccess, SuperadminBootstrap, PasswordMax72Bytes(+Validator), dto/
         ├── user/        User, UserRole, UserRoleId, Role, UserStatus, UserRepository, UserRoleRepository, UserController, UserService, PlatformLevelPolicy, dto/
         ├── admin/       AdminUserController, SuperadminController, AdminUserService, UserSuspendedEvent, dto/
@@ -639,6 +639,39 @@ che altrimenti lo renderebbe pubblico.
 **Criterio:** `./mvnw -q verify` verde; Postman con i tre elenchi; fase F7 chiusa: promemoria merge `develop → main` e
 controlli su Render (log, `/api/health`, i tre `/mine` con l'environment `render`).
 **Commit proposto:** `feat(content): aggiunge gli elenchi dei contenuti dell'utente`
+
+### Card F7-05 · Regole su nome e password — stima 1,5 h
+
+**Riferimenti:** decisione 84 (nuova, nata dal frontend: decisione 83); §4.4, §6.4, §6.5.
+**File:** `common/NoEmoji`, `NoEmojiValidator`, `NoInvisibleChars`, `NoInvisibleCharsValidator` (nuovi);
+`auth/dto/RegisterRequest`, `ResetPasswordRequest`; `user/dto/UpdateProfileRequest`; test `NoEmojiValidatorTest`,
+`NoInvisibleCharsValidatorTest` (nuovi), `RegistrationIntegrationTest`, `PasswordResetIntegrationTest`,
+`ProfileIntegrationTest`; Postman Auth e Users; `docs/progettazione.md`, `docs/decisioni.md` (84), questo piano.
+Nessuna migrazione: la colonna `display_name` resta `varchar(50)`.
+
+Regole (decisione 84), valide solo alla scrittura: nome da 2 a 30 caratteri (era 50) in registrazione e modifica del
+profilo, senza emoji né caratteri invisibili; nuova password (registrazione e reset) senza emoji, sempre 8–72 caratteri e
+72 byte. Login e verifica non cambiano (confrontano password già esistenti); `SuperadminBootstrap` non cambia (dati
+dell'operatore); gli utenti già presenti non sono toccati. Emoji: grafiche, modificatori, bandiere (indicatori regionali),
+U+FE0F e U+200D; bloccati anche © ® ™. Invisibili: caratteri di controllo e di formato, separatori di riga e paragrafo;
+gli spazi normali restano. Messaggi: "non può contenere emoji", "non può contenere caratteri invisibili". Se un test
+esistente usa nomi oltre i 30 caratteri, ci si ferma e si avvisa.
+
+- [x] **1. Annotazioni e test unitari (35 min).** `@NoEmoji` e `@NoInvisibleChars` in `common/`, con il loro validatore
+  (null e vuoto validi: la presenza la controlla `@NotBlank`). Test: lettere accentate, cifre e punteggiatura valide;
+  emoji semplice, con modificatore, bandiera, sequenza con ZWJ, selettore U+FE0F, © ® ™ rifiutati; spazio a larghezza
+  zero, inversione del testo (U+202E) e a capo rifiutati, spazio normale valido.
+- [x] **2. DTO e test di integrazione (40 min).** `RegisterRequest`: nome 2–30 con entrambe le annotazioni, password con
+  `@NoEmoji`; `ResetPasswordRequest.newPassword` con `@NoEmoji`; `UpdateProfileRequest.displayName` 2–30 con entrambe.
+  Test: nome di 30 caratteri accettato e di 31 rifiutato (registrazione e profilo); nome con emoji o con carattere
+  invisibile → 400 `VALIDATION_ERROR` con campo `displayName`; password con emoji → 400 con campo `password`
+  (registrazione) e `newPassword` (reset); il login con una password con emoji resta 401 `INVALID_CREDENTIALS`, non 400.
+- [x] **3. Documentazione, Postman e chiusura (25 min).** §4.4 e §6.4 (validazioni), §6.5 (riga `displayName` della tabella
+  del `PATCH`), decisione 84, questo piano. Postman: "Register con emoji nel nome (400)" e "Modifica con displayName con
+  emoji (400)". `./mvnw -q verify`; collection in locale con lo script a segmenti.
+
+**Criterio:** `./mvnw -q verify` verde; Postman con le due richieste nuove; §4.4, §6.4, §6.5 e decisione 84 aggiornate.
+**Commit proposto:** `feat(validation): limita il nome a 30 caratteri e vieta le emoji nel nome e nella password`
 
 ---
 

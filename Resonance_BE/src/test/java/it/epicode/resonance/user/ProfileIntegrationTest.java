@@ -247,9 +247,40 @@ class ProfileIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.fields.displayName").exists());
         mockMvc.perform(patch("/api/users/me").header("Authorization", bearer(user))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"displayName\": \"" + "x".repeat(51) + "\"}"))
+                        .content("{\"displayName\": \"" + "x".repeat(31) + "\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fields.displayName").exists());
+    }
+
+    @Test
+    void patch_displayNameOf30Characters_isAccepted() throws Exception {
+        User user = profiledUser("trenta@example.com");
+
+        mockMvc.perform(patch("/api/users/me").header("Authorization", bearer(user))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"displayName\": \"" + "x".repeat(30) + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.displayName").value("x".repeat(30)));
+    }
+
+    @Test
+    void patch_displayNameWithEmojiOrInvisibleCharacter_returns400AndKeepsTheOldName() throws Exception {
+        // Decisione 84: la regola vale anche alla modifica del nome, non solo alla registrazione.
+        User user = profiledUser("emoji@example.com");
+
+        mockMvc.perform(patch("/api/users/me").header("Authorization", bearer(user))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"displayName\": \"Nuovo 🎸\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.fields.displayName").value("non può contenere emoji"));
+        mockMvc.perform(patch("/api/users/me").header("Authorization", bearer(user))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"displayName\": \"Nuovo\\u200BNome\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.displayName").value("non può contenere caratteri invisibili"));
+
+        assertThat(users.findById(user.getId()).orElseThrow().getDisplayName()).isEqualTo("Nome Iniziale");
     }
 
     @Test

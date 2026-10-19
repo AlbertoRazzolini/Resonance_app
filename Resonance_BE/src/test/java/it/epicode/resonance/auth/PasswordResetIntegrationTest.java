@@ -390,13 +390,30 @@ class PasswordResetIntegrationTest extends IntegrationTest {
         forgot(EMAIL).andExpect(status().isNoContent());
         String code = lastCodeEvent().code();
 
-        // 30 emoji: 30 caratteri (sotto il massimo di 72) ma 120 byte in UTF-8, coerente con la registrazione.
-        reset(EMAIL, code, "😀".repeat(30))
+        // 40 "è": 40 caratteri (sotto il massimo di 72) ma 80 byte in UTF-8, coerente con la registrazione.
+        reset(EMAIL, code, "è".repeat(40))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.fields.newPassword").exists());
 
         // La validazione precede il service: il codice non e' stato consumato.
+        reset(EMAIL, code, NEW_PASSWORD).andExpect(status().isNoContent());
+    }
+
+    @Test
+    void reset_withEmojiInTheNewPassword_returns400OnTheNewPasswordField() throws Exception {
+        verifiedUser(EMAIL);
+        forgot(EMAIL).andExpect(status().isNoContent());
+        String code = lastCodeEvent().code();
+
+        // Sotto i 72 byte: a fermarla e' la regola sulle emoji (decisione 84).
+        reset(EMAIL, code, "nuova-🎸-password")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.fields.newPassword").value("non può contenere emoji"))
+                .andExpect(content().string(not(containsString("nuova-🎸-password"))));
+
+        // La validazione precede il service: il codice non e' stato consumato e la password e' invariata.
         reset(EMAIL, code, NEW_PASSWORD).andExpect(status().isNoContent());
     }
 

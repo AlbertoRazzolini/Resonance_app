@@ -147,7 +147,42 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "auth", "register"]
             },
-            "description": "Errore significativo. 400 VALIDATION_ERROR con fields.email. Anche una password sopra i 72 byte (per esempio 30 emoji) da' 400 con fields.password."
+            "description": "Errore significativo. 400 VALIDATION_ERROR con fields.email. Anche una password sopra i 72 byte (per esempio 40 lettere accentate) da' 400 con fields.password."
+          },
+          "response": []
+        },
+        {
+          "name": "Register con emoji nel nome (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR con fields.displayName', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(body.fields.displayName).to.eql('non può contenere emoji');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\",\n  \"displayName\": \"Utente 🎸\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Errore significativo (decisione 84). Il nome ha da 2 a 30 caratteri, senza emoji ne' caratteri invisibili; la password senza emoji (anche newPassword del reset). Le regole valgono solo alla scrittura: login e verifica non le applicano."
           },
           "response": []
         },
@@ -829,6 +864,51 @@
               ]
             },
             "description": "Errore significativo. Il displayName e' obbligatorio: se presente non puo' essere vuoto."
+          },
+          "response": []
+        },
+        {
+          "name": "Modifica con displayName con emoji (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR con fields.displayName', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(body.fields.displayName).to.eql('non può contenere emoji');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Nuovo nome 🎸\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Errore significativo (decisione 84). Il displayName ha da 2 a 30 caratteri, senza emoji ne' caratteri invisibili; il nome precedente resta invariato."
           },
           "response": []
         },

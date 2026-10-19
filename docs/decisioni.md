@@ -2521,3 +2521,42 @@ Ogni punto è stato proposto allo studente con alternative, pro, contro e raccom
 - **Navigazione e footer dentro FE-03:** la card passerebbe a circa 11 h mescolando layout e autenticazione.
 - **Footer rimandato a FE-12:** lo spazio in fondo (paginazione) andrebbe rivisto dopo, in tutte le schermate.
 - **Avviso di sospensione rosso, messaggi del browser per i campi vuoti:** non coerenti con il prototipo e con il resto dei form.
+
+## Decisione 84: regole su nome e password (card F7-05, progettazione, sezioni 4.4, 6.4 e 6.5)
+
+Ogni punto è stato proposto allo studente con considerazioni e raccomandazione, e approvato il 19 ottobre. Nata dal frontend
+(decisione 83), che applica la stessa regola nel form.
+
+### Scelta
+
+- **Nome (`displayName`):** da 2 a 30 caratteri (era 50) in registrazione e in `PATCH /api/users/me`. La colonna
+  `display_name` resta `varchar(50)`: nessuna migrazione. La ricerca utenti (`q`, 2–50) non cambia.
+- **Password:** invariata, 8–72 caratteri e massimo 72 byte.
+- **Emoji:** vietate nel nome e nella nuova password (registrazione e reset). Due annotazioni in `common/`:
+  `@NoEmoji` (emoji grafiche, modificatori di colore, indicatori di bandiera, selettore U+FE0F, collante ZWJ U+200D; cifre, `#` e
+  `*` restano ammessi; bloccati anche © ® ™, che Unicode tratta come emoji) e `@NoInvisibleChars` (caratteri di controllo,
+  di formato e separatori di riga e paragrafo; gli spazi normali restano). Il nome le ha entrambe, la password solo la prima.
+- **Messaggi dei campi:** "non può contenere emoji" e "non può contenere caratteri invisibili".
+- **Solo alla scrittura:** non si applicano a login, verifica e `SuperadminBootstrap`, e gli utenti già presenti non sono toccati
+  (la regola non è retroattiva; il database non aveva dati veri).
+- **Test:** i test del limite dei 72 byte (registrazione e reset) usano 40 "è" (80 byte) invece di 30 emoji, perché le emoji
+  sarebbero fermate dalla regola nuova e il test non proverebbe più il limite dei byte. Il login con 30 emoji resta 401
+  `INVALID_CREDENTIALS` (test esistente).
+- **Chat:** le emoji restano ammesse nei messaggi (FE-09b); la regola non la riguarda.
+
+### Motivazione
+
+- Le emoji nel nome non sono naturali e rendono le liste meno ordinate; i caratteri invisibili e l'inversione del testo
+  permettono due nomi diversi che a vista sono uguali (travestimento di un altro utente), con lo stesso codice.
+- 30 caratteri bastano ai nomi di gruppo e di locale più lunghi dei mock-up (27 caratteri); 20 e 25 ne tagliavano.
+- 72 è il tetto tecnico di BCrypt, non una lunghezza richiesta: abbassarlo non dà sicurezza e impedirebbe le frasi lunghe.
+- Validare solo alla scrittura non blocca il login di chi ha già un account.
+
+### Alternative scartate
+
+- **Massimo 20 o 25 caratteri per il nome:** taglierebbe nomi di gruppo reali.
+- **Abbassare il massimo della password:** nessun guadagno di sicurezza, meno frasi lunghe.
+- **Elenco di caratteri ammessi per il nome:** rifiuterebbe nomi legittimi con punteggiatura (AC/DC, "!!!").
+- **Regola solo nel frontend:** una chiamata diretta all'API la aggirerebbe.
+- **Regola anche su login e verifica:** bloccherebbe account già esistenti.
+- **Ridurre la colonna a `varchar(30)`:** una migrazione con il rischio dei nomi già salvati, senza vantaggi.
