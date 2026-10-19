@@ -89,8 +89,8 @@ async function doRefresh(sessionApi: SessionApi): Promise<RefreshOutcome> {
   return 'failed'
 }
 
-/** Dettagli della sospensione da `ErrorResponse.details`; senza dettagli validi, motivo vuoto. */
-function suspensionOf(body: unknown): SuspensionDetails {
+/** Dettagli della sospensione da `ErrorResponse.details`; senza dettagli validi, motivo vuoto. Li usa anche la pagina di accesso. */
+export function suspensionOf(body: unknown): SuspensionDetails {
   const details = (body as Partial<ErrorResponse> | null)?.details ?? {}
   return {
     suspensionReason: typeof details.suspensionReason === 'string' ? details.suspensionReason : '',

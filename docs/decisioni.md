@@ -2447,3 +2447,77 @@ Ogni punto è stato proposto allo studente con alternative, pro, contro e raccom
 - **Indirizzi relativi nel codice con i test adattati:** il codice di produzione resta pulito, ma serve un trucco nel setup dei test.
 - **Pulizia della cache esplicita in ogni punto che chiude la sessione:** una dimenticanza lascerebbe i dati in memoria.
 - **Solo i test del piano:** timer del rinnovo, logout e transizioni della sessione resterebbero senza un test dedicato.
+
+## Decisione 83: accesso, registrazione, verifica e reset nel frontend (card FE-03, progettazione, sezioni 4.4–4.10)
+
+Ogni punto è stato proposto allo studente con alternative, pro, contro e raccomandazione, e approvato il 19 ottobre.
+
+### Scelta
+
+- **Riferimento visivo:** la schermata Stitch "Accesso e Stati Account" (progetto "Resonance v2", decisione 80). Aspetto: barra con freccia
+  indietro e logo RESO**NANCE** a due colori; schede scure impilate, larghe al massimo 448 px, con striscia gialla in alto; intestazione
+  "ACCEDI •" con "Non hai un account? Registrati qui" a destra; "Password dimenticata?" sulla riga della password; pulsante argento
+  "ENTRA" con il microtesto "…nella Zona"; verifica con sei caselle, errore con icona, "VERIFICA →" e "Invia di nuovo il codice (30 s)";
+  il codice è presentato con l'email mascherata ("m***@dominio.it"). I testi che il prototipo non ha (registrazione, reset, errori del
+  client) restano quelli approvati il 19 ottobre, nello stesso tono.
+- **Account sospeso:** scheda con bordo ambra, badge "RESTRIZIONE ATTIVA", titolo "Account sospeso", "Sospeso fino al" con la data in
+  ora locale (formato breve, es. 30 ott 2026) oppure "A tempo indeterminato", "Motivo: …" e "Per un ricorso scrivi a …" con il contatto.
+  Serve un colore ambra nei token (`--rs-color-warning`).
+- **Campi vuoti all'accesso:** messaggi nostri sotto il campo ("Scrivi la tua email.", "Scrivi la password.") con l'icona di errore del
+  prototipo; il server non viene chiamato. Niente attributo `required` del browser.
+- **Registrazione con i soli tre campi del backend** (nome visibile, email, password): niente "Ripeti password" e niente casella dei
+  termini. Password con l'occhio per mostrarla e il contatore "N / 72 byte".
+- **Email in `/verifica`:** arriva dalla navigazione (stato del router) già scritta; il campo è modificabile e dopo un
+  ricaricamento resta vuoto. Nessun dato salvato nel browser, nessuna email nell'indirizzo.
+- **Contatto per i ricorsi** (sezione 1.4): segnaposto `ricorsi@resonance.example` in `src/config.ts`. Va sostituito con un indirizzo
+  vero prima di una consegna reale.
+- **Navigazione come nel prototipo:** su telefono barra in alto (logo, campanella, cerchio giallo del profilo) e barra di tab in basso
+  (Eventi, Collab, Feed, Messaggi, Profilo); su desktop colonna di navigazione a sinistra e in alto campanella e profilo. Niente
+  hamburger. Si realizza in una **card nuova, dopo FE-03 e in fase A, "Navigazione e footer"** (circa 6 h in più, senza tagli per ora).
+  In FE-03 resta la barra in alto di FE-01, con `UserMenu`: cerchio giallo con l'iniziale del nome (la foto arriva con FE-04) e menu
+  con "Esci"; l'anonimo vede Accedi e Registrati. Le pagine di accesso non hanno la barra di tab.
+- **Footer** (card "Navigazione e footer"): informativa privacy come pagina vera e cliccabile; copyright e termini di servizio come
+  link vuoti segnaposto. Compare a fondo pagina come pop-up dal basso, su telefono e su desktop. Sul telefono si aggiunge alla barra di
+  tab: sale tutto, il footer sta sotto e le tab restano visibili sopra. Non deve coprire né le tab, né la paginazione, né altre funzioni:
+  il contenuto riserva in fondo uno spazio pari a tab e footer insieme.
+- **Dopo il reset della password:** si va a `/accesso` con un avviso verde ("Password cambiata. Accedi con la nuova password."),
+  presente solo in quell'arrivo.
+- **Attesa del reinvio del codice (60 s):** conto alla rovescia che riparte da zero a ogni ricaricamento; se si clicca troppo presto il
+  server risponde `TOO_MANY_REQUESTS` e si mostra l'attesa. Nulla nel browser.
+- **Utente già loggato** su `/accesso`, `/registrazione`, `/verifica` e reset: reindirizzato alla home (o alla pagina richiesta, se
+  la sessione parte proprio da quella pagina).
+- **Freccia indietro delle pagine di accesso:** porta a una destinazione fissa, non alla cronologia: alla home da `/accesso`,
+  `/registrazione` e `/password-dimenticata`; a `/registrazione` da `/verifica` e a `/password-dimenticata` da `/password/reset`
+  (per correggere un'email sbagliata). La destinazione la dichiara la rotta in `handle.backTo`, letta da `AuthLayout`.
+- **Registrazione, dettagli approvati:** segnaposto "Come ti vedranno gli altri" nel nome e "tuonome@dominio.it" nell'email, nessuno
+  nella password (solo il contatore "N / 72 byte"). Il nome ha da 2 a 30 caratteri (il backend lo porta da 50 a 30 con F7-05).
+  `EMAIL_ALREADY_REGISTERED` dice "Esiste già un account con questa email." (senza "Prova ad accedere") e sotto compare il
+  collegamento "Vai all'accesso". Con `VALIDATION_ERROR` i messaggi del server vanno sotto i campi corrispondenti (nome, email,
+  password); un campo sconosciuto lascia solo l'avviso generico in alto.
+- **Emoji:** nel form il nome e la nuova password (registrazione e reset) non ammettono emoji: si possono scrivere o incollare, ma
+  sotto il campo compare "Le emoji non sono ammesse nel nome." (o "…nella password.") e il pulsante non invia. Il backend applicherà
+  la stessa regola con la card F7-05 (decisione 84): nome senza emoji né caratteri invisibili, password senza emoji, solo alla
+  scrittura (non nel login e nella verifica). Le emoji restano ammesse nei messaggi della chat (FE-09b).
+- **Form:** gli errori dei campi compaiono all'invio e poi si aggiornano mentre si scrive; il pulsante si disattiva solo durante
+  l'invio.
+- **Colori:** solo variabili `--rs-*` e Bootstrap, nessun colore scritto nei componenti, per poterli cambiare a fine frontend da
+  `tokens.css`.
+- **Due colonne su desktop** per le pagine di accesso: rimandate a FE-12 come rifinitura finale.
+
+### Motivazione
+
+- Il piano chiede "validazioni come il backend": aggiungere campi o requisiti (termini senza una pagina dei termini) sarebbe
+  inventare funzioni.
+- Il prototipo di accesso è già approvato dallo studente (decisione 80): seguirlo evita di rifare le pagine.
+- Salvare l'email nel browser o nell'indirizzo espone un dato personale per un vantaggio piccolo.
+- La navigazione a tab e il footer si progettano insieme, perché sul telefono occupano lo stesso spazio in basso.
+
+### Alternative scartate
+
+- **Ripeti password e casella dei termini (come NoseY):** un campo in più sul telefono e un link a una pagina che non esiste.
+- **Email in `sessionStorage` o in `?email=`:** dato personale nel browser, nella cronologia e nei log.
+- **Attesa del reinvio salvata nel browser:** più precisa, ma salva l'ora dell'ultimo invio legata all'email.
+- **Hamburger con le azioni dell'account (prima versione di questa decisione):** sostituito dalla navigazione del prototipo.
+- **Navigazione e footer dentro FE-03:** la card passerebbe a circa 11 h mescolando layout e autenticazione.
+- **Footer rimandato a FE-12:** lo spazio in fondo (paginazione) andrebbe rivisto dopo, in tutte le schermate.
+- **Avviso di sospensione rosso, messaggi del browser per i campi vuoti:** non coerenti con il prototipo e con il resto dei form.

@@ -19,6 +19,12 @@ export type MeResponse = {
   createdAt: string
 }
 
+/** Corpo di `POST /api/auth/login`. */
+export type LoginRequest = {
+  email: string
+  password: string
+}
+
 /** Risposta di verify, login e refresh: il refresh token non è nel body, viaggia nel cookie. */
 export type LoginResponse = {
   accessToken: string

@@ -32,6 +32,9 @@
   --rs-color-danger-rgb: 255, 107, 107;
   --rs-color-success: #3ddc97;
   --rs-color-success-rgb: 61, 220, 151;
+  /* Ambra: restrizioni dell'account (avviso di sospensione), per distinguerle dagli errori rossi */
+  --rs-color-warning: #f59e0b;
+  --rs-color-warning-rgb: 245, 158, 11;
 
   /* Tipografia: Barlow Condensed dal pacchetto npm, mai da CDN (decisione 76) */
   --rs-font-sans: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;

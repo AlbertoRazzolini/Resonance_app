@@ -3,4 +3,8 @@
 export const ROUTES = {
   home: '/',
   login: '/accesso',
+  register: '/registrazione',
+  verify: '/verifica',
+  forgotPassword: '/password-dimenticata',
+  resetPassword: '/password/reset',
 } as const
