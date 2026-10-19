@@ -41,7 +41,7 @@ export function NoticeBar() {
     >
       <span>{NOTICE_TEXT[notice]}</span>
       {notice === 'serverUnreachable' && (
-        <Button size="sm" variant="outline-dark" disabled={retrying} onClick={() => void retry()}>
+        <Button size="sm" variant="outline-light" disabled={retrying} onClick={() => void retry()}>
           Riprova
         </Button>
       )}
