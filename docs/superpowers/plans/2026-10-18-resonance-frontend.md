@@ -639,6 +639,9 @@ sospensione dall'area admin che chiude la sessione WebSocket dell'altro, hide e 
   nessun cambiamento di comportamento, test invariati e verdi.
 - [ ] **2. ReactBits (60 min; taglio n. 1).** Due o tre componenti TypeScript + CSS, senza WebGL, scelti con
   lo studente; `prefers-reduced-motion` rispettato; controllo sotto CSP in anteprima e del peso del bundle.
+  **Candidato fuori dal perimetro "senza WebGL":** MagicRings (sfondo animato in WebGL2, solo desktop). Il codice è
+  salvato in locale in `docs/magic-rings.md` (non versionato), con le note per adattarlo. Si decide in FE-12 con la
+  prova di peso, CSP e consumo, scelta per scelta con lo studente; se si sceglie, la decisione 78 si aggiorna allora.
 
 **Commit proposto:** `style(fe-ui): rifinisce l'interfaccia e aggiunge componenti animati`
 
