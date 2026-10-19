@@ -1,0 +1,149 @@
+/*
+ * Collega i token --rs-* alle variabili --bs-* di Bootstrap (decisione 80). Va caricato dopo il CSS di
+ * Bootstrap; il selettore :root[data-bs-theme] ha specificità maggiore delle regole del tema scuro.
+ */
+:root[data-bs-theme='dark'] {
+  --bs-body-font-family: var(--rs-font-sans);
+  --bs-body-font-size: var(--rs-text-base);
+  --bs-body-font-weight: var(--rs-weight-regular);
+  --bs-body-line-height: var(--rs-leading-body);
+  --bs-body-color: var(--rs-color-text);
+  --bs-body-bg: var(--rs-color-bg);
+  --bs-body-bg-rgb: 10, 10, 10;
+  --bs-emphasis-color: #ffffff;
+  --bs-secondary-color: var(--rs-color-text-muted);
+  --bs-tertiary-bg: var(--rs-color-surface);
+  --bs-secondary-bg: var(--rs-color-surface);
+  --bs-heading-color: #ffffff;
+
+  --bs-border-color: var(--rs-color-border);
+  --bs-border-radius: var(--rs-radius-md);
+  --bs-border-radius-sm: var(--rs-radius-sm);
+  --bs-border-radius-lg: var(--rs-radius-lg);
+  --bs-border-radius-pill: var(--rs-radius-pill);
+
+  --bs-primary: var(--rs-color-accent);
+  --bs-primary-rgb: var(--rs-color-accent-rgb);
+  --bs-link-color: #ffffff;
+  --bs-link-color-rgb: 255, 255, 255;
+  --bs-link-hover-color: var(--rs-color-accent);
+  --bs-link-hover-color-rgb: var(--rs-color-accent-rgb);
+  --bs-danger: var(--rs-color-danger);
+  --bs-danger-rgb: var(--rs-color-danger-rgb);
+  --bs-success: var(--rs-color-success);
+  --bs-success-rgb: var(--rs-color-success-rgb);
+  --bs-focus-ring-color: rgba(var(--rs-color-accent-rgb), 0.5);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: var(--rs-weight-heading);
+  line-height: var(--rs-leading-heading);
+  letter-spacing: var(--rs-tracking-heading);
+  text-wrap: balance;
+}
+
+a {
+  text-underline-offset: 0.2em;
+}
+
+/* Pulsante primario: grigio chiaro con testo scuro; l'accento giallo resta per gli stati attivi */
+.btn-primary {
+  --bs-btn-color: var(--rs-color-button-ink);
+  --bs-btn-bg: var(--rs-color-button);
+  --bs-btn-border-color: var(--rs-color-button);
+  --bs-btn-hover-color: var(--rs-color-button-ink);
+  --bs-btn-hover-bg: var(--rs-color-button-hover);
+  --bs-btn-hover-border-color: var(--rs-color-button-hover);
+  --bs-btn-active-color: var(--rs-color-button-ink);
+  --bs-btn-active-bg: var(--rs-color-accent);
+  --bs-btn-active-border-color: var(--rs-color-accent);
+  --bs-btn-disabled-color: var(--rs-color-button-ink);
+  --bs-btn-disabled-bg: var(--rs-color-button);
+  --bs-btn-disabled-border-color: var(--rs-color-button);
+  --bs-btn-focus-shadow-rgb: var(--rs-color-accent-rgb);
+  --bs-btn-font-weight: var(--rs-weight-heading);
+  letter-spacing: var(--rs-tracking-label);
+  text-transform: uppercase;
+}
+
+.btn-outline-light {
+  --bs-btn-border-color: var(--rs-color-border-strong);
+  --bs-btn-hover-bg: var(--rs-color-surface);
+  --bs-btn-hover-border-color: var(--rs-color-text);
+  --bs-btn-hover-color: var(--rs-color-text);
+}
+
+/* Campi: fondo scuro e solo la linea inferiore, gialla al focus */
+.form-control,
+.form-select {
+  background-color: var(--rs-color-field);
+  border: 0;
+  border-bottom: 1px solid var(--rs-color-border-strong);
+  border-radius: var(--rs-radius-sm) var(--rs-radius-sm) 0 0;
+  transition: border-color var(--rs-duration-fast) var(--rs-ease-out);
+}
+
+.form-control:focus,
+.form-select:focus {
+  background-color: var(--rs-color-field);
+  border-bottom-color: var(--rs-color-accent);
+  box-shadow: none;
+}
+
+.form-control::placeholder {
+  color: var(--rs-color-text-muted);
+}
+
+.form-label {
+  font-size: var(--rs-text-sm);
+  font-weight: var(--rs-weight-strong);
+  letter-spacing: var(--rs-tracking-label);
+  text-transform: uppercase;
+  color: var(--rs-color-text-muted);
+}
+
+/* Asterisco giallo dei campi obbligatori: <Form.Label className="rs-required"> */
+.rs-required::after {
+  content: ' *';
+  color: var(--rs-color-accent);
+}
+
+.form-check-input:checked {
+  background-color: var(--rs-color-accent);
+  border-color: var(--rs-color-accent);
+}
+
+.card {
+  --bs-card-bg: var(--rs-color-surface);
+  --bs-card-border-color: var(--rs-color-border);
+  --bs-card-cap-bg: var(--rs-color-surface);
+  box-shadow: var(--rs-shadow-card);
+}
+
+.navbar {
+  --bs-navbar-color: var(--rs-color-text-muted);
+  --bs-navbar-hover-color: #ffffff;
+  --bs-navbar-active-color: var(--rs-color-accent);
+  --bs-navbar-brand-color: #ffffff;
+  --bs-navbar-brand-hover-color: #ffffff;
+  --bs-navbar-brand-font-size: var(--rs-text-xl);
+  --bs-navbar-toggler-border-color: var(--rs-color-border-strong);
+  border-bottom: 1px solid var(--rs-color-border);
+}
+
+.navbar-brand {
+  font-weight: var(--rs-weight-heading);
+  letter-spacing: var(--rs-tracking-heading);
+  text-transform: uppercase;
+}
+
+.badge {
+  font-weight: var(--rs-weight-heading);
+  letter-spacing: var(--rs-tracking-label);
+  text-transform: uppercase;
+}

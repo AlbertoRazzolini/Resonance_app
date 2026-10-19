@@ -1,0 +1,96 @@
+/* Stili globali: font, base della pagina, parti del browser e bagliore da palco (decisione 80). */
+@import '@fontsource/barlow-condensed/latin-400.css';
+@import '@fontsource/barlow-condensed/latin-500.css';
+@import '@fontsource/barlow-condensed/latin-600.css';
+@import '@fontsource/barlow-condensed/latin-700.css';
+@import './tokens.css';
+@import './bootstrap-overrides.css';
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  min-height: 100vh;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Parti del browser che non ha disegnato nessuno: selezione, cursore, barre di scorrimento, focus */
+::selection {
+  background: var(--rs-color-accent);
+  color: var(--rs-color-accent-ink);
+}
+
+input,
+textarea {
+  caret-color: var(--rs-color-accent);
+}
+
+* {
+  scrollbar-color: var(--rs-color-border-strong) var(--rs-color-bg);
+  scrollbar-width: thin;
+}
+
+:focus-visible {
+  outline: 2px solid var(--rs-color-accent);
+  outline-offset: 2px;
+}
+
+/*
+ * Bagliore da palco, per fascia di schermo (decisione 80):
+ * - telefono (sotto md): su tutta la pagina, barra in alto compresa;
+ * - tablet (da md a sotto xl): solo sul corpo della pagina, non su barra e navigazione;
+ * - desktop (da xl): solo sulla barra di navigazione.
+ * Le soglie sono quelle di Bootstrap (md 768 px, xl 1200 px).
+ */
+.rs-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.rs-main {
+  flex: 1;
+}
+
+.rs-nav {
+  background-color: transparent;
+}
+
+@media (max-width: 767.98px) {
+  .rs-app {
+    background-image: var(--rs-spotlight-layers);
+    background-size: var(--rs-spotlight-sizes);
+    background-attachment: fixed;
+  }
+}
+
+@media (min-width: 768px) {
+  .rs-nav {
+    background-color: var(--rs-color-nav);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199.98px) {
+  .rs-main {
+    background-image: var(--rs-spotlight-layers);
+    background-size: var(--rs-spotlight-sizes);
+  }
+}
+
+@media (min-width: 1200px) {
+  .rs-nav {
+    background-image: var(--rs-spotlight-layers);
+    background-size: var(--rs-spotlight-sizes);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

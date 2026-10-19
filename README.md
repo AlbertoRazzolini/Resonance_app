@@ -9,7 +9,7 @@ Il repository contiene:
 | Cartella | Contenuto |
 |---|---|
 | `Resonance_BE/` | Backend Spring Boot (questo documento ne descrive l'avvio). |
-| `Resonance_FE/` | Frontend React: non ancora presente, si sviluppa dal 18 ottobre, dopo la card F7-03. |
+| `Resonance_FE/` | Frontend React + TypeScript (Vite), in sviluppo (vedi "Frontend"). |
 | `docs/` | Brief, progettazione, registro delle decisioni, schema del database, mappa del riuso. |
 
 ## Backend
@@ -29,12 +29,14 @@ Stack: Java 25, Spring Boot 4.1.1, PostgreSQL con Flyway. Il design di riferimen
 > Stato: il backend è completo (fasi F0-F6). Sono implementati autenticazione a due token, ruoli e
 > admin, eventi con geolocalizzazione, annunci collab, feed con like, amicizie e ricerca utenti, chat e
 > notifiche live, moderazione, documentazione OpenAPI e il fallback che serve il frontend dallo stesso
-> servizio. Il frontend (`Resonance_FE/`) si sviluppa dal 18 ottobre, dopo la card F7-03.
+> servizio. Il frontend (`Resonance_FE/`) è in sviluppo: per ora ha solo la struttura di base (barra di
+navigazione, router, build integrata nell'immagine Docker).
 
 ## Prerequisiti
 
 - JDK 25
 - Docker (PostgreSQL in locale)
+- Node 24 LTS (solo per il frontend)
 
 ## Avvio in locale
 
@@ -77,7 +79,28 @@ esegui `docker compose up -d` dalla radice del repository. Usano il database `re
 che viene svuotato prima di ogni test.
 
 **Immagine Docker** (quella che userà Render), dalla **radice** del repository, non da `Resonance_BE`:
-`docker build -f Resonance_BE/Dockerfile -t resonance .`
+`docker build -f Resonance_BE/Dockerfile -t resonance .` L'immagine compila anche il frontend (stage Node) e
+ne copia `dist/` in `static/`: backend e frontend escono da un solo servizio.
+
+## Frontend
+
+Cartella `Resonance_FE/`: React 19, TypeScript `strict`, Vite, Redux Toolkit, React Router e Bootstrap
+(react-bootstrap). Richiede **Node 24** e npm. Comandi, da `Resonance_FE/`:
+
+1. `npm ci` installa le dipendenze (dal lock).
+2. `npm run dev` avvia il server di sviluppo su `http://localhost:5173`. **Serve il backend in dev sulla
+   8080** (vedi "Avvio in locale", con il database acceso): Vite inoltra `/api` e `/ws` alla 8080, così il
+   browser vede una sola origine e il cookie di refresh funziona anche in locale.
+3. `npm run lint` (ESLint), `npm run format` (Prettier) e `npm test` (Vitest con Testing Library e MSW).
+4. `npm run build` compila in `dist/`; `npm run preview` lo serve su `http://localhost:4173` con lo stesso
+   proxy e con l'header `Content-Security-Policy` della decisione 76. L'anteprima serve a trovare le
+   violazioni (script inline, da CDN o `eval`, vietati) prima del deploy.
+
+I percorsi dell'app, tutti in italiano, sono definiti in un solo file, `src/app/routes.ts`.
+
+Gli stili stanno in `src/styles/`: i colori, i caratteri (Barlow Condensed dal pacchetto npm, nessun font da
+CDN) e le spaziature sono custom properties `--rs-*` in `tokens.css`, collegate a Bootstrap da
+`bootstrap-overrides.css` (decisione 80). Il tema è scuro.
 
 ## Variabili d'ambiente
 
@@ -125,8 +148,9 @@ servizio web `resonance` (Docker, piano gratuito, Frankfurt); il deploy parte da
 Il servizio serve API e frontend dalla stessa origine. I file statici stanno in `classpath:/static/`
 (`SpaResourceConfig`): una rotta del frontend senza estensione (es. `/eventi/123`) risponde con
 `index.html`, i file in `/assets/` hanno la cache lunga (un anno), `index.html` no. Un percorso `/api/...`
-inesistente risponde sempre 404 in JSON, mai con `index.html`. Finché il frontend non c'è (stage Node del
-Dockerfile, card FE-01), la cartella è vuota e anche queste rotte rispondono 404 JSON.
+inesistente risponde sempre 404 in JSON, mai con `index.html`. Il frontend lo compila lo stage Node del
+Dockerfile e finisce in quella cartella; senza `dist/` (per esempio nei test di Maven) le rotte del frontend
+rispondono 404 JSON.
 
 Documentazione OpenAPI: `/swagger-ui.html` (interfaccia) e `/v3/api-docs` (JSON), pubbliche in sola lettura.
 

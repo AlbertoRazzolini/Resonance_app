@@ -1,9 +1,9 @@
 # Blueprint Render: database + un solo servizio web (progettazione, sezioni 1.1 e 12.5).
 # Su Render: New > Blueprint > repository > Apply. Il passo guidato e' la card F2-03.
 #
-# Un solo servizio: il backend Spring Boot serve le API e, dal 20 ottobre, anche il frontend React
-# (stessa origine: cookie di refresh di prima parte e nessun CORS in produzione). Per ora
-# l'immagine contiene solo il backend. Nessun dominio personalizzato: l'indirizzo e'
+# Un solo servizio: il backend Spring Boot serve le API e anche il frontend React, costruito dallo
+# stage Node del Dockerfile (stessa origine: cookie di refresh di prima parte e nessun CORS in
+# produzione). Nessun dominio personalizzato: l'indirizzo e'
 # https://<nome-servizio>.onrender.com, assegnato da Render alla creazione.
 
 databases:

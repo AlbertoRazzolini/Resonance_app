@@ -1,14 +1,25 @@
 # Render non ha un runtime Java 25 pronto: si costruisce l'immagine, cosi' la versione del JDK la
 # decidiamo noi ed e' la stessa che gira sul portatile (progettazione, sezione 12.5).
 #
-# IMPORTANTE: il contesto di build e' la RADICE del repository, non Resonance_BE, perche' in
-# futuro l'immagine dovra' leggere anche Resonance_FE. Da qui:
+# IMPORTANTE: il contesto di build e' la RADICE del repository, non Resonance_BE, perche'
+# l'immagine legge anche Resonance_FE. Da qui:
 #   docker build -f Resonance_BE/Dockerfile -t resonance .
 #
-# Lo stage Node che costruisce il frontend (e copia dist/ in src/main/resources/static/)
-# arrivera' con la card FE-01: fino al 20 ottobre Resonance_FE non esiste.
+# Un solo servizio per API e frontend (decisione 1): lo stage Node costruisce il frontend e lo
+# stage JDK ne copia dist/ in src/main/resources/static/, da dove Spring lo serve (decisione 74).
 
-# --- Fase 1: compilazione -----------------------------------------------------
+# --- Fase 1: frontend ---------------------------------------------------------
+# Node 24 LTS, la stessa versione dello sviluppo. Prima solo i file del lock: finche' le
+# dipendenze non cambiano, Render riusa lo strato di npm ci dalla cache.
+FROM node:24-alpine AS frontend
+WORKDIR /fe
+COPY Resonance_FE/package.json Resonance_FE/package-lock.json ./
+RUN npm ci
+
+COPY Resonance_FE/ ./
+RUN npm run build
+
+# --- Fase 2: compilazione -----------------------------------------------------
 FROM eclipse-temurin:25-jdk AS build
 WORKDIR /app
 
@@ -19,9 +30,11 @@ COPY Resonance_BE/mvnw Resonance_BE/pom.xml ./
 RUN chmod +x mvnw && ./mvnw -B -ntp dependency:go-offline
 
 COPY Resonance_BE/src/ src/
+# Il frontend compilato va in static/ prima del package: finisce dentro il jar (progettazione, sezione 12.5).
+COPY --from=frontend /fe/dist/ src/main/resources/static/
 RUN ./mvnw -B -ntp -DskipTests package
 
-# --- Fase 2: esecuzione -------------------------------------------------------
+# --- Fase 3: esecuzione -------------------------------------------------------
 # Solo il JRE e il jar: l'immagine finale non si porta dietro Maven ne' i sorgenti.
 FROM eclipse-temurin:25-jre
 WORKDIR /app

@@ -2303,3 +2303,74 @@ Scelte dello studente, una per una, durante il brainstorming del piano
 - **URL non cliccabili, eventualmente con aspetto da link:** sicuri, ma meno utili; con l'aspetto da link sembrano un
   difetto.
 - **`href="javascript:void(0)"`:** bloccato dalla CSP e da React, ed è proprio il tipo di link che si vuole evitare.
+
+## Decisione 80: tema scuro, token di design e bagliore da palco (card FE-01)
+
+### Scelta
+
+- **Tema scuro unico** (`data-bs-theme="dark"` su `<html>`), con tono da palco: fondo `#0a0a0a`, pannelli `#121212`, accento
+  giallo `#ffd60a`, pulsante primario grigio chiaro con testo scuro, campi con la sola linea inferiore (gialla al focus),
+  raggi piccoli (2, 4 e 8 px). Il riferimento è il mock-up di accesso approvato dallo studente il 19 ottobre.
+- **Font Barlow Condensed** dal pacchetto npm `@fontsource/barlow-condensed` (pesi 400, 500, 600, 700, solo latino),
+  incluso nel bundle: nessun font da CDN (decisione 76).
+- **Token in tre file** (`src/styles/`): `tokens.css` con le custom properties `--rs-*` (colori, tipografia,
+  spaziature, raggi, ombre, movimento), `bootstrap-overrides.css` che le collega alle variabili `--bs-*` e ritocca
+  pulsanti, campi, card, barra e badge, `index.css` con font, base della pagina, selezione, cursore, barre di
+  scorrimento, focus e movimento ridotto. Nessun Sass.
+- **Bagliore da palco** (faro giallo dall'angolo in alto a destra più una griglia da 24 px quasi invisibile), applicato
+  per fascia di schermo con le classi `rs-app`, `rs-main` e `rs-nav` di `AppShell` e `NavBar`: telefono (sotto 768 px)
+  su tutta la pagina, barra compresa; tablet (768–1199 px) solo sul corpo della pagina; desktop (da 1200 px) solo sulla
+  barra di navigazione.
+- **Le schermate di Stitch** (progetto "Resonance v2", id `697298539032039664`) sono solo un riferimento visivo di stile
+  e di struttura. Le funzioni che mostrano e che il backend non ha (partecipazione agli eventi, prezzi, rating, gear,
+  link a Spotify, canali di gruppo, esportazione CSV) non si implementano; il contenuto delle schermate lo decide il
+  piano.
+- **Test dei token** (`tokens.test.ts`): ogni variabile `--rs-*` usata dai fogli di stile deve essere definita in
+  `tokens.css`.
+
+### Motivazione
+
+- Il tema scuro e il bagliore sono la scelta visiva dello studente; farli passare da variabili permette di cambiarli in
+  un punto solo e di decidere dove si applicano senza toccare i componenti.
+- Una variabile CSS mancante non dà errori (il valore sparisce in silenzio): il test la intercetta.
+- I contrasti dei testi sulle superfici scure restano sopra 4,5:1; i testi più piccoli del mock-up (8–9 px) salgono a
+  12 px.
+- Sulla barra di navigazione la soglia di 1200 px segue il breakpoint `xl` di Bootstrap, quella di 768 px `md`.
+
+### Alternative scartate
+
+- **Bagliore su tutta la pagina a ogni larghezza:** sul desktop affaticherebbe le schermate dense (liste, mappa).
+- **Font di sistema o da CDN:** il primo non ha il carattere del mock-up, il secondo è vietato dalla CSP.
+- **Tema chiaro e scuro commutabili:** il doppio dei valori da curare e da provare, senza una richiesta dello studente.
+- **Sass o Tailwind per i token:** vietati dalla decisione 79 e dal piano (custom properties e Bootstrap).
+- **Rigenerare con Stitch tutte le schermate mancanti (feed, admin, Host, registrazione, password):** molte ore perse per
+  timeout e copie; bastano il piano e lo stile già definito.
+
+## Decisione 81: progetto creato dallo studente con create-vite e TypeScript fissato a 6.0.3 (card FE-01)
+
+### Scelta
+
+- **Creazione a mano:** `Resonance_FE/` lo crea lo studente con `npm create vite@latest` (React + TypeScript) e con npm, guidato
+  passo passo; Claude non scrive lo scheletro. Poi si fondono nei file del template le configurazioni del piano: `strict`
+  esplicito, alias `@/`, proxy `/api` e `/ws`, CSP in `vite preview`, Vitest con jsdom e MSW, divieto di
+  `dangerouslySetInnerHTML`. Il codice di esempio del template (`App.tsx`, `App.css`, `index.css`, `assets/`, `public/`)
+  è stato tolto.
+- **Versioni (19 ottobre):** `create-vite` 9.3.0 è il generatore; la libreria `vite` è la 8.3.4, l'ultima pubblicata (la 9.3.0 che si vede con `npm create vite` è il generatore, non la libreria), React 19.3.1.
+- **TypeScript `~6.0.3`**, non la 7.0.2 messa dal template: `typescript-eslint` 8.71.2 (l'ultima) accetta solo
+  `>=4.8.4 <6.1.0` e `npm install` falliva con ERESOLVE. Da rivedere quando `typescript-eslint` supporterà la 7.
+- **Stitch tramite MCP** (server HTTP `stitch` nel profilo dell'utente, fuori dal repository), scelta dello studente al posto
+  dell'uso a mano con screenshot previsto dalla decisione 78; la chiave API non sta in nessun file del progetto.
+
+### Motivazione
+
+- Lo studente vuole sapere come nasce il progetto: creato da lui, ogni scelta è tracciabile.
+- Con il template i file di base sono quelli ufficiali e restano aggiornabili; le aggiunte del piano sono poche e si vedono.
+- Aggirare il conflitto con `--legacy-peer-deps` avrebbe nascosto un'incompatibilità vera; la 6.0.3 è già quella di NoseY.
+- Con l'MCP lo stile delle schermate si legge dai progetti Stitch, senza esportare immagini a mano.
+
+### Alternative scartate
+
+- **Scheletro scritto da Claude:** più veloce, ma lo studente non sa come è fatto (era la prima versione di FE-01).
+- **`--legacy-peer-deps` o `--force`:** installa, ma ignora un conflitto reale fra TypeScript e il lint.
+- **TypeScript 7.0.2 senza `typescript-eslint`:** si perderebbe il lint dei tipi e il divieto in ESLint resterebbe solo sulla sintassi.
+- **Stitch solo a mano, con screenshot:** nessuna configurazione, ma il contesto della schermata si perde.

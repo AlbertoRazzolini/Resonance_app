@@ -1,0 +1,92 @@
+/*
+ * Token di design di Resonance: tema scuro da palco (decisione 80). Le custom properties --rs-* sono
+ * l'unica fonte dei valori; bootstrap-overrides.css le collega alle variabili --bs-* di Bootstrap.
+ * Contrasti verificati sulle superfici scure: testo 4,5:1 o più, testo secondario almeno 5,3:1.
+ */
+:root {
+  /* Superfici, dal fondo pagina al campo di input */
+  --rs-color-bg: #0a0a0a;
+  --rs-color-nav: #080808;
+  --rs-color-surface: #121212;
+  --rs-color-field: #161616;
+  --rs-color-border: #222222;
+  --rs-color-border-strong: #3a3a3a;
+
+  /* Testo */
+  --rs-color-text: #f5f5f5;
+  --rs-color-text-muted: #8c8c8c;
+
+  /* Accento giallo: stati attivi, distanze, asterischi dei campi obbligatori, focus */
+  --rs-color-accent: #ffd60a;
+  --rs-color-accent-hover: #ffe24d;
+  --rs-color-accent-ink: #0a0a0a;
+  --rs-color-accent-rgb: 255, 214, 10;
+
+  /* Pulsante primario grigio chiaro con testo scuro (come nel mock-up di accesso) */
+  --rs-color-button: #d9d9d9;
+  --rs-color-button-hover: #ffffff;
+  --rs-color-button-ink: #0a0a0a;
+
+  /* Esiti */
+  --rs-color-danger: #ff6b6b;
+  --rs-color-danger-rgb: 255, 107, 107;
+  --rs-color-success: #3ddc97;
+  --rs-color-success-rgb: 61, 220, 151;
+
+  /* Tipografia: Barlow Condensed dal pacchetto npm, mai da CDN (decisione 76) */
+  --rs-font-sans: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --rs-text-xs: 0.75rem;
+  --rs-text-sm: 0.875rem;
+  --rs-text-base: 1.0625rem;
+  --rs-text-lg: 1.25rem;
+  --rs-text-xl: 1.5rem;
+  --rs-text-2xl: 2rem;
+  --rs-text-3xl: 2.75rem;
+  --rs-weight-regular: 500;
+  --rs-weight-strong: 600;
+  --rs-weight-heading: 700;
+  --rs-leading-body: 1.45;
+  --rs-leading-heading: 1.1;
+  --rs-tracking-heading: 0.01em;
+  --rs-tracking-label: 0.06em;
+
+  /* Spaziature su base 4 px */
+  --rs-space-1: 0.25rem;
+  --rs-space-2: 0.5rem;
+  --rs-space-3: 0.75rem;
+  --rs-space-4: 1rem;
+  --rs-space-5: 1.5rem;
+  --rs-space-6: 2rem;
+  --rs-space-7: 3rem;
+  --rs-space-8: 4rem;
+
+  /* Raggi piccoli: il tema è sobrio, non arrotondato */
+  --rs-radius-sm: 2px;
+  --rs-radius-md: 4px;
+  --rs-radius-lg: 8px;
+  --rs-radius-pill: 999px;
+
+  /* Ombre con scostamento e sfumatura, senza aloni colorati */
+  --rs-shadow-card: 0 2px 6px rgba(0, 0, 0, 0.5);
+  --rs-shadow-raised: 0 10px 24px -6px rgba(0, 0, 0, 0.7);
+
+  /* Movimento: uscita esponenziale; azzerato da prefers-reduced-motion in index.css */
+  --rs-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --rs-duration-fast: 150ms;
+  --rs-duration-base: 250ms;
+
+  /*
+   * Bagliore da palco del mock-up di accesso: faro giallo dall'angolo in alto a destra e griglia
+   * quasi invisibile ogni 24 px. Dove si applica lo decide index.css, per fascia di schermo.
+   */
+  --rs-spotlight-layers:
+    radial-gradient(
+      circle at 95% 0%,
+      rgba(var(--rs-color-accent-rgb), 0.12) 0%,
+      rgba(var(--rs-color-accent-rgb), 0.04) 35%,
+      rgba(10, 10, 10, 0) 70%
+    ),
+    linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  --rs-spotlight-sizes: auto, 24px 24px, 24px 24px;
+}

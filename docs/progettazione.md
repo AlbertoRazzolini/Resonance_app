@@ -1627,8 +1627,8 @@ aggiunge `sslmode`. Stampa solo l'URL JDBC, mai la password.
 - **Dockerfile** in `Resonance_BE/Dockerfile`, multi-stage, con **contesto di build alla radice del
   repository** (deve poter leggere sia `Resonance_BE` sia `Resonance_FE`):
   1. stage Node (`node:<LTS>`): `npm ci` e `npm run build` di `Resonance_FE` → `dist/`.
-     **Aggiunto solo con la card FE-01**: fino alla card FE-01 (18 ottobre, dopo F7-03) `Resonance_FE` non esiste e il
-     Dockerfile ha solo gli stage 2 e 3.
+     **Aggiunto con la card FE-01** (19 ottobre, dopo F7-03): prima di allora `Resonance_FE` non esisteva e il
+     Dockerfile aveva solo gli stage 2 e 3.
   2. stage JDK (`eclipse-temurin:25-jdk`, da NoseY): cache delle dipendenze Maven
      (`dependency:go-offline`), copia di `dist/` in `src/main/resources/static/` (quando c'è lo
      stage Node), `mvnw -DskipTests package`.
@@ -1640,8 +1640,8 @@ aggiunge `sslmode`. Stampa solo l'URL JDBC, mai la password.
 - **Fallback SPA** (`SpaResourceConfig`, package `web`): risorse statiche da `classpath:/static/`;
   un percorso senza file corrispondente e senza estensione, fuori da `api/` e `ws`, restituisce
   `index.html` (routing di React Router). `index.html` con `Cache-Control: no-cache`, file in
-  `/assets/` (nomi con hash di Vite) con cache lunga. Senza frontend (fino alla card FE-01) non c'è
-  `index.html` e questi percorsi rispondono 404 JSON.
+  `/assets/` (nomi con hash di Vite) con cache lunga. Senza `dist/` copiato in `static/` (per esempio nei test di
+  Maven, fuori dall'immagine Docker) non c'è `index.html` e questi percorsi rispondono 404 JSON.
 - **`render.yaml`** nella radice, adattato da NoseY: database `resonance-db` (free, Frankfurt) e **un
   solo servizio web** `resonance` (`runtime: docker`, `dockerContext: .`,
   `dockerfilePath: ./Resonance_BE/Dockerfile`, `branch: main`, deploy automatico,

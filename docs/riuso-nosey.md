@@ -27,7 +27,7 @@ alla card corrente, senza rileggere l'intero progetto.
 | `config/SecurityConfig` | `config.SecurityConfig` | A | F1-01 | Stateless, niente httpBasic/formLogin, endpoint pubblici espliciti, `/ws/**` e `/error` permessi, EntryPoint/AccessDenied con `ErrorResponse`. `RoleHierarchy` solo `SUPERADMIN > ADMIN`. Regola `GET` statici in F6-03. |
 | `config/WebSocketConfig` | `config.WebSocketConfig` | R | F5-01 | `/ws` senza SockJS, broker `/queue`, prefissi `/app` e `/user`; aggiungere decorator per il registro sessioni. |
 | `web/StatoController` | `web.HealthController` (`GET /api/health`) | A | F0-02 | Risposta `{status, database}`, 503 se il DB non risponde. |
-| `be/Dockerfile` | `Resonance_BE/Dockerfile` | A | F0-03 | Stage JDK/JRE invariati, `MaxRAMPercentage=60` (era 75) e utente non root aggiunto; contesto di build alla radice; stage Node in FE-01. |
+| `be/Dockerfile` | `Resonance_BE/Dockerfile` | A | F0-03 | Stage JDK/JRE invariati, `MaxRAMPercentage=60` (era 75) e utente non root aggiunto; contesto di build alla radice; stage Node (`node:24-alpine`) aggiunto in FE-01, che copia `dist/` in `static/` prima del `package`. |
 | `be/.dockerignore` | `.dockerignore` (radice) | A | F0-03 | Aggiungere `docs`, `postman`, `**/node_modules`, `**/dist`. |
 | `render.yaml` (radice) | `render.yaml` (radice) | A | F0-03 | Database + un solo servizio web; `dockerContext: .`; via `GEMINI_API_KEY`, `JWT_DURATA`, `ALLOWED_ORIGIN`; aggiunti `ACCESS_TOKEN_TTL`, `REFRESH_TOKEN_TTL`, `SUPERADMIN_*`, `GEOCODING_CONTACT`; tenere i commenti su JWT_SECRET, profilo prod e Brevo. |
 
@@ -113,6 +113,24 @@ alla card corrente, senza rileggere l'intero progetto.
 | `mail/EmailEventListener` | `mail.EmailEventListener` | R | F1-03 | `@Async` + `AFTER_COMMIT`. |
 | `mail/CodiceVerificaEmailEvent`, `CodiceResetEmailEvent`, `PasswordCambiataEmailEvent` | `VerificationCodeEmailEvent`, `PasswordResetCodeEmailEvent`, `PasswordChangedEmailEvent` | R | F1-03, F1-04 | |
 | `be/src/main/resources/templates/mail/codice-verifica.html`, `codice-reset.html`, `password-cambiata.html` | `templates/mail/verification-code.html`, `password-reset-code.html`, `password-changed.html` | A | F1-03, F1-04 | Testi in italiano adattati a Resonance. |
+
+## Frontend
+
+Percorsi NoseY relativi a `fe/`; percorsi Resonance relativi a `Resonance_FE/`. Si copia e si adatta la
+logica con i nomi in inglese; gli stili di NoseY (Tailwind) non si portano mai: in Resonance si usano
+Bootstrap e le custom properties `--rs-*` (decisione 78).
+
+| NoseY | Resonance | Cat. | Card | Note |
+|---|---|---|---|---|
+| `vite.config.ts` | `vite.config.ts` | A | FE-01 | Si tiene il proxy `/api` e `/ws` (`ws: true`) verso la 8080, esteso anche a `vite preview`, con la CSP della decisione 76 in `preview.headers`. Si toglie Tailwind e il plugin che rimuoveva il service worker di MSW. |
+| `tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json` | `tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json` | A | FE-01 | Alias `@/`; aggiunti `strict` e i tipi di Vitest e jest-dom. |
+| struttura di `src/` (`App.tsx`, `router.tsx`, `main.tsx`) | `src/app/`, `src/components/layout/` | A | FE-01 | Cartelle "a forma fissa" (decisione 78); store in `app/store.ts`; rotte in `app/routes.ts`; pagine caricate in modo differito. |
+| `hooks/redux.ts` | `hooks/redux.ts` | R | FE-01 | `useAppDispatch` e `useAppSelector` tipizzati sullo store. |
+| `hooks/useMediaQuery.ts` | `hooks/useMediaQuery.ts` | R | FE-01 | Nomi in inglese. |
+
+**Non portato nel frontend:** stili e configurazione Tailwind, MSW nel browser (`mocks/`,
+`public/mockServiceWorker.js`: in Resonance MSW serve solo ai test), `qrcode.react` e le schermate dei
+ticket, le funzioni AI, la "ragnatela" delle connessioni.
 
 ## Documentazione e Postman
 
