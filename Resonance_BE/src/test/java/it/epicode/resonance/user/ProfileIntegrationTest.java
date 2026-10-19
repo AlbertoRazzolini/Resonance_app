@@ -242,7 +242,7 @@ class ProfileIntegrationTest extends IntegrationTest {
 
         mockMvc.perform(patch("/api/users/me").header("Authorization", bearer(user))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"displayName\": \"A\"}"))
+                        .content("{\"displayName\": \"AB\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fields.displayName").exists());
         mockMvc.perform(patch("/api/users/me").header("Authorization", bearer(user))
@@ -250,6 +250,17 @@ class ProfileIntegrationTest extends IntegrationTest {
                         .content("{\"displayName\": \"" + "x".repeat(31) + "\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fields.displayName").exists());
+    }
+
+    @Test
+    void patch_displayNameOf3Characters_isAccepted() throws Exception {
+        User user = profiledUser("tre@example.com");
+
+        mockMvc.perform(patch("/api/users/me").header("Authorization", bearer(user))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"displayName\": \"Mia\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.displayName").value("Mia"));
     }
 
     @Test

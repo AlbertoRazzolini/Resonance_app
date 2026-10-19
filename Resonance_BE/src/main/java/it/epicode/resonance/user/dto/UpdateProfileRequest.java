@@ -11,12 +11,12 @@ import jakarta.validation.constraints.Size;
 /**
  * Modifica parziale del profilo (progettazione, sezioni 6.1 e 6.5). Campo assente o null = invariato; per i
  * testi facoltativi la stringa vuota (anche dopo il trim) svuota il campo. Il displayName e' obbligatorio e
- * non si svuota, ha da 2 a 30 caratteri e niente emoji ne' caratteri invisibili (decisione 84). Le coordinate non si
+ * non si svuota, ha da 3 a 30 caratteri e niente emoji ne' caratteri invisibili (decisione 84). Le coordinate non si
  * svuotano da qui: serve DELETE /api/users/me/location.
  */
 @CoordinatesTogether
 public record UpdateProfileRequest(
-        @NotBlankIfPresent @Size(min = 2, max = 30) @NoEmoji @NoInvisibleChars String displayName,
+        @NotBlankIfPresent @Size(min = 3, max = 30) @NoEmoji @NoInvisibleChars String displayName,
         @HttpUrl String avatarUrl,
         @Size(max = 500) String bio,
         @Size(max = 100) String city,

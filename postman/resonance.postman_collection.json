@@ -182,7 +182,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "auth", "register"]
             },
-            "description": "Errore significativo (decisione 84). Il nome ha da 2 a 30 caratteri, senza emoji ne' caratteri invisibili; la password senza emoji (anche newPassword del reset). Le regole valgono solo alla scrittura: login e verifica non le applicano."
+            "description": "Errore significativo (decisione 84). Il nome ha da 3 a 30 caratteri, senza emoji ne' caratteri invisibili; la password senza emoji (anche newPassword del reset). Le regole valgono solo alla scrittura: login e verifica non le applicano."
           },
           "response": []
         },
@@ -908,7 +908,7 @@
                 "me"
               ]
             },
-            "description": "Errore significativo (decisione 84). Il displayName ha da 2 a 30 caratteri, senza emoji ne' caratteri invisibili; il nome precedente resta invariato."
+            "description": "Errore significativo (decisione 84). Il displayName ha da 3 a 30 caratteri, senza emoji ne' caratteri invisibili; il nome precedente resta invariato."
           },
           "response": []
         },

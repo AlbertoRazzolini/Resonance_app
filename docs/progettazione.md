@@ -603,7 +603,7 @@ funziona su HTTP.
 `POST /api/auth/register` `{email, password, displayName}` → 201 `{email}` (senza l'id: al client non serve, deve solo verificare l'email e fare il login).
 
 1. Email normalizzata (trim, minuscole); password 8–72 caratteri e massimo 72 byte UTF-8, senza emoji; `displayName` dopo
-   il trim da 2 a 30 caratteri, senza emoji né caratteri invisibili (decisione 84).
+   il trim da 3 a 30 caratteri, senza emoji né caratteri invisibili (decisione 84).
 2. Lock sulla riga dell'utente con quell'email (`SELECT ... FOR UPDATE`).
 3. Email già verificata o account sospeso → 409 `EMAIL_ALREADY_REGISTERED`.
 4. Email esistente ma non verificata: controllo dei limiti di invio (4.6), poi i nuovi dati
@@ -955,7 +955,7 @@ status, createdAt}`. L'`id` compare solo nel proprio profilo: il frontend lo con
 hanno un id solo se serve a un'azione successiva; la registrazione risponde `{email}`.
 
 Validazioni: email `@Email` max 255; password 8–72 caratteri, 72 byte e senza emoji (anche `newPassword` del reset);
-`displayName` 2–30 caratteri, senza emoji né caratteri invisibili; `code` `\d{6}`. Le regole sulle emoji valgono solo
+`displayName` 3–30 caratteri, senza emoji né caratteri invisibili; `code` `\d{6}`. Le regole sulle emoji valgono solo
 quando si scrive la password o il nome: login e verifica confrontano password già esistenti e non le applicano, e gli
 utenti già presenti non sono toccati (decisione 84).
 
@@ -985,7 +985,7 @@ Regole di `PATCH /api/users/me` (sezione 6.1):
 
 | Campo | Assente o `null` | Stringa vuota | Valore |
 |---|---|---|---|
-| `displayName` | invariato | 400 `VALIDATION_ERROR` | 2–30 caratteri, senza emoji né caratteri invisibili (decisione 84) |
+| `displayName` | invariato | 400 `VALIDATION_ERROR` | 3–30 caratteri, senza emoji né caratteri invisibili (decisione 84) |
 | `bio` | invariato | svuota | massimo 500 |
 | `city` | invariato | svuota | massimo 100 |
 | `avatarUrl` | invariato | svuota | URL http/https, massimo 2048 |

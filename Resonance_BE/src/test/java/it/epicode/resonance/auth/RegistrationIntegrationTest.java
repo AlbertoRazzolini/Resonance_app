@@ -154,6 +154,18 @@ class RegistrationIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void register_withANameOf3Characters_isAccepted_andOf2Characters_isRejected() throws Exception {
+        // Minimo 3 (decisione 84): blocca i nomi da due lettere scritti a caso, senza escludere "Mia" o "Ugo".
+        register(EMAIL, PASSWORD, "AB")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.displayName").exists());
+        assertThat(users.count()).isZero();
+
+        register(EMAIL, PASSWORD, "Mia").andExpect(status().isCreated());
+        assertThat(users.findByEmail(EMAIL).orElseThrow().getDisplayName()).isEqualTo("Mia");
+    }
+
+    @Test
     void register_withANameOf30Characters_isAccepted_andOf31Characters_isRejected() throws Exception {
         register(EMAIL, PASSWORD, "x".repeat(30)).andExpect(status().isCreated());
         assertThat(users.findByEmail(EMAIL).orElseThrow().getDisplayName()).isEqualTo("x".repeat(30));

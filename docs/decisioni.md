@@ -2490,7 +2490,7 @@ Ogni punto è stato proposto allo studente con alternative, pro, contro e raccom
   `/registrazione` e `/password-dimenticata`; a `/registrazione` da `/verifica` e a `/password-dimenticata` da `/password/reset`
   (per correggere un'email sbagliata). La destinazione la dichiara la rotta in `handle.backTo`, letta da `AuthLayout`.
 - **Registrazione, dettagli approvati:** segnaposto "Come ti vedranno gli altri" nel nome e "tuonome@dominio.it" nell'email, nessuno
-  nella password (solo il contatore "N / 72 byte"). Il nome ha da 2 a 30 caratteri (il backend lo porta da 50 a 30 con F7-05).
+  nella password (solo il contatore "N / 72 byte"). Il nome ha da 3 a 30 caratteri (il backend lo porta da 50 a 30 con F7-05).
   `EMAIL_ALREADY_REGISTERED` dice "Esiste già un account con questa email." (senza "Prova ad accedere") e sotto compare il
   collegamento "Vai all'accesso". Con `VALIDATION_ERROR` i messaggi del server vanno sotto i campi corrispondenti (nome, email,
   password); un campo sconosciuto lascia solo l'avviso generico in alto.
@@ -2529,8 +2529,9 @@ Ogni punto è stato proposto allo studente con considerazioni e raccomandazione,
 
 ### Scelta
 
-- **Nome (`displayName`):** da 2 a 30 caratteri (era 50) in registrazione e in `PATCH /api/users/me`. La colonna
-  `display_name` resta `varchar(50)`: nessuna migrazione. La ricerca utenti (`q`, 2–50) non cambia.
+- **Nome (`displayName`):** da 3 a 30 caratteri (era 2–50) in registrazione e in `PATCH /api/users/me`. La colonna
+  `display_name` resta `varchar(50)`: nessuna migrazione. La ricerca utenti (`q`, 2–50) non cambia. Il minimo di 3 caratteri è
+  una correzione dello stesso giorno (prima era 2): lo studente aveva chiesto 5 o 6, poi ha scelto 3 dopo aver visto cosa escludevano.
 - **Password:** invariata, 8–72 caratteri e massimo 72 byte.
 - **Emoji:** vietate nel nome e nella nuova password (registrazione e reset). Due annotazioni in `common/`:
   `@NoEmoji` (emoji grafiche, modificatori di colore, indicatori di bandiera, selettore U+FE0F, collante ZWJ U+200D; cifre, `#` e
@@ -2555,6 +2556,8 @@ Ogni punto è stato proposto allo studente con considerazioni e raccomandazione,
 ### Alternative scartate
 
 - **Massimo 20 o 25 caratteri per il nome:** taglierebbe nomi di gruppo reali.
+- **Minimo di 5 o 6 caratteri per il nome:** con 6 non passerebbero "Mario", "Marco" o "Paolo"; con 5 resterebbero fuori "Luca",
+  "Anna", "Mina" e nomi d'arte brevi come "Muse" e "Blur". Con 3 si blocca solo il nome da due lettere, tipico dei nomi scritti a caso.
 - **Abbassare il massimo della password:** nessun guadagno di sicurezza, meno frasi lunghe.
 - **Elenco di caratteri ammessi per il nome:** rifiuterebbe nomi legittimi con punteggiatura (AC/DC, "!!!").
 - **Regola solo nel frontend:** una chiamata diretta all'API la aggirerebbe.

@@ -649,7 +649,7 @@ controlli su Render (log, `/api/health`, i tre `/mine` con l'environment `render
 `ProfileIntegrationTest`; Postman Auth e Users; `docs/progettazione.md`, `docs/decisioni.md` (84), questo piano.
 Nessuna migrazione: la colonna `display_name` resta `varchar(50)`.
 
-Regole (decisione 84), valide solo alla scrittura: nome da 2 a 30 caratteri (era 50) in registrazione e modifica del
+Regole (decisione 84), valide solo alla scrittura: nome da 3 a 30 caratteri (era 2–50) in registrazione e modifica del
 profilo, senza emoji né caratteri invisibili; nuova password (registrazione e reset) senza emoji, sempre 8–72 caratteri e
 72 byte. Login e verifica non cambiano (confrontano password già esistenti); `SuperadminBootstrap` non cambia (dati
 dell'operatore); gli utenti già presenti non sono toccati. Emoji: grafiche, modificatori, bandiere (indicatori regionali),
@@ -661,8 +661,8 @@ esistente usa nomi oltre i 30 caratteri, ci si ferma e si avvisa.
   (null e vuoto validi: la presenza la controlla `@NotBlank`). Test: lettere accentate, cifre e punteggiatura valide;
   emoji semplice, con modificatore, bandiera, sequenza con ZWJ, selettore U+FE0F, © ® ™ rifiutati; spazio a larghezza
   zero, inversione del testo (U+202E) e a capo rifiutati, spazio normale valido.
-- [x] **2. DTO e test di integrazione (40 min).** `RegisterRequest`: nome 2–30 con entrambe le annotazioni, password con
-  `@NoEmoji`; `ResetPasswordRequest.newPassword` con `@NoEmoji`; `UpdateProfileRequest.displayName` 2–30 con entrambe.
+- [x] **2. DTO e test di integrazione (40 min).** `RegisterRequest`: nome 3–30 con entrambe le annotazioni, password con
+  `@NoEmoji`; `ResetPasswordRequest.newPassword` con `@NoEmoji`; `UpdateProfileRequest.displayName` 3–30 con entrambe.
   Test: nome di 30 caratteri accettato e di 31 rifiutato (registrazione e profilo); nome con emoji o con carattere
   invisibile → 400 `VALIDATION_ERROR` con campo `displayName`; password con emoji → 400 con campo `password`
   (registrazione) e `newPassword` (reset); il login con una password con emoji resta 401 `INVALID_CREDENTIALS`, non 400.
