@@ -1,9 +1,14 @@
-import { createBrowserRouter, type RouteObject } from 'react-router'
+import { Navigate, Outlet, createBrowserRouter, type RouteObject } from 'react-router'
 import { RedirectIfAuthenticated } from '@/components/guards/RedirectIfAuthenticated'
+import { RequireAuth } from '@/components/guards/RequireAuth'
 import { AuthLayout, type AuthRouteHandle } from '@/components/layout/AuthLayout'
 import { AppShell } from '@/components/layout/AppShell'
+import type { TitleRouteHandle } from '@/components/layout/NavBar'
 import { HydrateFallback } from './HydrateFallback'
 import { ROUTES } from './routes'
+
+/** Titolo della barra in alto per la rotta (da tablet in su, decisione 83). */
+const titled = (title: string) => ({ title }) satisfies TitleRouteHandle
 
 /**
  * Tutte le rotte dell'app, con le pagine caricate in modo differito (ogni modulo esporta `Component`).
@@ -44,7 +49,53 @@ export const routes: RouteObject[] = [
     Component: AppShell,
     HydrateFallback,
     children: [
-      { index: true, lazy: () => import('./HomePage') },
+      // La home è la lista degli eventi (decisione 83: la tab Eventi e il logo portano nello stesso posto)
+      { index: true, element: <Navigate to={ROUTES.events} replace /> },
+      {
+        path: ROUTES.events,
+        handle: titled('Eventi'),
+        lazy: () => import('@/features/events/pages/NearbyEventsPage'),
+      },
+      {
+        path: ROUTES.collab,
+        handle: titled('Collab'),
+        lazy: () => import('@/features/collab/pages/CollabBoardPage'),
+      },
+      {
+        path: ROUTES.feed,
+        handle: titled('Feed'),
+        lazy: () => import('@/features/feed/pages/FeedPage'),
+      },
+      {
+        // Messaggi e Profilo: solo con la sessione, altrimenti accesso e ritorno qui (progettazione, sezione 6)
+        element: (
+          <RequireAuth>
+            <Outlet />
+          </RequireAuth>
+        ),
+        children: [
+          {
+            path: ROUTES.chat,
+            handle: titled('Messaggi'),
+            lazy: () => import('@/features/chat/pages/ChatPage'),
+          },
+          {
+            path: ROUTES.profile,
+            handle: titled('Profilo'),
+            lazy: () => import('@/features/users/pages/ProfilePage'),
+          },
+        ],
+      },
+      {
+        path: ROUTES.privacy,
+        handle: titled('Informativa privacy'),
+        lazy: () => import('@/features/legal/pages/PrivacyPolicyPage'),
+      },
+      {
+        path: ROUTES.cookies,
+        handle: titled('Informativa cookie'),
+        lazy: () => import('@/features/legal/pages/CookiePolicyPage'),
+      },
       { path: '*', lazy: () => import('./NotFoundPage') },
     ],
   },

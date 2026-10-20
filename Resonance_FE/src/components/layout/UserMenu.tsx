@@ -36,20 +36,26 @@ export function UserMenu() {
   }
 
   return (
-    <Dropdown align="end">
-      <Dropdown.Toggle
-        as="button"
-        type="button"
-        className="rs-avatar"
-        aria-label={`Menu dell'account di ${user.displayName}`}
-      >
-        {initialOf(user.displayName)}
-      </Dropdown.Toggle>
-      <Dropdown.Menu>
-        <Dropdown.Item as="button" type="button" onClick={() => void logout()}>
-          Esci
-        </Dropdown.Item>
-      </Dropdown.Menu>
-    </Dropdown>
+    <div className="rs-user">
+      {/* Il nome lo mostra solo il desktop (CSS); il pulsante ha già il suo nome per i lettori di schermo */}
+      <span className="rs-user__name" aria-hidden="true">
+        {user.displayName}
+      </span>
+      <Dropdown align="end">
+        <Dropdown.Toggle
+          as="button"
+          type="button"
+          className="rs-avatar"
+          aria-label={`Menu dell'account di ${user.displayName}`}
+        >
+          {initialOf(user.displayName)}
+        </Dropdown.Toggle>
+        <Dropdown.Menu>
+          <Dropdown.Item as="button" type="button" onClick={() => void logout()}>
+            Esci
+          </Dropdown.Item>
+        </Dropdown.Menu>
+      </Dropdown>
+    </div>
   )
 }

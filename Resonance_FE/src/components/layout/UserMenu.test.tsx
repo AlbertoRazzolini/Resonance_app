@@ -51,6 +51,12 @@ describe('UserMenu', () => {
     expect(screen.queryByRole('link', { name: 'Registrati' })).not.toBeInTheDocument()
   })
 
+  it('mostra il nome accanto al cerchio (lo nasconde il CSS sotto il desktop)', () => {
+    renderMenu('mattia verdi')
+
+    expect(screen.getByText('mattia verdi')).toHaveClass('rs-user__name')
+  })
+
   it("con un nome che inizia con un'emoji mostra l'emoji intera, non un carattere spezzato", () => {
     renderMenu('🎸 Chitarrista')
 

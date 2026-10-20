@@ -2478,7 +2478,7 @@ Ogni punto è stato proposto allo studente con alternative, pro, contro e raccom
   con "Esci"; l'anonimo vede Accedi e Registrati. Le pagine di accesso non hanno la barra di tab.
 - **Footer** (card "Navigazione e footer"): informativa privacy come pagina vera e cliccabile; copyright e termini di servizio come
   link vuoti segnaposto. Compare a fondo pagina come pop-up dal basso, su telefono e su desktop. Sul telefono si aggiunge alla barra di
-  tab: sale tutto, il footer sta sotto e le tab restano visibili sopra. Non deve coprire né le tab, né la paginazione, né altre funzioni:
+  tab: sale tutto, il footer sta sotto e le tab restano visibili sopra. *(Aggiornato in FE-03b, decisione 85: le tab restano ferme e il footer esce da dietro di esse.)* Non deve coprire né le tab, né la paginazione, né altre funzioni:
   il contenuto riserva in fondo uno spazio pari a tab e footer insieme.
 - **Dopo il reset della password:** si va a `/accesso` con un avviso verde ("Password cambiata. Accedi con la nuova password."),
   presente solo in quell'arrivo.
@@ -2579,3 +2579,38 @@ Ogni punto è stato proposto allo studente con considerazioni e raccomandazione,
 - **Regola solo nel frontend:** una chiamata diretta all'API la aggirerebbe.
 - **Regola anche su login e verifica:** bloccherebbe account già esistenti.
 - **Ridurre la colonna a `varchar(30)`:** una migrazione con il rischio dei nomi già salvati, senza vantaggi.
+
+## Decisione 85: navigazione a tab e colonna, footer a comparsa e informative (card FE-03b, progettazione, sezioni 4.4 e 6)
+
+Ogni punto è stato proposto allo studente con alternative, pro, contro e raccomandazione, e approvato il 20 ottobre.
+
+### Scelta
+
+- **Cinque voci per tutti:** Eventi, Collab, Feed, Messaggi, Profilo, nell'ordine del prototipo, anche per l'anonimo. I percorsi sono quelli del piano: `/eventi`, `/collab`, `/feed`, `/chat`, `/profilo` (quindi "Messaggi" va a `/chat`). Eventi, Collab e Feed sono letture pubbliche del backend. **Messaggi e Profilo stanno già dietro `RequireAuth`** in questa card: l'anonimo va a `/accesso` e torna alla pagina richiesta; il backend risponde comunque 401 ai suoi endpoint. `/` rimanda a `/eventi` (la `HomePage` di FE-01 è stata tolta) e il logo porta a `/eventi`.
+- **Pagine segnaposto:** le cinque pagine hanno i nomi di quelle vere del piano (`NearbyEventsPage`, `CollabBoardPage`, `FeedPage`, `ChatPage`, `ProfilePage`) e mostrano titolo e "Questa sezione arriva presto." (`ComingSoon`): le card successive le sostituiscono nello stesso file.
+- **Tre forme della navigazione:** sotto 768 px barra in alto e tab in basso; da 768 a 1199 px colonna stretta (4,5 rem) con la scritta sotto l'icona e barra in alto su tutta la larghezza; da 1200 px colonna larga (15 rem) a tutta altezza con il logo, e barra a destra di essa. Niente menu a scomparsa. La forma tab/colonna la sceglie `useMediaQuery`, tra colonna stretta e larga solo il CSS.
+- **Barra in alto:** logo (non su desktop, dove sta nella colonna), titolo della pagina da `handle.title` della rotta (da 768 px), campanella solo per chi ha la sessione, nome accanto al cerchio solo su desktop. **La campanella è visibile ma disattivata** (nome "Notifiche") finché FE-09b non la collega. **Niente icona dei filtri** del prototipo: la aggiunge FE-05 con il pannello.
+- **Bagliore da palco (decisione 80):** resta sulla barra in alto su desktop e sul corpo a tablet; la colonna è piatta, come nel prototipo.
+- **Icone di Animate UI (Lucide animate):** pacchetti `@animate-ui/react` e `motion`; i file delle icone (calendario, persone, pila di fogli, messaggio, profilo, campanella) stanno in `src/components/animate-ui/icons/` e sono adattati (senza `'use client'`, senza l'import di React inutilizzato, con la regola `react-refresh/only-export-components` disattivata nel file). Per il feed è `layers`: `newspaper` non esiste nel registro. Un `components.json` minimo, scritto a mano e senza Tailwind, serve solo alla CLI di shadcn per le icone future.
+- **Footer a comparsa:** sale dal basso quando la pagina è scrollata in fondo (o subito se non scorre) e scende risalendo; nascosto è `inert`. **Le tab restano ferme**: sul telefono il footer esce da dietro la barra e si ferma sopra di essa (modifica di un dettaglio della decisione 83, dove le tab salivano sopra il footer). Voci: "Informativa privacy" e "Informativa cookie" (pagine vere), "Copyright" e "Termini di servizio" (segnaposto senza indirizzo, `aria-disabled`; i testi si scrivono in FE-12). Il footer c'è anche nelle pagine di accesso, registrazione, verifica e reset.
+- **Spazio riservato:** il contenuto lascia in fondo l'altezza del footer e, sul telefono, anche quella delle tab (token `--rs-footer-height`, `--rs-tabbar-height`, `--rs-topbar-height`), così nulla copre l'ultimo elemento né la paginazione.
+- **Informative:** due pagine vere, `/informativa-privacy` e `/informativa-cookie`, con i testi approvati dallo studente il 20 ottobre (il piano ne prevedeva una sola). Il testo dice "progetto in sviluppo", non "non commerciale", e avvisa che i link ai biglietti portano a siti esterni (l'app non vende biglietti). Il contatto è un segnaposto, `PRIVACY_CONTACT = 'privacy@resonance.example'` in `src/config.ts`, da sostituire prima di una consegna reale. I testi non sono rivisti da un avvocato.
+
+### Motivazione
+
+- Il prototipo ha la navigazione a tab e a colonna: seguirlo è la scelta del 19 ottobre. Le stesse voci per tutti mostrano cosa offre l'app anche a chi non ha l'account.
+- La guardia sulle due rotte riservate ora evita che le card successive debbano ricordarsela; il backend resta la protezione vera.
+- Le tab ferme evitano che i controlli principali si spostino sotto il pollice quando compare il footer.
+- Il footer anche nelle pagine di accesso permette di leggere le informative prima di dare email e password.
+- Le due informative separate tengono la pagina dei cookie breve e verificabile (un solo cookie, `resonance_refresh`).
+
+### Alternative scartate
+
+- **Voci diverse per l'anonimo (solo tre):** la barra cambierebbe forma tra anonimo e loggato.
+- **Tab non cliccabili o al "non trovato" in attesa delle pagine:** non si proverebbero la voce attiva e la guardia.
+- **SVG scritti a mano o `lucide-react`:** più semplici, ma senza l'animazione scelta dallo studente.
+- **`shadcn init` completo:** poteva aggiungere Tailwind, vietato dalla decisione 79.
+- **Tab che salgono sopra il footer (decisione 83 originale):** le tab si spostano di colpo e i link finiscono vicino alla barra dei gesti.
+- **Footer con pulsante "Info" o fisso a fine contenuto:** contraddicono "a comparsa a fondo pagina".
+- **Colonna di una sola forma (larga o stretta):** diversa dal prototipo.
+- **Icona dei filtri disattivata subito:** un pulsante finto senza pannello da aprire.

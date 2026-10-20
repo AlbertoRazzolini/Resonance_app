@@ -49,8 +49,23 @@ textarea {
   min-height: 100vh;
 }
 
+/* Il contenuto riserva in fondo lo spazio del footer, e con le tab anche il loro (decisione 83) */
 .rs-main {
   flex: 1;
+  padding-bottom: var(--rs-footer-height);
+}
+
+.rs-app:has(> .rs-tabbar) > .rs-main {
+  padding-bottom: calc(
+    var(--rs-footer-height) + var(--rs-tabbar-height) + env(safe-area-inset-bottom)
+  );
+}
+
+/* Da 768 px il footer è più basso: lo cambia la radice, perché lo leggono footer e contenuto */
+@media (min-width: 768px) {
+  :root {
+    --rs-footer-height: 3.5rem;
+  }
 }
 
 .rs-nav {
@@ -83,6 +98,293 @@ textarea {
     background-image: var(--rs-spotlight-layers);
     background-size: var(--rs-spotlight-sizes);
   }
+}
+
+/* Barra in alto, senza menu a scomparsa: logo a sinistra, campanella e menu utente a destra (decisione 83) */
+.rs-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--rs-space-4);
+  min-height: var(--rs-topbar-height);
+  padding: 0 var(--rs-space-4);
+}
+
+.rs-topbar__brand {
+  display: inline-flex;
+  text-decoration: none;
+}
+
+/* Titolo della pagina (da handle.title): non sul telefono, dove bastano logo e tab */
+.rs-topbar__title {
+  display: none;
+  margin: 0;
+  font-size: var(--rs-text-xl);
+  font-weight: var(--rs-weight-heading);
+  letter-spacing: var(--rs-tracking-heading);
+  text-transform: uppercase;
+}
+
+.rs-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--rs-space-3);
+  margin-left: auto;
+}
+
+/* Nome accanto al cerchio del profilo: solo desktop */
+.rs-user {
+  display: flex;
+  align-items: center;
+  gap: var(--rs-space-2);
+}
+
+.rs-user__name {
+  display: none;
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--rs-text-sm);
+  font-weight: var(--rs-weight-heading);
+  text-transform: uppercase;
+}
+
+.rs-bell {
+  display: inline-flex;
+  padding: var(--rs-space-1);
+  border: 0;
+  background: transparent;
+  color: var(--rs-color-text-muted);
+}
+
+/* Tab del telefono: ferme sul bordo dello schermo; il contenuto riserva lo spazio sotto (decisione 83) */
+.rs-tabbar {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 1030;
+  display: flex;
+  height: calc(var(--rs-tabbar-height) + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--rs-color-nav);
+  border-top: 1px solid var(--rs-color-border);
+}
+
+.rs-tab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rs-space-1);
+  font-size: var(--rs-text-xs);
+  font-weight: var(--rs-weight-heading);
+  letter-spacing: var(--rs-tracking-label);
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--rs-color-text-muted);
+}
+
+.rs-tab.active {
+  color: var(--rs-color-accent);
+}
+
+/*
+ * Da 768 px (decisione 83): griglia con barra in alto sopra tutto e colonna a sinistra stretta (tablet); da 1200 px
+ * la colonna sale a tutta altezza, larga e con il logo, e la barra resta a destra di essa.
+ */
+@media (min-width: 768px) {
+  .rs-app--side {
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      'top top'
+      'side main';
+  }
+
+  .rs-app--side .rs-nav {
+    grid-area: top;
+    border-bottom: 1px solid var(--rs-color-border);
+  }
+
+  .rs-app--side .rs-main {
+    grid-area: main;
+  }
+
+  .rs-topbar__title {
+    display: block;
+  }
+}
+
+.rs-sidenav {
+  grid-area: side;
+  position: sticky;
+  top: var(--rs-topbar-height);
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rs-space-4);
+  height: calc(100vh - var(--rs-topbar-height));
+  padding: var(--rs-space-3) var(--rs-space-2);
+  background: var(--rs-color-nav);
+  border-right: 1px solid var(--rs-color-border);
+}
+
+.rs-sidenav__brand {
+  display: inline-flex;
+  padding: 0 var(--rs-space-2);
+  text-decoration: none;
+}
+
+.rs-sidenav__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rs-space-2);
+}
+
+.rs-side-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--rs-space-1);
+  padding: var(--rs-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--rs-radius-md);
+  font-size: var(--rs-text-xs);
+  font-weight: var(--rs-weight-heading);
+  letter-spacing: var(--rs-tracking-label);
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--rs-color-text-muted);
+}
+
+.rs-side-item:hover {
+  color: var(--rs-color-text);
+}
+
+.rs-side-item.active {
+  color: var(--rs-color-accent);
+  background: rgba(var(--rs-color-accent-rgb), 0.1);
+  border-color: rgba(var(--rs-color-accent-rgb), 0.3);
+}
+
+@media (min-width: 1200px) {
+  .rs-app--side {
+    grid-template-columns: 15rem minmax(0, 1fr);
+    grid-template-areas:
+      'side top'
+      'side main';
+  }
+
+  .rs-sidenav {
+    top: 0;
+    height: 100vh;
+    padding: var(--rs-space-4);
+  }
+
+  .rs-side-item {
+    flex-direction: row;
+    gap: var(--rs-space-3);
+    padding: var(--rs-space-3) var(--rs-space-4);
+    font-size: var(--rs-text-base);
+  }
+
+  .rs-user__name {
+    display: inline;
+  }
+}
+
+/*
+ * Footer a comparsa (decisione 83): sale dal basso quando la pagina è in fondo. Sul telefono parte da dietro le tab
+ * (z-index sotto di loro) e si ferma sopra; senza tab (pagine di accesso) sta sul bordo. Da 768 px parte a destra
+ * della colonna. Le voci sono su due righe sul telefono, su una da 768 px.
+ */
+.rs-footer {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 1029;
+  display: flex;
+  align-items: center;
+  height: var(--rs-footer-height);
+  padding: 0 var(--rs-space-4);
+  background: var(--rs-color-surface);
+  border-top: 1px solid var(--rs-color-border);
+  box-shadow: var(--rs-shadow-raised);
+  transform: translateY(100%);
+  transition: transform var(--rs-duration-base) var(--rs-ease-out);
+}
+
+.rs-footer[data-visible='true'] {
+  transform: translateY(0);
+}
+
+.rs-app:has(> .rs-tabbar) > .rs-footer {
+  bottom: calc(var(--rs-tabbar-height) + env(safe-area-inset-bottom));
+}
+
+.rs-footer__list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--rs-space-2) var(--rs-space-4);
+  width: 100%;
+  font-size: var(--rs-text-xs);
+  font-weight: var(--rs-weight-strong);
+  letter-spacing: var(--rs-tracking-label);
+  text-transform: uppercase;
+}
+
+.rs-footer__list a {
+  color: var(--rs-color-text-muted);
+  text-decoration: none;
+}
+
+.rs-footer__list a[href]:hover {
+  color: var(--rs-color-accent);
+}
+
+/* Segnaposto senza indirizzo (copyright e termini, fino a FE-12): si vedono ma non si possono usare */
+.rs-footer__list a[aria-disabled='true'] {
+  cursor: default;
+  color: var(--rs-color-text-muted);
+  opacity: 0.6;
+}
+
+@media (min-width: 768px) {
+  .rs-footer {
+    left: 4.5rem;
+  }
+
+  .rs-footer__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--rs-space-1) var(--rs-space-5);
+    font-size: var(--rs-text-sm);
+  }
+}
+
+@media (min-width: 1200px) {
+  .rs-footer {
+    left: 15rem;
+  }
+}
+
+/* Pagine delle informative: colonna di lettura stretta, titoli piccoli e liste ariose */
+.rs-legal {
+  max-width: 42rem;
+}
+
+.rs-legal h2 {
+  margin: var(--rs-space-5) 0 var(--rs-space-2);
+  font-size: var(--rs-text-lg);
+  text-transform: uppercase;
+}
+
+.rs-legal ul {
+  padding-left: var(--rs-space-5);
+}
+
+.rs-legal li {
+  margin-bottom: var(--rs-space-2);
 }
 
 /* Logo a due colori e cerchio del profilo (barra e pagine di accesso) */

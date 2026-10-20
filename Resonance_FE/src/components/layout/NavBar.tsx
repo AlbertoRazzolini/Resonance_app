@@ -1,33 +1,37 @@
-import { Container, Nav, Navbar } from 'react-bootstrap'
-import { Link, NavLink } from 'react-router'
+import { Link, useMatches } from 'react-router'
 import { ROUTES } from '@/app/routes'
 import { Logo } from '@/components/ui/Logo'
+import { selectCurrentUser } from '@/features/auth/authSlice'
+import { useAppSelector } from '@/hooks/redux'
+import { NotificationBell } from './NotificationBell'
 import { UserMenu } from './UserMenu'
 
+/** Dato che una rotta dichiara in `handle` per dare il titolo alla barra in alto (da tablet in su). */
+export type TitleRouteHandle = { title?: string }
+
 /**
- * Barra di navigazione: sotto `md` il menu si apre e si chiude con il pulsante (react-bootstrap). Il menu utente sta
- * sempre in vista, a destra; la navigazione a tab del prototipo arriva con la card "Navigazione e footer" (decisione 83).
+ * Barra in alto, senza menu a scomparsa (decisione 83): il logo porta agli eventi (`showLogo` lo toglie sul
+ * desktop, dove sta nella colonna), poi il titolo della pagina da `handle.title` della rotta (lo mostra il CSS da
+ * 768 px), a destra la campanella (solo con la sessione) e il menu utente.
  */
-export function NavBar() {
+export function NavBar({ showLogo = true }: { showLogo?: boolean }) {
+  const user = useAppSelector(selectCurrentUser)
+  const title = useMatches()
+    .map((match) => (match.handle as TitleRouteHandle | undefined)?.title)
+    .findLast(Boolean)
+
   return (
-    <Navbar expand="md" className="rs-nav">
-      <Container>
-        <Navbar.Brand as={Link} to={ROUTES.home}>
+    <header className="rs-nav rs-topbar">
+      {showLogo && (
+        <Link to={ROUTES.events} className="rs-topbar__brand">
           <Logo />
-        </Navbar.Brand>
-        {/* Sotto md prima del pulsante del menu, da md in poi in fondo a destra (order-md-last) */}
-        <div className="order-md-last ms-auto me-2 me-md-0">
-          <UserMenu />
-        </div>
-        <Navbar.Toggle aria-controls="main-nav" label="Apri il menu" />
-        <Navbar.Collapse id="main-nav">
-          <Nav className="me-auto">
-            <Nav.Link as={NavLink} to={ROUTES.home} end>
-              Home
-            </Nav.Link>
-          </Nav>
-        </Navbar.Collapse>
-      </Container>
-    </Navbar>
+        </Link>
+      )}
+      {title && <p className="rs-topbar__title">{title}</p>}
+      <div className="rs-topbar__actions">
+        {user && <NotificationBell />}
+        <UserMenu />
+      </div>
+    </header>
   )
 }

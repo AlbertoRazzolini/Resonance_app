@@ -69,6 +69,11 @@
   --rs-radius-lg: 8px;
   --rs-radius-pill: 999px;
 
+  /* Navigazione: altezza della barra in alto e delle tab del telefono (decisione 83) */
+  --rs-topbar-height: 3.5rem;
+  --rs-tabbar-height: 4rem;
+  --rs-footer-height: 5.5rem;
+
   /* Ombre con scostamento e sfumatura, senza aloni colorati */
   --rs-shadow-card: 0 2px 6px rgba(0, 0, 0, 0.5);
   --rs-shadow-raised: 0 10px 24px -6px rgba(0, 0, 0, 0.7);

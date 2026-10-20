@@ -414,6 +414,14 @@ card). Riuso NoseY: nessuno (la navigazione di NoseY usa Tailwind).
 tab in basso, colonna a sinistra, `Footer`), `UserMenu` (già esistente), `src/app/routes.ts` (percorso dell'informativa privacy),
 pagina dell'informativa privacy, `index.css`; test accanto ai file.
 
+**Esito (20 ottobre, decisione 85):** scelte dello studente oltre alle regole sopra. Cinque tab per tutti verso `/eventi`,
+`/collab`, `/feed`, `/chat`, `/profilo` con pagine segnaposto "Questa sezione arriva presto." (con i nomi delle pagine vere);
+`/` rimanda a `/eventi`; Messaggi e Profilo già dietro `RequireAuth`. Colonna in due forme (stretta a tablet, larga da 1200 px
+con il logo). Campanella visibile e disattivata; titolo della pagina da `handle.title`; nessuna icona filtri (la porta FE-05).
+Icone di Animate UI. Footer: **le tab restano ferme** e il footer esce da dietro di esse; **due informative vere**
+(`/informativa-privacy` e `/informativa-cookie`, testi approvati dallo studente); copyright e termini restano link vuoti fino a
+FE-12; il footer c'è anche nelle pagine di accesso. Contatto `PRIVACY_CONTACT` segnaposto in `config.ts`.
+
 Regole già decise (decisione 83): su telefono barra in alto (logo, campanella, cerchio giallo del profilo) e barra di tab in basso
 (Eventi, Collab, Feed, Messaggi, Profilo); da 768 px colonna di navigazione a sinistra con in alto campanella e profilo; niente
 hamburger. Il footer compare a fondo pagina come pop-up dal basso, su telefono e su desktop; sul telefono si aggiunge alle tab
@@ -677,6 +685,10 @@ sospensione dall'area admin che chiude la sessione WebSocket dell'altro, hide e 
 
 **Riferimenti:** brief §12 (strumenti e UI); decisione 78; skill impeccable; ReactBits.
 **File:** `src/styles/*` e componenti delle schermate; `src/components/motion/*` (componenti ReactBits).
+
+**Aggiunta del 20 ottobre (decisione 85):** scrivere i testi di **copyright** e **termini di servizio**, oggi link vuoti nel
+footer (`Footer.tsx`), con lo studente; le due informative sono già vere. Sostituire anche i contatti segnaposto di
+`src/config.ts` (`APPEAL_CONTACT`, `PRIVACY_CONTACT`) se la consegna è reale.
 
 - [ ] **1. Revisione con impeccable (120 min; taglio n. 5).** Tutte le schermate: gerarchia, spaziature,
   stati di caricamento, vuoto ed errore, contrasto, focus da tastiera, tre larghezze. Solo stile e testi:

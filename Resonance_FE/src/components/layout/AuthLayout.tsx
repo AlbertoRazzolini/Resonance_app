@@ -2,6 +2,7 @@ import { Link, Outlet, useMatches } from 'react-router'
 import { ROUTES } from '@/app/routes'
 import { Logo } from '@/components/ui/Logo'
 import { NoticeBar } from '@/components/ui/NoticeBar'
+import { Footer } from './Footer'
 
 /** Cosa una rotta può dichiarare in `handle` per la cornice delle pagine di accesso. */
 export type AuthRouteHandle = {
@@ -34,6 +35,7 @@ export function AuthLayout() {
           <Outlet />
         </div>
       </main>
+      <Footer />
     </div>
   )
 }

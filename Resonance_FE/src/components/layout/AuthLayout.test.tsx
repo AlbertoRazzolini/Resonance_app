@@ -37,6 +37,14 @@ describe('AuthLayout', () => {
     expect(screen.getByLabelText('Resonance')).toBeInTheDocument()
   })
 
+  it('ha il footer a comparsa con le informative, anche qui (decisione 83)', () => {
+    renderAt('/prima')
+    expect(screen.getByRole('link', { name: 'Informativa privacy', hidden: true })).toHaveAttribute(
+      'href',
+      ROUTES.privacy,
+    )
+  })
+
   it('la freccia indietro porta alla home, non alla pagina precedente della cronologia', async () => {
     const router = renderAt('/prima')
     expect(screen.getByRole('link', { name: 'Indietro' })).toHaveAttribute('href', ROUTES.home)
