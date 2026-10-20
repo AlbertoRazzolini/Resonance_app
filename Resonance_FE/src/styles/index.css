@@ -788,6 +788,11 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+/* Senza bio il pulsante segue direttamente il cerchio: stesso spazio che la bio mette sopra e sotto di sé */
+.rs-profile__head + .btn {
+  margin-top: var(--rs-space-4);
+}
+
 /* «Modifica profilo»: a tutta larghezza sul telefono, della misura del testo da 768 px */
 .rs-profile > .btn {
   display: block;
