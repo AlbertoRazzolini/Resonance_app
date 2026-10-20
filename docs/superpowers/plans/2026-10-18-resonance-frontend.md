@@ -711,6 +711,15 @@ CSP), `docs/progettazione.md` (§8); `README.md`; `docs/riuso-nosey.md`.
   risposte con gli header di Spring Security. Test MockMvc: header presente su `/`, `/api/health` e
   `/swagger-ui/index.html`. Prova in locale nel browser: frontend compilato e Swagger UI senza violazioni.
   `./mvnw -q verify`.
+  **Da valutare nello stesso intervento (trovato su Render il 20 ottobre, dopo FE-03b):** le richieste `HEAD` su
+  pagine e asset danno 401, mentre `GET` dà 200, perché `SecurityConfig.isStaticFileRequest` ammette solo `GET`.
+  Non cambia nulla per i browser; può dare problemi a controlli di uptime e anteprime dei link. Se si corregge,
+  ammettere anche `HEAD` per i file statici e la SPA (non per `/api` e `/ws`), con un test MockMvc.
+  **Da guardare nel log di Render (20 ottobre, ore 13:15 italiane):** messaggio INFO di Spring `More than one
+  TaskExecutor bean found within the context, and none is named 'taskExecutor'` (`AnnotationAsyncExecutionInterceptor`,
+  con `clientInboundChannelExecutor`, `clientOutboundChannelExecutor`, `brokerChannelExecutor` e
+  `messageBrokerTaskScheduler`). Non è un errore: per gli `@Async` (invio delle email) Spring non sa quale esecutore
+  usare. Verificare quale esecutore usano davvero gli `@Async` e, se serve, dichiararne uno con il nome `taskExecutor`.
 - [ ] **2. Build e deploy (50 min).** `docker build` dalla radice; promemoria merge `develop → main`; su
   Render log, `/api/health`, apertura dell'app, login, sessione ripresa dopo il ricaricamento, chat fra due
   account, nessuna violazione CSP nella console, Swagger UI.
