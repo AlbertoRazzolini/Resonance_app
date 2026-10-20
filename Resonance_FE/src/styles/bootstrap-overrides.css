@@ -62,9 +62,11 @@ a {
   --bs-btn-active-color: var(--rs-color-button-ink);
   --bs-btn-active-bg: var(--rs-color-accent);
   --bs-btn-active-border-color: var(--rs-color-accent);
-  --bs-btn-disabled-color: var(--rs-color-button-ink);
-  --bs-btn-disabled-bg: var(--rs-color-button);
-  --bs-btn-disabled-border-color: var(--rs-color-button);
+  /* Spento: grigio scuro con testo grigio, senza opacità, così non sembra un pulsante da premere */
+  --bs-btn-disabled-color: var(--rs-color-text-muted);
+  --bs-btn-disabled-bg: var(--rs-color-border);
+  --bs-btn-disabled-border-color: var(--rs-color-border);
+  --bs-btn-disabled-opacity: 1;
   --bs-btn-focus-shadow-rgb: var(--rs-color-accent-rgb);
   --bs-btn-font-weight: var(--rs-weight-heading);
   letter-spacing: var(--rs-tracking-label);

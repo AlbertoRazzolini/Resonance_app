@@ -2614,3 +2614,39 @@ Ogni punto è stato proposto allo studente con alternative, pro, contro e raccom
 - **Footer con pulsante "Info" o fisso a fine contenuto:** contraddicono "a comparsa a fondo pagina".
 - **Colonna di una sola forma (larga o stretta):** diversa dal prototipo.
 - **Icona dei filtri disattivata subito:** un pulsante finto senza pannello da aprire.
+
+## Decisione 86: profilo, posizione, ruoli e schede dei contenuti nel frontend (card FE-04, progettazione, sezioni 5.3 e 6.5)
+
+Ogni punto è stato proposto allo studente con alternative, pro, contro e raccomandazione, e approvato il 20 ottobre.
+
+### Scelta
+
+- **Profilo e area personale in una sola pagina, come nel prototipo Stitch:** `/profilo` mostra la scheda (foto o iniziale, nome, ruoli, città, bio, «Modifica profilo») e sotto le schede dei contenuti (`AreaTabs`); `/profilo/modifica` ha il form dei dati, la posizione e i ruoli. **La rotta `/area-personale` del piano non esiste** e `PersonalAreaPage` non viene creata. Il profilo pubblico è `/utenti/:id`.
+- **Schede (`areaTabs.tsx`):** registro `{key, title, roles?, element}`; Concerti (HOST), Indie event (MUSICIAN), Annunci (MUSICIAN), Post (tutti), ognuna con «Questa sezione arriva presto.» finché FE-06, FE-07 e FE-08 non sostituiscono `element`. I ruoli servono a mostrare o nascondere: gli elenchi `/mine` non richiedono ruoli (decisione 77).
+- **`PATCH /api/users/me` con i soli campi cambiati (decisione 31):** dopo il trim, stringa vuota per svuotare `bio`, `city` e `avatarUrl`, il nome non si invia mai vuoto; avatar solo `http` o `https` (`isHttpUrl`). La regola del nome è `displayNameError` di `features/auth/validation.ts`, ora esportata. «Salva» è spento finché non c'è una modifica; a salvataggio riuscito si torna a `/profilo` con l'avviso «Profilo aggiornato.» (segno nello stato del router, non nell'URL).
+- **Pulsanti primari spenti:** grigio scuro (`--rs-color-border`) con testo grigio (`--rs-color-text-muted`), senza opacità, per **tutti** i pulsanti `btn-primary` (anche «Entra» mentre invia).
+- **Foto del profilo:** se l'indirizzo manca o non si carica, il cerchio mostra l'iniziale del nome (`Avatar`, usato anche dal menu utente).
+- **Posizione (decisione 30):** `useBrowserPosition` chiede la posizione solo al clic; il `PATCH` invia latitudine e longitudine insieme, **arrotondate a 2 decimali** (circa 1 km); «Smetti di condividere» usa `DELETE /api/users/me/location`. Le coordinate non si mostrano mai: l'interfaccia dice solo se la posizione è condivisa. Messaggi per permesso negato e posizione non trovata.
+- **Ruoli (decisione 53):** una scheda per ruolo che spiega cosa sblocca e dice che non si può disattivare; **un solo clic, senza finestra di conferma**. A ruolo attivo il pulsante sparisce e resta il collegamento a ciò che si può pubblicare.
+- **Menu utente:** «Pubblica concerto» (HOST) e «Pubblica indie event» (MUSICIAN), con pagine segnaposto `/concerti/nuovo` e `/indie/nuovo` dietro `RequireRole`, che FE-06 sostituisce. Post e annunci aggiungeranno le loro voci con FE-07 e FE-08.
+- **Avviso di accesso richiesto:** `RequireAuth` aggiunge `loginRequired: true` allo stato del router e `LoginPage` mostra «Devi eseguire l'accesso per vedere questi contenuti.» solo in quel caso (non aprendo `/accesso` direttamente, e non passa alla registrazione). Vale per Messaggi, Profilo, la pubblicazione degli eventi e ogni pagina protetta futura.
+- **Profilo pubblico aperto agli anonimi**, come `GET /api/users/{id}`; un utente inesistente o non verificato dà «Utente non trovato.». **La regola «un anonimo vede solo i profili degli autori di contenuti pubblicati» è rinviata a Post-V1** (progettazione, sezione 15): richiede un cambiamento del backend. Intanto gli id sono UUID non indovinabili, la ricerca utenti richiede il login e il profilo pubblico non mostra mai email né coordinate.
+- **Controllo visivo a 375, 430, 768, 1024 e 1280 px** (telefono, telefono grande, i due estremi del tablet e il desktop più stretto); i breakpoint del CSS restano quelli della decisione 85.
+
+### Motivazione
+
+- Il prototipo ha un solo profilo con le schede sotto; la pagina di modifica separata tiene il form comodo sul telefono e lascia la scheda pulita.
+- Il grigio spento non si scambia per un errore (il rosso) né per un pulsante attivo (lo stesso grigio chiaro, solo sbiadito).
+- Due decimali bastano per cercare eventi a 5-100 km e non salvano la posizione esatta di casa.
+- Il ruolo è gratuito e senza effetti dannosi: una conferma aggiungerebbe solo attrito.
+- Un solo guard (`RequireAuth`) dà l'avviso a tutte le pagine protette senza ripeterlo.
+
+### Alternative scartate
+
+- **Due pagine come nel piano (`/profilo` e `/area-personale`):** due passaggi per vedere il proprio profilo.
+- **Finestra di conferma per i ruoli:** attrito e un componente in più (`ConfirmDialog` nasce in FE-06).
+- **Voci «Pubblica» solo logiche e nascoste:** il criterio non si vedrebbe in questa card.
+- **Coordinate esatte:** nessun vantaggio per il raggio degli eventi.
+- **Pulsante spento con lo stesso colore sbiadito (quello di Bootstrap) o rosso:** il primo sembra ancora attivo su sfondo scuro, il secondo sembra un errore.
+- **Profilo pubblico dietro il login:** filtro solo nell'interfaccia, il backend resta pubblico e l'anonimo non vedrebbe chi ha scritto un annuncio.
+- **Regola «solo autori» subito:** nuova card di backend (circa 2-3 ore) senza margine nel calendario.

@@ -18,6 +18,13 @@ describe('token di design', () => {
     expect(defined).toContain('--rs-color-accent')
   })
 
+  it('il pulsante primario spento è grigio scuro con testo grigio, non sbiadito', () => {
+    const css = read('bootstrap-overrides.css')
+    expect(css).toMatch(/--bs-btn-disabled-bg:\s*var\(--rs-color-border\)/)
+    expect(css).toMatch(/--bs-btn-disabled-color:\s*var\(--rs-color-text-muted\)/)
+    expect(css).toMatch(/--bs-btn-disabled-opacity:\s*1/)
+  })
+
   it.each(['tokens.css', 'bootstrap-overrides.css', 'index.css'])(
     '%s usa solo variabili --rs-* definite',
     (file) => {

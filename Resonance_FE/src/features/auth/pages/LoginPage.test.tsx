@@ -212,6 +212,44 @@ describe('LoginPage', () => {
     ).not.toBeInTheDocument()
   })
 
+  it("se arriva da una pagina protetta mostra l'avviso che serve l'accesso", () => {
+    renderLogin({ from: '/riservata', loginRequired: true })
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      "Devi eseguire l'accesso per vedere questi contenuti.",
+    )
+  })
+
+  it("aprendo /accesso direttamente non mostra l'avviso", () => {
+    renderLogin()
+
+    expect(screen.queryByText(/Devi eseguire l'accesso/)).not.toBeInTheDocument()
+  })
+
+  it("un segno `loginRequired` che non è `true` non mostra l'avviso", () => {
+    renderLogin({ loginRequired: 'sì' })
+
+    expect(screen.queryByText(/Devi eseguire l'accesso/)).not.toBeInTheDocument()
+  })
+
+  it("l'avviso non passa alla registrazione: lì si porta dietro solo la pagina richiesta", async () => {
+    const { user, router } = renderLogin({ from: '/riservata', loginRequired: true })
+
+    await user.click(screen.getByRole('link', { name: 'Registrati qui' }))
+
+    expect(await screen.findByText('Registrazione')).toBeInTheDocument()
+    expect(router.state.location.state).toEqual({ from: '/riservata' })
+  })
+
+  it("dopo il login con l'avviso torna alla pagina richiesta", async () => {
+    server.use(loginSucceeds())
+    const { user } = renderLogin({ from: '/riservata', loginRequired: true })
+
+    await fillAndSubmit(user, 'fan@example.com', 'password-lunga')
+
+    expect(await screen.findByText('Pagina riservata')).toBeInTheDocument()
+  })
+
   it('chi ha già la sessione non vede il form e va alla home', async () => {
     renderLogin(undefined, (store) =>
       store.dispatch(sessionStarted(makeLoginResponse({ user: makeMe() }))),

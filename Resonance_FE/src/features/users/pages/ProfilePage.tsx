@@ -1,6 +1,42 @@
-import { ComingSoon } from '@/components/ui/ComingSoon'
+import { Alert } from 'react-bootstrap'
+import { Link, useLocation } from 'react-router'
+import { ROUTES } from '@/app/routes'
+import { selectCurrentUser } from '@/features/auth/authSlice'
+import { useAppSelector } from '@/hooks/redux'
+import { AreaTabs } from '../components/AreaTabs'
+import { ProfileHeader } from '../components/ProfileHeader'
+import { wasProfileUpdated } from '../profilePatch'
 
-/** Segnaposto di Profilo: lo sostituisce la card FE-04. */
+/**
+ * Profilo dell'utente autenticato (progettazione, sezione 6.5): la sua scheda, «Modifica profilo» e l'avviso dopo
+ * un salvataggio (stato del router, non URL). Sotto, le schede dei contenuti secondo i ruoli (`AreaTabs`).
+ */
 export function Component() {
-  return <ComingSoon title="Profilo" />
+  const user = useAppSelector(selectCurrentUser)
+  const location = useLocation()
+
+  // RequireAuth non mostra questa pagina senza sessione: l'utente c'è sempre
+  if (!user) return null
+
+  return (
+    <>
+      {wasProfileUpdated(location.state) && (
+        <Alert variant="success" role="status">
+          Profilo aggiornato.
+        </Alert>
+      )}
+      <ProfileHeader
+        displayName={user.displayName}
+        avatarUrl={user.avatarUrl}
+        city={user.city}
+        bio={user.bio}
+        roles={user.roles}
+      >
+        <Link to={ROUTES.profileEdit} className="btn btn-primary">
+          Modifica profilo
+        </Link>
+      </ProfileHeader>
+      <AreaTabs />
+    </>
+  )
 }

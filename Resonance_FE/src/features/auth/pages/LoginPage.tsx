@@ -16,11 +16,12 @@ import { readAuthState } from '../locationState'
 /**
  * Pagina di accesso (progettazione, sezione 4.7). Un messaggio per ogni esito del backend: credenziali sbagliate,
  * email non verificata (con il collegamento alla verifica), troppi tentativi e account sospeso (con
- * `SuspendedNotice`). A sessione aperta il ritorno alla pagina richiesta lo fa `RedirectIfAuthenticated`.
+ * `SuspendedNotice`). Se arriva da una pagina protetta (`RequireAuth`) dice che serve l'accesso. A sessione aperta il
+ * ritorno alla pagina richiesta lo fa `RedirectIfAuthenticated`.
  */
 export function Component() {
   const location = useLocation()
-  const { from, passwordChanged } = readAuthState(location.state)
+  const { from, passwordChanged, loginRequired } = readAuthState(location.state)
   const suspension = useAppSelector((state) => state.auth.suspension)
   const [login, { isLoading, error }] = useLoginMutation()
   const [email, setEmail] = useState('')
@@ -62,6 +63,11 @@ export function Component() {
           </>
         }
       >
+        {loginRequired && (
+          <Alert variant="info" role="status">
+            Devi eseguire l'accesso per vedere questi contenuti.
+          </Alert>
+        )}
         {passwordChanged && (
           <Alert variant="success">Password cambiata. Accedi con la nuova password.</Alert>
         )}

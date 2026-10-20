@@ -19,6 +19,38 @@ export type MeResponse = {
   createdAt: string
 }
 
+/** Nome da mostrare per ogni ruolo (badge del profilo); il CSS dei badge li scrive in maiuscolo. */
+export const ROLE_LABELS: Record<Role, string> = {
+  FAN: 'Fan',
+  MUSICIAN: 'Musicista',
+  HOST: 'Host',
+  ADMIN: 'Admin',
+  SUPERADMIN: 'Superadmin',
+}
+
+/**
+ * Corpo di `PATCH /api/users/me` (progettazione, sezione 6.5): un campo assente è invariato, una stringa vuota
+ * svuota `bio`, `city` e `avatarUrl`; `latitude` e `longitude` vanno sempre insieme.
+ */
+export type UpdateProfileRequest = {
+  displayName?: string
+  avatarUrl?: string
+  bio?: string
+  city?: string
+  latitude?: number
+  longitude?: number
+}
+
+/** Profilo pubblico di `GET /api/users/{id}`: mai email né coordinate, e solo i ruoli della community. */
+export type PublicUserResponse = {
+  id: string
+  displayName: string
+  avatarUrl: string | null
+  bio: string | null
+  city: string | null
+  roles: Role[]
+}
+
 /** Corpo di `POST /api/auth/register`. */
 export type RegisterRequest = {
   email: string

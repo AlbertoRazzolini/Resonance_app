@@ -1,4 +1,4 @@
-import type { LoginResponse, MeResponse } from '@/types/users'
+import type { LoginResponse, MeResponse, PublicUserResponse } from '@/types/users'
 
 /** Profilo di prova (un FAN attivo); `overrides` cambia i campi che interessano al test. */
 export function makeMe(overrides: Partial<MeResponse> = {}): MeResponse {
@@ -14,6 +14,19 @@ export function makeMe(overrides: Partial<MeResponse> = {}): MeResponse {
     roles: ['FAN'],
     status: 'ACTIVE',
     createdAt: '2026-10-01T10:00:00Z',
+    ...overrides,
+  }
+}
+
+/** Profilo pubblico di prova (un utente con il solo ruolo FAN); `overrides` cambia i campi che interessano al test. */
+export function makePublicUser(overrides: Partial<PublicUserResponse> = {}): PublicUserResponse {
+  return {
+    id: '22222222-2222-2222-2222-222222222222',
+    displayName: 'Altro utente',
+    avatarUrl: null,
+    bio: null,
+    city: null,
+    roles: ['FAN'],
     ...overrides,
   }
 }

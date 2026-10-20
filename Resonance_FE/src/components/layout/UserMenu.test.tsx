@@ -9,13 +9,15 @@ import { sessionEnded, sessionStarted } from '@/features/auth/authSlice'
 import { makeLoginResponse, makeMe } from '@/test/fixtures/users'
 import { logoutSucceeds } from '@/test/handlers/auth'
 import { server } from '@/test/server'
+import type { MeResponse } from '@/types/users'
 import { UserMenu } from './UserMenu'
 
-// Menu utente della barra: Accedi e Registrati per l'anonimo; per chi ha la sessione il cerchio con l'iniziale e, nel menu, Esci.
-function renderMenu(displayName: string | null) {
+// Menu utente della barra: Accedi e Registrati per l'anonimo; per chi ha la sessione il cerchio con la foto o l'iniziale
+// e, nel menu, le voci «Pubblica» secondo i ruoli ed Esci.
+function renderMenu(displayName: string | null, overrides: Partial<MeResponse> = {}) {
   const store = makeStore()
   if (displayName) {
-    store.dispatch(sessionStarted(makeLoginResponse({ user: makeMe({ displayName }) })))
+    store.dispatch(sessionStarted(makeLoginResponse({ user: makeMe({ displayName, ...overrides }) })))
   } else {
     store.dispatch(sessionEnded())
   }
@@ -61,6 +63,57 @@ describe('UserMenu', () => {
     renderMenu('🎸 Chitarrista')
 
     expect(screen.getByRole('button', { name: /Menu dell'account/ })).toHaveTextContent('🎸')
+  })
+
+  it("con una foto nel profilo mostra la foto al posto dell'iniziale", () => {
+    renderMenu('Mattia', { avatarUrl: 'https://x.it/a.png' })
+
+    const toggle = screen.getByRole('button', { name: /Menu dell'account/ })
+    expect(toggle.querySelector('img')).toHaveAttribute('src', 'https://x.it/a.png')
+  })
+
+  it('a un FAN non mostra nessuna voce «Pubblica»', async () => {
+    renderMenu('Mattia', { roles: ['FAN'] })
+
+    await userEvent.click(screen.getByRole('button', { name: /Menu dell'account/ }))
+
+    expect(await screen.findByText('Esci')).toBeInTheDocument()
+    expect(screen.queryByText('Pubblica concerto')).not.toBeInTheDocument()
+    expect(screen.queryByText('Pubblica indie event')).not.toBeInTheDocument()
+  })
+
+  it('a un HOST mostra «Pubblica concerto» e non «Pubblica indie event»', async () => {
+    renderMenu('Mattia', { roles: ['FAN', 'HOST'] })
+
+    await userEvent.click(screen.getByRole('button', { name: /Menu dell'account/ }))
+
+    expect(await screen.findByRole('link', { name: 'Pubblica concerto' })).toHaveAttribute(
+      'href',
+      ROUTES.newConcert,
+    )
+    expect(screen.queryByText('Pubblica indie event')).not.toBeInTheDocument()
+  })
+
+  it('a un MUSICIAN mostra «Pubblica indie event» e non «Pubblica concerto»', async () => {
+    renderMenu('Mattia', { roles: ['FAN', 'MUSICIAN'] })
+
+    await userEvent.click(screen.getByRole('button', { name: /Menu dell'account/ }))
+
+    expect(await screen.findByRole('link', { name: 'Pubblica indie event' })).toHaveAttribute(
+      'href',
+      ROUTES.newIndieEvent,
+    )
+    expect(screen.queryByText('Pubblica concerto')).not.toBeInTheDocument()
+  })
+
+  it('con entrambi i ruoli mostra tutte e due le voci, prima di Esci', async () => {
+    renderMenu('Mattia', { roles: ['FAN', 'MUSICIAN', 'HOST'] })
+
+    await userEvent.click(screen.getByRole('button', { name: /Menu dell'account/ }))
+
+    await screen.findByText('Esci')
+    const items = [...document.querySelectorAll('.dropdown-item')].map((item) => item.textContent)
+    expect(items).toEqual(['Pubblica concerto', 'Pubblica indie event', 'Esci'])
   })
 
   it('Esci chiude la sessione dopo il DELETE del refresh token', async () => {

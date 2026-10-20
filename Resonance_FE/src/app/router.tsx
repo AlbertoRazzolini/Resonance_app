@@ -1,6 +1,7 @@
 import { Navigate, Outlet, createBrowserRouter, type RouteObject } from 'react-router'
 import { RedirectIfAuthenticated } from '@/components/guards/RedirectIfAuthenticated'
 import { RequireAuth } from '@/components/guards/RequireAuth'
+import { RequireRole } from '@/components/guards/RequireRole'
 import { AuthLayout, type AuthRouteHandle } from '@/components/layout/AuthLayout'
 import { AppShell } from '@/components/layout/AppShell'
 import type { TitleRouteHandle } from '@/components/layout/NavBar'
@@ -83,6 +84,47 @@ export const routes: RouteObject[] = [
             path: ROUTES.profile,
             handle: titled('Profilo'),
             lazy: () => import('@/features/users/pages/ProfilePage'),
+          },
+          {
+            path: ROUTES.profileEdit,
+            handle: titled('Profilo'),
+            lazy: () => import('@/features/users/pages/EditProfilePage'),
+          },
+        ],
+      },
+      {
+        // Profilo di un altro utente: aperto anche agli anonimi, come `GET /api/users/{id}` (progettazione, sezione 6.5)
+        path: ROUTES.publicUser,
+        handle: titled('Profilo'),
+        lazy: () => import('@/features/users/pages/PublicProfilePage'),
+      },
+      {
+        // Pubblicazione dei concerti: solo HOST (progettazione, sezione 6.6); la protezione vera è nel backend
+        element: (
+          <RequireRole roles={['HOST']}>
+            <Outlet />
+          </RequireRole>
+        ),
+        children: [
+          {
+            path: ROUTES.newConcert,
+            handle: titled('Pubblica concerto'),
+            lazy: () => import('@/features/events/pages/NewConcertPage'),
+          },
+        ],
+      },
+      {
+        // Pubblicazione degli indie event: solo MUSICIAN (progettazione, sezione 6.6)
+        element: (
+          <RequireRole roles={['MUSICIAN']}>
+            <Outlet />
+          </RequireRole>
+        ),
+        children: [
+          {
+            path: ROUTES.newIndieEvent,
+            handle: titled('Pubblica indie event'),
+            lazy: () => import('@/features/events/pages/NewIndieEventPage'),
           },
         ],
       },

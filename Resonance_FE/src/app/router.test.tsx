@@ -2,18 +2,23 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import { RouterProvider, createMemoryRouter } from 'react-router'
 import { sessionEnded, sessionStarted } from '@/features/auth/authSlice'
-import { makeLoginResponse, makeMe } from '@/test/fixtures/users'
+import { makeLoginResponse, makeMe, makePublicUser } from '@/test/fixtures/users'
+import { publicUserFound } from '@/test/handlers/users'
+import { server } from '@/test/server'
 import { setViewportWidth } from '@/test/viewport'
+import type { Role } from '@/types/users'
 import { makeStore } from './store'
 import { routes } from './router'
-import { ROUTES } from './routes'
+import { ROUTES, userPath } from './routes'
 
 // Prova del router: home verso gli eventi, pagine segnaposto delle tab (Messaggi e Profilo dietro il login), pagina
 // "non trovato", frecce indietro delle pagine di accesso e navigazione del telefono senza menu a scomparsa.
 // Serve uno store: la barra degli avvisi dentro AppShell legge lo stato.
-function renderAt(path: string, { loggedIn = false } = {}) {
+function renderAt(path: string, { loggedIn = false, roles = ['FAN'] as Role[] } = {}) {
   const store = makeStore()
-  store.dispatch(loggedIn ? sessionStarted(makeLoginResponse({ user: makeMe() })) : sessionEnded())
+  store.dispatch(
+    loggedIn ? sessionStarted(makeLoginResponse({ user: makeMe({ roles }) })) : sessionEnded(),
+  )
   const router = createMemoryRouter(routes, { initialEntries: [path] })
   render(
     <Provider store={store}>
@@ -50,20 +55,62 @@ describe('router', () => {
     expect(router.state.location.pathname).toBe(path)
   })
 
-  it.each([ROUTES.chat, ROUTES.profile])(
+  it.each([ROUTES.chat, ROUTES.profile, ROUTES.profileEdit])(
     "%s manda l'anonimo all'accesso, ricordando la pagina richiesta",
     async (path) => {
       const router = renderAt(path)
       await waitFor(() => expect(router.state.location.pathname).toBe(ROUTES.login))
-      expect(router.state.location.state).toEqual({ from: path })
+      expect(router.state.location.state).toEqual({ from: path, loginRequired: true })
+    },
+  )
+
+  it('/chat mostra il segnaposto di Messaggi a chi ha la sessione', async () => {
+    renderAt(ROUTES.chat, { loggedIn: true })
+    expect(await screen.findByRole('heading', { name: 'Messaggi' })).toBeInTheDocument()
+  })
+
+  it('/profilo mostra il profilo a chi ha la sessione', async () => {
+    renderAt(ROUTES.profile, { loggedIn: true })
+    expect(await screen.findByRole('heading', { level: 1, name: 'Fan di prova' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Modifica profilo' })).toBeInTheDocument()
+  })
+
+  it('/profilo/modifica mostra il form a chi ha la sessione', async () => {
+    renderAt(ROUTES.profileEdit, { loggedIn: true })
+    expect(await screen.findByRole('heading', { name: 'Modifica profilo' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Nome visibile')).toHaveValue('Fan di prova')
+  })
+
+  it("/utenti/:id è aperta all'anonimo e mostra il profilo pubblico", async () => {
+    server.use(publicUserFound(makePublicUser({ displayName: 'Chitarrista' })))
+    const router = renderAt(userPath('abc'))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Chitarrista' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe(userPath('abc'))
+  })
+
+  it.each([ROUTES.newConcert, ROUTES.newIndieEvent])(
+    "%s manda l'anonimo all'accesso, ricordando la pagina richiesta",
+    async (path) => {
+      const router = renderAt(path)
+      await waitFor(() => expect(router.state.location.pathname).toBe(ROUTES.login))
+      expect(router.state.location.state).toEqual({ from: path, loginRequired: true })
     },
   )
 
   it.each([
-    [ROUTES.chat, 'Messaggi'],
-    [ROUTES.profile, 'Profilo'],
-  ])('%s mostra il segnaposto a chi ha la sessione', async (path, title) => {
-    renderAt(path, { loggedIn: true })
+    [ROUTES.newConcert, ['FAN', 'MUSICIAN'] as Role[]],
+    [ROUTES.newIndieEvent, ['FAN', 'HOST'] as Role[]],
+  ])('%s mostra «Accesso negato» a chi non ha il ruolo giusto', async (path, roles) => {
+    const router = renderAt(path, { loggedIn: true, roles })
+    expect(await screen.findByRole('heading', { name: 'Accesso negato' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe(path)
+  })
+
+  it.each([
+    [ROUTES.newConcert, 'HOST' as Role, 'Pubblica concerto'],
+    [ROUTES.newIndieEvent, 'MUSICIAN' as Role, 'Pubblica indie event'],
+  ])('%s mostra il segnaposto a chi ha il ruolo giusto', async (path, role, title) => {
+    renderAt(path, { loggedIn: true, roles: ['FAN', role] })
     expect(await screen.findByRole('heading', { name: title })).toBeInTheDocument()
   })
 

@@ -152,8 +152,8 @@ Regole della struttura (decisione 78):
 | `getErrorMessage` / `getFieldErrors` | `(error: unknown) => string`; `(error: unknown) => Record<string, string>` (solo `VALIDATION_ERROR` e `ADDRESS_NOT_FOUND`); `<ErrorAlert error>` | FE-02 |
 | `RequireAuth` / `RequireRole` | `<RequireAuth>{children}</RequireAuth>`; `<RequireRole roles={Role[]}>` (solo interfaccia) | FE-02 |
 | `SuspendedNotice` | `<SuspendedNotice details={{suspensionReason, suspendedUntil}} />` con il contatto di `config.ts` | FE-03 |
-| `useBrowserPosition` | `() => {status: 'idle' \| 'pending' \| 'granted' \| 'denied' \| 'unavailable', position, request()}` | FE-04 |
-| `AreaTabs` | registro delle schede dell'area personale: ogni card aggiunge la sua (`{key, title, roles?, element}`) | FE-04 |
+| `useBrowserPosition` | `() => {status: 'idle' \| 'pending' \| 'granted' \| 'denied' \| 'unavailable', position: {latitude, longitude} \| null, request(): Promise<{latitude, longitude} \| null>}` | FE-04 |
+| `AreaTabs` | registro delle schede sotto il profilo (`AREA_TABS` in `features/users/areaTabs.tsx`): ogni card sostituisce `element` della sua (`{key, title, roles?, element}`) | FE-04 |
 | `useSearchCenter` / raggio | `() => {center, source: 'browser' \| 'profile' \| 'default'}`; `RADIUS_LEVELS = [5, 15, 25, 50, 100]`, `DEFAULT_RADIUS_KM = 15` | FE-05 |
 | `Map` | `<Map center zoom markers onMarkerClick label />`, caricata in modo differito | FE-05 |
 | `ExternalLink` | `<ExternalLink href>`: solo `http`/`https`, modale di conferma con il dominio, apertura con `noopener noreferrer` | FE-05 |
@@ -454,12 +454,23 @@ Render login, cookie salvato, sessione ripresa dopo il ricaricamento, fallback S
 
 ### Card FE-04 · Profilo, ruoli e area personale — stima 4 h
 
-**Riferimenti:** §5.3, §6.5; decisioni 30, 31, 49, 53, 77. Riuso NoseY: `features/profilo/FormDatiPersonali`,
+**Riferimenti:** §5.3, §6.5; decisioni 30, 31, 49, 53, 77, 86. Riuso NoseY: `features/profilo/FormDatiPersonali`,
 `validaProfilo`, `features/eventi/usePosizioneUtente`, `components/ui/Avatar`.
-**File:** `src/features/users/api/usersApi.ts`, `pages/` (`ProfilePage`, `PublicProfilePage`,
-`PersonalAreaPage`), `components/` (`ProfileForm`, `LocationSettings`, `RoleActivation`), `areaTabs.ts`,
-`profilePatch.ts`; `src/types/users.ts`; `src/hooks/useBrowserPosition.ts`; test accanto ai file
-(`profilePatch.test.ts`, `RoleActivation.test.tsx`).
+**File:** `src/features/users/api/usersApi.ts`, `pages/` (`ProfilePage`, `EditProfilePage`, `PublicProfilePage`),
+`components/` (`ProfileHeader`, `ProfileForm`, `LocationSettings`, `RoleActivation`, `AreaTabs`), `areaTabs.tsx`,
+`profilePatch.ts`; `src/types/users.ts`; `src/hooks/useBrowserPosition.ts`; `src/components/ui/Avatar.tsx`;
+`src/features/events/pages/` (`NewConcertPage` e `NewIndieEventPage`, segnaposto); `src/test/handlers/users.ts`; test
+accanto ai file.
+
+**Esito (20 ottobre, decisione 86):** scelte dello studente oltre alle regole sopra. **Profilo e area personale in una sola
+pagina come nel prototipo Stitch:** `/profilo` (scheda e schede dei contenuti) e `/profilo/modifica` (dati, posizione e
+ruoli); la rotta `/area-personale` e `PersonalAreaPage` non esistono. Ruoli con un clic e senza conferma; voci «Pubblica
+concerto» e «Pubblica indie event» nel menu utente con pagine segnaposto (`/concerti/nuovo`, `/indie/nuovo`); coordinate
+arrotondate a 2 decimali e mai mostrate; «Salva» grigio e spento senza modifiche (grigio scuro per tutti i pulsanti primari
+spenti); dopo il salvataggio si torna a `/profilo` con l'avviso; foto con ritorno all'iniziale. **Aggiunta:** avviso «Devi
+eseguire l'accesso per vedere questi contenuti.» nella pagina di accesso per chi arriva da una pagina protetta. Profilo
+pubblico aperto agli anonimi; la regola «solo gli autori di contenuti pubblicati» è Post-V1. Controllo a 375, 430, 768, 1024 e
+1280 px.
 
 - [ ] **1. Profilo e modifica (75 min).** `/profilo`: il `PATCH` invia solo i campi cambiati; stringa vuota
   per svuotare `bio`, `city`, `avatarUrl`; `displayName` non svuotabile; avatar solo `http`/`https`;
@@ -469,8 +480,8 @@ Render login, cookie salvato, sessione ripresa dopo il ricaricamento, fallback S
   negato o posizione non disponibile.
 - [ ] **3. Ruoli (30 min).** Attivazione di MUSICIAN e HOST (idempotente) con la spiegazione di cosa
   sblocca ciascuno; voci "Pubblica" del menu secondo i ruoli.
-- [ ] **4. Profilo pubblico e area personale (50 min).** `/utenti/:id` (`PublicUserResponse`, 404 → "non
-  trovato"); `/area-personale` con `AreaTabs` (schede vuote che FE-06, FE-07 e FE-08 completano, mostrate
+- [ ] **4. Profilo pubblico e schede (50 min).** `/utenti/:id` (`PublicUserResponse`, 404 → "non
+  trovato"); `AreaTabs` sotto il profilo (schede vuote che FE-06, FE-07 e FE-08 completano, mostrate
   secondo i ruoli).
 - [ ] **5. Test e responsive (45 min).** Costruzione del `PATCH` (solo campi cambiati, vuoto = `""`,
   coordinate sempre insieme); pulsanti dei ruoli nascosti quando il ruolo c'è già. Tre larghezze.

@@ -1,25 +1,20 @@
 import { Dropdown } from 'react-bootstrap'
 import { Link } from 'react-router'
 import { ROUTES } from '@/app/routes'
-import { selectCurrentUser } from '@/features/auth/authSlice'
+import { Avatar } from '@/components/ui/Avatar'
+import { selectCurrentUser, selectHasRole } from '@/features/auth/authSlice'
 import { useLogoutMutation } from '@/features/auth/api/authApi'
 import { useAppSelector } from '@/hooks/redux'
 
-const graphemes = new Intl.Segmenter('it', { granularity: 'grapheme' })
-
-/** Prima lettera del nome in maiuscolo; con un'emoji prende l'emoji intera, non un carattere spezzato. */
-function initialOf(displayName: string): string {
-  const first = graphemes.segment(displayName.trim())[Symbol.iterator]().next()
-  return first.done ? '?' : first.value.segment.toUpperCase()
-}
-
 /**
  * Menu utente della barra (decisione 83): per l'anonimo i pulsanti Accedi e Registrati; per chi ha la sessione il
- * cerchio giallo con l'iniziale e un menu con "Esci". Le card successive aggiungono qui le loro voci (Profilo, Area
- * personale). La foto sostituisce l'iniziale con FE-04.
+ * cerchio giallo con la foto o l'iniziale e un menu con le voci «Pubblica» secondo i ruoli (solo per mostrare o
+ * nascondere: la protezione vera è nel backend) e "Esci". Le card successive aggiungono qui le loro voci.
  */
 export function UserMenu() {
   const user = useAppSelector(selectCurrentUser)
+  const isHost = useAppSelector(selectHasRole('HOST'))
+  const isMusician = useAppSelector(selectHasRole('MUSICIAN'))
   const [logout] = useLogoutMutation()
 
   if (!user) {
@@ -45,12 +40,23 @@ export function UserMenu() {
         <Dropdown.Toggle
           as="button"
           type="button"
-          className="rs-avatar"
+          className="rs-avatar-toggle"
           aria-label={`Menu dell'account di ${user.displayName}`}
         >
-          {initialOf(user.displayName)}
+          <Avatar displayName={user.displayName} avatarUrl={user.avatarUrl} />
         </Dropdown.Toggle>
         <Dropdown.Menu>
+          {isHost && (
+            <Dropdown.Item as={Link} to={ROUTES.newConcert}>
+              Pubblica concerto
+            </Dropdown.Item>
+          )}
+          {isMusician && (
+            <Dropdown.Item as={Link} to={ROUTES.newIndieEvent}>
+              Pubblica indie event
+            </Dropdown.Item>
+          )}
+          {(isHost || isMusician) && <Dropdown.Divider />}
           <Dropdown.Item as="button" type="button" onClick={() => void logout()}>
             Esci
           </Dropdown.Item>

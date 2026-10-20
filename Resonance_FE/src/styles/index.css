@@ -404,9 +404,10 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   width: 2.25rem;
   height: 2.25rem;
-  border: 0;
+  overflow: hidden;
   border-radius: var(--rs-radius-pill);
   background: var(--rs-color-accent);
   color: var(--rs-color-accent-ink);
@@ -414,7 +415,27 @@ textarea {
   text-transform: uppercase;
 }
 
-.rs-avatar::after {
+.rs-avatar--lg {
+  width: 6rem;
+  height: 6rem;
+  font-size: var(--rs-text-3xl);
+}
+
+.rs-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Il pulsante del menu utente: nessun riquadro, il cerchio è l'Avatar al suo interno */
+.rs-avatar-toggle {
+  padding: 0;
+  border: 0;
+  border-radius: var(--rs-radius-pill);
+  background: transparent;
+}
+
+.rs-avatar-toggle::after {
   display: none;
 }
 
@@ -710,6 +731,213 @@ textarea {
   margin: 0;
   padding-top: var(--rs-space-2);
   border-top: 1px solid var(--rs-color-border);
+}
+
+/* Profilo (proprio e pubblico): scheda con foto, nome, ruoli, città e bio, come nel prototipo */
+.rs-profile {
+  margin-bottom: var(--rs-space-4);
+  padding: var(--rs-space-4);
+  background: var(--rs-color-surface);
+  border: 1px solid var(--rs-color-border);
+  border-radius: var(--rs-radius-lg);
+}
+
+.rs-profile__head {
+  display: flex;
+  align-items: center;
+  gap: var(--rs-space-4);
+}
+
+.rs-profile__identity {
+  min-width: 0;
+}
+
+.rs-profile__name {
+  margin: 0 0 var(--rs-space-2);
+  font-size: var(--rs-text-2xl);
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.rs-profile__roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rs-space-2);
+  margin: 0 0 var(--rs-space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.rs-profile__role {
+  background: var(--rs-color-accent);
+  color: var(--rs-color-accent-ink);
+}
+
+.rs-profile__city {
+  margin: 0;
+  color: var(--rs-color-text-muted);
+}
+
+/* La bio mantiene gli a capo di chi l'ha scritta e non rompe il layout con una parola lunghissima */
+.rs-profile__bio {
+  margin: var(--rs-space-4) 0;
+  padding: var(--rs-space-3);
+  background: var(--rs-color-bg);
+  border-radius: var(--rs-radius-md);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* «Modifica profilo»: a tutta larghezza sul telefono, della misura del testo da 768 px */
+.rs-profile > .btn {
+  display: block;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .rs-profile {
+    padding: var(--rs-space-5);
+  }
+
+  .rs-profile > .btn {
+    display: inline-block;
+    width: auto;
+    padding-inline: var(--rs-space-6);
+  }
+}
+
+/* Schede dei contenuti: due colonne sul telefono (come nel prototipo), in riga da 768 px; la scheda aperta è gialla */
+.rs-area-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--rs-space-2);
+  margin-bottom: var(--rs-space-4);
+}
+
+.rs-area-tabs .nav-link {
+  width: 100%;
+  background: var(--rs-color-surface);
+  border: 1px solid var(--rs-color-border);
+  font-weight: var(--rs-weight-heading);
+  letter-spacing: var(--rs-tracking-label);
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--rs-color-text);
+}
+
+.rs-area-tabs .nav-link.active {
+  background: var(--rs-color-accent);
+  border-color: var(--rs-color-accent);
+  color: var(--rs-color-accent-ink);
+}
+
+@media (min-width: 768px) {
+  .rs-area-tabs {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .rs-area-tabs .nav-link {
+    width: auto;
+    padding-inline: var(--rs-space-5);
+  }
+}
+
+/* Modifica del profilo: colonna di lettura stretta, sezioni separate da un filo */
+.rs-edit {
+  max-width: 36rem;
+}
+
+.rs-edit__back {
+  display: inline-block;
+  margin-bottom: var(--rs-space-3);
+  font-size: var(--rs-text-sm);
+  color: var(--rs-color-text-muted);
+}
+
+.rs-edit__section {
+  margin-top: var(--rs-space-5);
+  padding-top: var(--rs-space-4);
+  border-top: 1px solid var(--rs-color-border);
+}
+
+.rs-edit__section h2 {
+  margin-bottom: var(--rs-space-4);
+  font-size: var(--rs-text-lg);
+  text-transform: uppercase;
+}
+
+/* Posizione condivisa: lo stato e il pulsante, uno sotto l'altro */
+.rs-location {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--rs-space-3);
+}
+
+.rs-location .alert {
+  width: 100%;
+  margin: 0;
+}
+
+.rs-location__state {
+  margin: 0;
+  font-weight: var(--rs-weight-strong);
+}
+
+/* Ruoli attivabili: una scheda per ruolo, in colonna sul telefono e affiancate da 768 px */
+.rs-roles {
+  display: grid;
+  gap: var(--rs-space-3);
+}
+
+.rs-roles .alert {
+  margin: 0;
+}
+
+.rs-role-card {
+  padding: var(--rs-space-4);
+  background: var(--rs-color-surface);
+  border: 1px solid var(--rs-color-border);
+  border-radius: var(--rs-radius-lg);
+}
+
+.rs-role-card h3 {
+  margin: 0 0 var(--rs-space-2);
+  font-size: var(--rs-text-lg);
+  text-transform: uppercase;
+}
+
+.rs-role-card p {
+  margin: 0 0 var(--rs-space-3);
+}
+
+.rs-role-card__note {
+  font-size: var(--rs-text-sm);
+  color: var(--rs-color-text-muted);
+}
+
+.rs-role-card__active {
+  font-weight: var(--rs-weight-heading);
+  color: var(--rs-color-accent);
+}
+
+@media (min-width: 768px) {
+  .rs-roles {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .rs-roles .alert {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Pulsanti in fondo a un form: affiancati, il principale a destra */
+.rs-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--rs-space-3);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -7,6 +7,11 @@ export const ROUTES = {
   feed: '/feed',
   chat: '/chat',
   profile: '/profilo',
+  profileEdit: '/profilo/modifica',
+  /** Modello della rotta; per un collegamento si usa `userPath(id)`. */
+  publicUser: '/utenti/:id',
+  newConcert: '/concerti/nuovo',
+  newIndieEvent: '/indie/nuovo',
   privacy: '/informativa-privacy',
   cookies: '/informativa-cookie',
   login: '/accesso',
@@ -15,3 +20,6 @@ export const ROUTES = {
   forgotPassword: '/password-dimenticata',
   resetPassword: '/password/reset',
 } as const
+
+/** Percorso del profilo pubblico di un utente. */
+export const userPath = (id: string) => `/utenti/${encodeURIComponent(id)}`

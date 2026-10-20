@@ -1,0 +1,48 @@
+import type { ReactNode } from 'react'
+import { Avatar } from '@/components/ui/Avatar'
+import { ROLE_LABELS, type Role } from '@/types/users'
+
+type ProfileHeaderProps = {
+  displayName: string
+  avatarUrl: string | null
+  city: string | null
+  bio: string | null
+  roles: Role[]
+  /** Azioni sotto la bio (per il proprio profilo «Modifica profilo»). */
+  children?: ReactNode
+}
+
+/**
+ * Scheda di un profilo, uguale per il proprio e per quello pubblico: foto, nome, ruoli, città e bio. La bio è testo
+ * semplice (React la scrive come testo, mai come HTML); gli URL cliccabili li aggiunge `UserText` con FE-07.
+ */
+export function ProfileHeader({ displayName, avatarUrl, city, bio, roles, children }: ProfileHeaderProps) {
+  return (
+    <section className="rs-profile" aria-label="Profilo">
+      <div className="rs-profile__head">
+        <Avatar displayName={displayName} avatarUrl={avatarUrl} size="lg" />
+        <div className="rs-profile__identity">
+          <h1 className="rs-profile__name">{displayName}</h1>
+          <ul className="rs-profile__roles" aria-label="Ruoli">
+            {roles.map((role) => (
+              <li key={role} className="badge rs-profile__role">
+                {ROLE_LABELS[role]}
+              </li>
+            ))}
+          </ul>
+          {city && (
+            <p className="rs-profile__city" data-testid="profile-city">
+              {city}
+            </p>
+          )}
+        </div>
+      </div>
+      {bio && (
+        <p className="rs-profile__bio" data-testid="profile-bio">
+          {bio}
+        </p>
+      )}
+      {children}
+    </section>
+  )
+}
