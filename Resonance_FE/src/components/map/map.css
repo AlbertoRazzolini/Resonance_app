@@ -1,0 +1,154 @@
+/* Mappa degli eventi: cornice, marker, controlli e fumetto nei colori del tema (decisione 80). */
+.rs-map {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 18rem;
+  overflow: hidden;
+  border: 1px solid var(--rs-color-border);
+  border-radius: var(--rs-radius-lg);
+  background: var(--rs-color-surface);
+}
+
+.rs-map--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--rs-color-text-muted);
+}
+
+.rs-map__error {
+  position: absolute;
+  top: var(--rs-space-2);
+  left: var(--rs-space-2);
+  right: 3.5rem;
+  padding: var(--rs-space-2) var(--rs-space-3);
+  border-radius: var(--rs-radius-md);
+  background: var(--rs-color-surface);
+  color: var(--rs-color-danger);
+  font-size: var(--rs-text-sm);
+}
+
+/* Marker: cerchio con l'icona del tipo. Ufficiale pieno giallo, indie scuro con bordo giallo. */
+.rs-map-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 2px solid var(--rs-color-accent);
+  border-radius: var(--rs-radius-pill);
+  box-shadow: var(--rs-shadow-card);
+  cursor: pointer;
+  transition: transform var(--rs-duration-fast) var(--rs-ease-out);
+}
+
+.rs-map-marker--official {
+  background: var(--rs-color-accent);
+  color: var(--rs-color-accent-ink);
+}
+
+.rs-map-marker--indie {
+  background: var(--rs-color-bg);
+  color: var(--rs-color-accent);
+}
+
+.rs-map-marker:hover,
+.rs-map-marker[aria-pressed='true'] {
+  transform: scale(1.2);
+}
+
+.rs-map-marker--static {
+  width: 1.5rem;
+  height: 1.5rem;
+  cursor: default;
+}
+
+.rs-map-marker--static:hover {
+  transform: none;
+}
+
+.rs-map-legend {
+  display: flex;
+  gap: var(--rs-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--rs-color-text-muted);
+  font-size: var(--rs-text-sm);
+}
+
+.rs-map-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rs-space-2);
+}
+
+/* Controlli di MapLibre (zoom): di base sono bianchi */
+.rs-map .maplibregl-ctrl-group {
+  overflow: hidden;
+  border-radius: var(--rs-radius-md);
+  background: var(--rs-color-surface);
+  box-shadow: var(--rs-shadow-raised);
+}
+
+.rs-map .maplibregl-ctrl-group button + button {
+  border-top-color: var(--rs-color-border);
+}
+
+.rs-map .maplibregl-ctrl-group button:hover {
+  background-color: var(--rs-color-field);
+}
+
+/* Le icone dei pulsanti sono immagini scure: si schiariscono */
+.rs-map .maplibregl-ctrl-group .maplibregl-ctrl-icon {
+  filter: invert(0.9);
+}
+
+/* Attribuzione (OpenFreeMap, OpenMapTiles, OpenStreetMap): sempre visibile e leggibile sul fondo scuro */
+.rs-map .maplibregl-ctrl-attrib {
+  background: rgba(10, 10, 10, 0.75);
+  color: var(--rs-color-text-muted);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.rs-map .maplibregl-ctrl-attrib a {
+  color: var(--rs-color-text);
+}
+
+.rs-map .maplibregl-ctrl-attrib a:hover,
+.rs-map .maplibregl-ctrl-attrib a:focus-visible {
+  color: var(--rs-color-accent);
+  text-decoration: underline;
+}
+
+/* Fumetto del marker aperto: MapLibre imposta un suo carattere, qui si rimette quello del tema */
+.rs-map .maplibregl-popup,
+.rs-map .maplibregl-ctrl-attrib {
+  font-family: var(--rs-font-sans);
+}
+
+.rs-map .maplibregl-popup-content {
+  padding: var(--rs-space-3) var(--rs-space-5) var(--rs-space-3) var(--rs-space-3);
+  border: 1px solid var(--rs-color-border-strong);
+  border-radius: var(--rs-radius-md);
+  background: var(--rs-color-surface);
+  color: var(--rs-color-text);
+  box-shadow: var(--rs-shadow-raised);
+}
+
+.rs-map .maplibregl-popup-tip {
+  border-top-color: var(--rs-color-surface);
+}
+
+.rs-map .maplibregl-popup-close-button {
+  color: var(--rs-color-text-muted);
+  font-size: var(--rs-text-lg);
+}
+
+.rs-map .maplibregl-popup-close-button:hover {
+  background: transparent;
+  color: var(--rs-color-accent);
+}

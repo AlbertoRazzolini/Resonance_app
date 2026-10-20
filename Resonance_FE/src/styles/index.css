@@ -949,3 +949,250 @@ textarea {
     scroll-behavior: auto !important;
   }
 }
+
+/* Eventi vicini (FE-05): mappa e elenco, card, stato vuoto, fumetto del marker e scheletro di caricamento */
+.rs-nearby {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rs-space-4);
+}
+
+.rs-nearby__map {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rs-space-2);
+  height: 20rem;
+}
+
+.rs-nearby__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rs-space-3);
+}
+
+/* Da lg la mappa sta a destra dell'elenco (nel codice viene prima, per stare sopra l'elenco sul telefono) */
+@media (min-width: 992px) {
+  .rs-nearby {
+    flex-direction: row-reverse;
+    align-items: flex-start;
+  }
+
+  .rs-nearby__map,
+  .rs-nearby__list {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .rs-nearby__map {
+    position: sticky;
+    top: calc(var(--rs-topbar-height) + var(--rs-space-4));
+    height: calc(100vh - var(--rs-topbar-height) - var(--rs-footer-height) - var(--rs-space-6));
+    min-height: 24rem;
+  }
+}
+
+.rs-event-card {
+  padding: var(--rs-space-4);
+  border: 1px solid var(--rs-color-border);
+  border-radius: var(--rs-radius-lg);
+  background: var(--rs-color-surface);
+  box-shadow: var(--rs-shadow-card);
+}
+
+.rs-event-card--highlighted {
+  border-color: var(--rs-color-accent);
+}
+
+.rs-event-card__top,
+.rs-event-card__bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rs-space-2);
+}
+
+.rs-event-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rs-space-2);
+  margin: 0;
+  color: var(--rs-color-text-muted);
+  font-size: var(--rs-text-sm);
+  text-transform: uppercase;
+  letter-spacing: var(--rs-tracking-label);
+}
+
+.rs-event-card__kind {
+  padding: 0 var(--rs-space-2);
+  border: 1px solid var(--rs-color-border-strong);
+  border-radius: var(--rs-radius-sm);
+  color: var(--rs-color-text);
+}
+
+.rs-event-card__kind--free {
+  border-color: var(--rs-color-success);
+  color: var(--rs-color-success);
+}
+
+.rs-event-card__distance {
+  padding: 0 var(--rs-space-2);
+  border: 1px solid rgba(var(--rs-color-accent-rgb), 0.5);
+  border-radius: var(--rs-radius-sm);
+  color: var(--rs-color-accent);
+  font-weight: var(--rs-weight-strong);
+}
+
+.rs-event-card__title {
+  margin: var(--rs-space-2) 0 var(--rs-space-1);
+  font-size: var(--rs-text-xl);
+  font-weight: var(--rs-weight-heading);
+  line-height: var(--rs-leading-heading);
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.rs-event-card__venue {
+  margin: 0 0 var(--rs-space-3);
+  color: var(--rs-color-text-muted);
+}
+
+.rs-event-card__bottom {
+  padding-top: var(--rs-space-3);
+  border-top: 1px solid var(--rs-color-border);
+}
+
+.rs-event-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rs-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rs-event-card__tags li {
+  padding: 0 var(--rs-space-2);
+  border: 1px solid var(--rs-color-border);
+  border-radius: var(--rs-radius-sm);
+  background: var(--rs-color-field);
+  font-size: var(--rs-text-sm);
+}
+
+.rs-empty {
+  padding: var(--rs-space-6) var(--rs-space-4);
+  border: 1px dashed var(--rs-color-border-strong);
+  border-radius: var(--rs-radius-lg);
+  text-align: center;
+}
+
+.rs-empty__title {
+  margin: 0;
+  font-size: var(--rs-text-lg);
+  font-weight: var(--rs-weight-strong);
+}
+
+.rs-empty__hint {
+  margin: var(--rs-space-2) 0 0;
+  color: var(--rs-color-text-muted);
+}
+
+/* Fumetto del marker aperto sulla mappa */
+.rs-map-popup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rs-space-1);
+  min-width: 10rem;
+  font-size: var(--rs-text-sm);
+}
+
+.rs-map-popup strong {
+  font-size: var(--rs-text-base);
+}
+
+.rs-map-popup span {
+  color: var(--rs-color-accent);
+}
+
+/* Scheletro di caricamento: forme grigie del tema invece del colore del testo */
+.placeholder {
+  background-color: var(--rs-color-border-strong);
+}
+
+/* Livello del raggio scelto: giallo, come gli altri stati attivi */
+.rs-radius .btn[aria-pressed='true'] {
+  border-color: var(--rs-color-accent);
+  background: var(--rs-color-accent);
+  color: var(--rs-color-accent-ink);
+  font-weight: var(--rs-weight-strong);
+}
+
+/* Dettaglio di un evento (FE-05) */
+.rs-event-detail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--rs-space-3);
+  max-width: 48rem;
+}
+
+.rs-event-detail__badges {
+  display: flex;
+  gap: var(--rs-space-2);
+  margin: 0;
+  font-size: var(--rs-text-sm);
+  text-transform: uppercase;
+  letter-spacing: var(--rs-tracking-label);
+}
+
+.rs-event-detail h1 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.rs-event-detail__facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--rs-space-1) var(--rs-space-4);
+  margin: 0;
+}
+
+.rs-event-detail__facts dt {
+  color: var(--rs-color-text-muted);
+  font-weight: var(--rs-weight-regular);
+}
+
+.rs-event-detail__facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Testo scritto dall'organizzatore: a capo come l'ha scritto, mai HTML (FE-07 lo passerà da UserText) */
+.rs-event-detail__description {
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Copertina: riquadro 16:9 con la forma grigia finché l'immagine arriva */
+.rs-cover {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--rs-radius-lg);
+  background: var(--rs-color-surface);
+}
+
+.rs-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rs-cover__placeholder {
+  position: absolute;
+  inset: 0;
+  display: block;
+}

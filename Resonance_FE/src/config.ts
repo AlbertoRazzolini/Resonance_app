@@ -9,3 +9,9 @@ export const APPEAL_CONTACT = 'ricorsi@resonance.example'
  * indirizzo vero prima di una consegna reale.
  */
 export const PRIVACY_CONTACT = 'privacy@resonance.example'
+
+/**
+ * Centro della ricerca degli eventi quando non si conosce la posizione dell'utente: Firenze (piano frontend, decisione
+ * 78). Le ricerche vicine vogliono sempre un centro (progettazione, sezione 10.2).
+ */
+export const DEFAULT_SEARCH_CENTER = { latitude: 43.7696, longitude: 11.2558 }

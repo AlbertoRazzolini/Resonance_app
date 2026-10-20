@@ -25,7 +25,7 @@ describe('token di design', () => {
     expect(css).toMatch(/--bs-btn-disabled-opacity:\s*1/)
   })
 
-  it.each(['tokens.css', 'bootstrap-overrides.css', 'index.css'])(
+  it.each(['tokens.css', 'bootstrap-overrides.css', 'index.css', '../components/map/map.css'])(
     '%s usa solo variabili --rs-* definite',
     (file) => {
       const used = [...read(file).matchAll(/var\((--rs-[\w-]+)/g)].map((match) => match[1])

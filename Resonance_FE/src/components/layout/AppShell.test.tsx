@@ -5,12 +5,17 @@ import { describe, expect, it } from 'vitest'
 import { routes } from '@/app/router'
 import { makeStore } from '@/app/store'
 import { ROUTES } from '@/app/routes'
+import { makePage } from '@/test/fixtures/events'
+import { nearbyConcertsFound } from '@/test/handlers/events'
+import { server } from '@/test/server'
 import { setViewportWidth } from '@/test/viewport'
 
 // Forma della navigazione ai tre breakpoint (decisione 83): tab sotto 768 px, colonna stretta da 768 px, colonna larga
 // con il logo da 1200 px; mai due navigazioni insieme e mai un menu a scomparsa.
 function renderEvents(width: number) {
   setViewportWidth(width)
+  // La pagina Eventi cerca i concerti vicini all'apertura: senza handler la richiesta farebbe fallire il test
+  server.use(nearbyConcertsFound([makePage([])]))
   render(
     <Provider store={makeStore()}>
       <RouterProvider router={createMemoryRouter(routes, { initialEntries: [ROUTES.events] })} />

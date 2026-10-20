@@ -99,6 +99,18 @@ export const routes: RouteObject[] = [
         lazy: () => import('@/features/users/pages/PublicProfilePage'),
       },
       {
+        // Dettagli degli eventi: aperti anche agli anonimi, come `GET /api/official-concerts/{id}` (sezione 6.6). Le rotte
+        // statiche `/concerti/nuovo` e `/indie/nuovo` vincono su `:id` (ordine per specificità di React Router)
+        path: ROUTES.concert,
+        handle: titled('Evento'),
+        lazy: () => import('@/features/events/pages/ConcertDetailPage'),
+      },
+      {
+        path: ROUTES.indieEvent,
+        handle: titled('Evento'),
+        lazy: () => import('@/features/events/pages/IndieEventDetailPage'),
+      },
+      {
         // Pubblicazione dei concerti: solo HOST (progettazione, sezione 6.6); la protezione vera è nel backend
         element: (
           <RequireRole roles={['HOST']}>

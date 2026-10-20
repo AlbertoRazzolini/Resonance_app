@@ -80,6 +80,12 @@ a {
   --bs-btn-hover-color: var(--rs-color-text);
 }
 
+/* Schede a pillola (es. Ufficiali / Indie): la scheda attiva in giallo, l'accento dello stato attivo */
+.nav-pills {
+  --bs-nav-pills-link-active-bg: var(--rs-color-accent);
+  --bs-nav-pills-link-active-color: var(--rs-color-accent-ink);
+}
+
 /* Campi: fondo scuro e solo la linea inferiore, gialla al focus */
 .form-control,
 .form-select {

@@ -12,6 +12,9 @@ export const ROUTES = {
   publicUser: '/utenti/:id',
   newConcert: '/concerti/nuovo',
   newIndieEvent: '/indie/nuovo',
+  /** Modelli delle rotte dei dettagli; per un collegamento si usano `concertPath(id)` e `indieEventPath(id)`. */
+  concert: '/concerti/:id',
+  indieEvent: '/indie/:id',
   privacy: '/informativa-privacy',
   cookies: '/informativa-cookie',
   login: '/accesso',
@@ -23,3 +26,9 @@ export const ROUTES = {
 
 /** Percorso del profilo pubblico di un utente. */
 export const userPath = (id: string) => `/utenti/${encodeURIComponent(id)}`
+
+/** Percorso del dettaglio di un concerto ufficiale. */
+export const concertPath = (id: string) => `/concerti/${encodeURIComponent(id)}`
+
+/** Percorso del dettaglio di un indie event. */
+export const indieEventPath = (id: string) => `/indie/${encodeURIComponent(id)}`

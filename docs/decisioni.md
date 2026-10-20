@@ -2650,3 +2650,42 @@ Ogni punto è stato proposto allo studente con alternative, pro, contro e raccom
 - **Pulsante spento con lo stesso colore sbiadito (quello di Bootstrap) o rosso:** il primo sembra ancora attivo su sfondo scuro, il secondo sembra un errore.
 - **Profilo pubblico dietro il login:** filtro solo nell'interfaccia, il backend resta pubblico e l'anonimo non vedrebbe chi ha scritto un annuncio.
 - **Regola «solo autori» subito:** nuova card di backend (circa 2-3 ore) senza margine nel calendario.
+
+## Decisione 87: eventi vicini, mappa e dettagli nel frontend (card FE-05, progettazione, sezioni 6.6 e 10.2)
+
+Ogni punto è stato proposto allo studente con alternative, pro, contro e raccomandazione, e approvato il 20 ottobre.
+
+### Scelta
+
+- **Due schede, non un elenco misto:** `/eventi` ha le schede «Ufficiali» e «Indie», ognuna con il suo endpoint, la sua paginazione e il suo «Carica altri» (come nel piano). Il mock-up Stitch mostra un solo elenco «Tutti»: qui diverge. I nomi nell'interfaccia sono «Ufficiali» e «Indie» (non «Concerti»: anche un indie event è un concerto); i percorsi restano `/concerti/:id` e `/indie/:id`.
+- **Scheda e raggio nell'indirizzo** (`?tipo=indie&raggio=25`): «Indietro» dal dettaglio ritrova scheda e raggio, e il link si condivide. I valori iniziali (Ufficiali, 15 km) non si scrivono; un raggio che non è uno dei livelli 5-15-25-50-100 torna a 15.
+- **Centro della ricerca:** la posizione del browser solo dopo il clic su «Usa la mia posizione» (coerente con FE-04 e la decisione 30; nessuna richiesta di permesso a sorpresa e nessuna Permissions API), altrimenti le coordinate del profilo, altrimenti Firenze con un avviso. La posizione del browser resta nella pagina: uscendo si perde e il browser la rida subito dalla sua cache (5 minuti).
+- **Mappa neutra all'apertura:** con il centro predefinito (Firenze) la ricerca usa Firenze e il raggio scelto, ma la mappa parte con zoom 5 (l'Italia dall'alto); quando arrivano i risultati si avvicina al raggio. Con un errore resta sull'Italia.
+- **Mappa:** MapLibre GL, react-map-gl e lo stile scuro di OpenFreeMap, con cerchio giallo tratteggiato del raggio; il clic (o Invio) su un marker apre un fumetto con titolo, distanza e link «Dettagli» ed evidenzia la card. Provata sotto la CSP di `vite preview` (worker come file): nessuna violazione.
+- **«Pubblica» fuori da FE-05:** il pulsante del mock-up arriva con FE-06.
+- **Skeleton:** un solo componente condiviso (`Placeholder` di React Bootstrap), che compare dopo 200 ms, con `aria-busy` e il testo «Caricamento in corso»; usato nell'elenco e nel dettaglio degli eventi. Avatar e profilo pubblico restano come sono.
+- **Descrizione dell'evento:** testo semplice con a capo (CSS `pre-wrap`, escape di React) finché FE-07 non crea `UserText`, che la sostituirà.
+- **`ExternalLink`:** un pulsante, non un `<a>`; il clic apre «Stai uscendo da Resonance» con il dominio vero (anche con `utente@` davanti all'indirizzo) e solo «Continua» apre la nuova scheda con `noopener,noreferrer`. Un indirizzo che non è `http`/`https` resta testo inerte; nel dettaglio il biglietto non compare affatto.
+- **Evento non trovato:** un 404 con codice `NOT_FOUND` (nascosto, inesistente, bozza di un altro) mostra una pagina dedicata «Evento non trovato» con «Torna agli eventi»; gli altri errori mostrano il messaggio con «Riprova».
+- **Formati:** data in ora locale «ven 23 ott · 21:30» (nel dettaglio «venerdì 23 ottobre 2026 · 21:30»); distanza «3,2 km» con la virgola, sotto il chilometro in metri («800 m»).
+- **Dettaglio:** copertina (solo se `http`/`https`) con riquadro di caricamento, senza `Referer`, che sparisce se non si carica; etichetta «Bozza» per il proprietario di una bozza; titolo della barra «Evento» per entrambe le pagine.
+- **Testi dell'interfaccia** approvati nella bozza proposta (titoli, avvisi, stati vuoti, conferma d'uscita), con «Ufficiali» al posto di «Concerti».
+
+### Motivazione
+
+- Le due schede tengono semplice la paginazione (nessuna fusione lato client di due endpoint) e restano nelle 4 ore della card.
+- L'indirizzo come stato rende la navigazione prevedibile (Indietro, link) senza uno slice in più.
+- La posizione del browser solo con il clic rispetta la scelta di FE-04: nessuna richiesta di permesso a sorpresa.
+- La mappa sull'Italia rende l'aspetto neutro, mentre la ricerca resta su un centro vero: il backend non cerca «in tutta Italia» (raggio massimo 200 km, centro obbligatorio).
+- Un indirizzo esterno scritto da un utente non si apre mai senza conferma né con uno schema diverso da `http`/`https` (progettazione, sezione 4.13).
+
+### Alternative scartate
+
+- **Elenco misto «Tutti / Ufficiali / Indie»:** fusione lato client di due endpoint e «Carica altri» ambiguo, circa +1 ora.
+- **Posizione automatica (se il permesso c'è già, o sempre):** Permissions API con comportamenti diversi fra browser, oppure una richiesta di permesso a sorpresa che molti rifiutano.
+- **Stato solo nella pagina:** dopo il dettaglio si tornerebbe a Ufficiali e 15 km.
+- **Nessuna ricerca finché non si sceglie il centro:** pagina vuota all'inizio, in contrasto con il criterio della card.
+- **Fumetto sostituito dalla navigazione diretta al dettaglio:** un clic per sbaglio cambia pagina e non si vede quale card è.
+- **`UserText` anticipato:** esce dalla card.
+- **Pagina «Pagina non trovata» generica per gli eventi:** link verso la home e testo non specifico.
+- **Skeleton anche su Avatar e profilo pubblico, o solo «Caricamento…»:** il primo tocca file di FE-04 in un giorno già pieno, il secondo fa lampeggiare l'elenco.

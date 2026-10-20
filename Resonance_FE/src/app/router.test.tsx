@@ -2,14 +2,16 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import { RouterProvider, createMemoryRouter } from 'react-router'
 import { sessionEnded, sessionStarted } from '@/features/auth/authSlice'
+import { makeConcert, makeIndieEvent, makePage } from '@/test/fixtures/events'
 import { makeLoginResponse, makeMe, makePublicUser } from '@/test/fixtures/users'
+import { concertFound, indieEventFound, nearbyConcertsFound } from '@/test/handlers/events'
 import { publicUserFound } from '@/test/handlers/users'
 import { server } from '@/test/server'
 import { setViewportWidth } from '@/test/viewport'
 import type { Role } from '@/types/users'
 import { makeStore } from './store'
 import { routes } from './router'
-import { ROUTES, userPath } from './routes'
+import { concertPath, indieEventPath, ROUTES, userPath } from './routes'
 
 // Prova del router: home verso gli eventi, pagine segnaposto delle tab (Messaggi e Profilo dietro il login), pagina
 // "non trovato", frecce indietro delle pagine di accesso e navigazione del telefono senza menu a scomparsa.
@@ -29,14 +31,16 @@ function renderAt(path: string, { loggedIn = false, roles = ['FAN'] as Role[] } 
 }
 
 describe('router', () => {
+  // /eventi cerca i concerti vicini all'apertura: senza handler la richiesta farebbe fallire il test
+  beforeEach(() => server.use(nearbyConcertsFound([makePage([])])))
+
   it('"/" porta agli eventi', async () => {
     const router = renderAt(ROUTES.home)
-    expect(await screen.findByRole('heading', { name: 'Eventi' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Eventi vicini' })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe(ROUTES.events)
   })
 
   it.each([
-    [ROUTES.events, 'Eventi'],
     [ROUTES.collab, 'Collab'],
     [ROUTES.feed, 'Feed'],
   ])("%s è aperta all'anonimo e mostra il segnaposto", async (path, title) => {
@@ -44,6 +48,24 @@ describe('router', () => {
     expect(await screen.findByRole('heading', { name: title })).toBeInTheDocument()
     expect(screen.getByText('Questa sezione arriva presto.')).toBeInTheDocument()
     expect(router.state.location.pathname).toBe(path)
+  })
+
+  it("/eventi è aperta all'anonimo e mostra gli eventi vicini", async () => {
+    const router = renderAt(ROUTES.events)
+    expect(await screen.findByRole('heading', { level: 1, name: 'Eventi vicini' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe(ROUTES.events)
+  })
+
+  it("/concerti/:id è aperta all'anonimo e mostra il dettaglio, con il titolo «Evento» in barra", async () => {
+    server.use(concertFound(makeConcert({ title: 'Mogwai' })))
+    renderAt(concertPath('c1'))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Mogwai' })).toBeInTheDocument()
+  })
+
+  it("/indie/:id è aperta all'anonimo e mostra il dettaglio", async () => {
+    server.use(indieEventFound(makeIndieEvent({ title: 'Underground night' })))
+    renderAt(indieEventPath('e1'))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Underground night' })).toBeInTheDocument()
   })
 
   it.each([
