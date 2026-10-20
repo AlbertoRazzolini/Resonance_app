@@ -48,6 +48,11 @@ export function getErrorMessage(error: unknown): string {
   return ERROR_MESSAGES.INTERNAL_ERROR
 }
 
+/** Codice dell'`ErrorResponse` del backend in un errore di RTK Query, se c'è: serve a decidere cosa mostrare (sezione 6.1). */
+export function getErrorCode(error: unknown): string | undefined {
+  return backendError(error)?.code
+}
+
 /** Errori dei singoli campi (`nome campo → messaggio`), solo per `VALIDATION_ERROR` e `ADDRESS_NOT_FOUND`. */
 export function getFieldErrors(error: unknown): Record<string, string> {
   const response = backendError(error)

@@ -26,6 +26,38 @@ describe('router', () => {
     expect(await screen.findByRole('heading', { name: 'Pagina non trovata' })).toBeInTheDocument()
   })
 
+  it('la freccia indietro di /verifica porta alla registrazione, quella di /accesso alla home', async () => {
+    renderAt(ROUTES.verify)
+    expect(await screen.findByRole('link', { name: 'Indietro' })).toHaveAttribute(
+      'href',
+      ROUTES.register,
+    )
+  })
+
+  it('la freccia indietro del reset porta a "password dimenticata", quella di "password dimenticata" alla home', async () => {
+    renderAt(ROUTES.resetPassword)
+    expect(await screen.findByRole('link', { name: 'Indietro' })).toHaveAttribute(
+      'href',
+      ROUTES.forgotPassword,
+    )
+  })
+
+  it('la freccia indietro di "password dimenticata" porta alla home', async () => {
+    renderAt(ROUTES.forgotPassword)
+    expect(await screen.findByRole('link', { name: 'Indietro' })).toHaveAttribute(
+      'href',
+      ROUTES.home,
+    )
+  })
+
+  it('la freccia indietro di /accesso porta alla home', async () => {
+    renderAt(ROUTES.login)
+    expect(await screen.findByRole('link', { name: 'Indietro' })).toHaveAttribute(
+      'href',
+      ROUTES.home,
+    )
+  })
+
   it('la barra ha il pulsante del menu a scomparsa', async () => {
     renderAt(ROUTES.home)
     expect(await screen.findByRole('button', { name: 'Apri il menu' })).toBeInTheDocument()

@@ -143,10 +143,10 @@ class RegistrationIntegrationTest extends IntegrationTest {
     @Test
     void register_withAnInvisibleCharacterInTheName_returns400OnTheDisplayNameField() throws Exception {
         // Spazio a larghezza zero e inversione del testo: nomi uguali a vista ma diversi.
-        register(EMAIL, PASSWORD, "Mario​Rossi")
+        register(EMAIL, PASSWORD, "Mario\u200BRossi")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fields.displayName").value("non può contenere caratteri invisibili"));
-        register(EMAIL, PASSWORD, "Mario‮oiram")
+        register(EMAIL, PASSWORD, "Mario\u202Eoiram")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fields.displayName").exists());
 

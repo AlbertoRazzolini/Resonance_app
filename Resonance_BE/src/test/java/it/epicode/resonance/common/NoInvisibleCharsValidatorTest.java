@@ -39,20 +39,20 @@ class NoInvisibleCharsValidatorTest {
 
     @Test
     void zeroWidthSpace_isRejected() {
-        assertThat(isValid("Mario​Rossi")).isFalse();
+        assertThat(isValid("Mario\u200BRossi")).isFalse();
     }
 
     @Test
     void textDirectionOverride_isRejected() {
         // U+202E inverte il verso del testo: "Mario" potrebbe sembrare un altro nome.
-        assertThat(isValid("Mario‮oiram")).isFalse();
+        assertThat(isValid("Mario\u202Eoiram")).isFalse();
     }
 
     @Test
     void otherFormatCharacters_areRejected() {
-        assertThat(isValid("Mario‍Rossi")).isFalse();
-        assertThat(isValid("﻿Mario")).isFalse();
-        assertThat(isValid("Mar­io")).isFalse();
+        assertThat(isValid("Mario\u200DRossi")).isFalse();
+        assertThat(isValid("\uFEFFMario")).isFalse();
+        assertThat(isValid("Mar\u00ADio")).isFalse();
     }
 
     @Test
@@ -64,7 +64,7 @@ class NoInvisibleCharsValidatorTest {
 
     @Test
     void lineAndParagraphSeparators_areRejected() {
-        assertThat(isValid("Mario Rossi")).isFalse();
-        assertThat(isValid("Mario Rossi")).isFalse();
+        assertThat(isValid("Mario\u2028Rossi")).isFalse();
+        assertThat(isValid("Mario\u2029Rossi")).isFalse();
     }
 }

@@ -19,6 +19,42 @@ export type MeResponse = {
   createdAt: string
 }
 
+/** Corpo di `POST /api/auth/register`. */
+export type RegisterRequest = {
+  email: string
+  password: string
+  displayName: string
+}
+
+/** Risposta di `POST /api/auth/register`: solo l'email, senza l'id (progettazione, sezione 4.4). */
+export type RegisterResponse = {
+  email: string
+}
+
+/** Corpo di `POST /api/auth/verify`: l'email, il codice a 6 cifre e la password scelta alla registrazione. */
+export type VerifyRequest = {
+  email: string
+  code: string
+  password: string
+}
+
+/** Corpo di `POST /api/auth/resend-code`. */
+export type ResendCodeRequest = {
+  email: string
+}
+
+/** Corpo di `POST /api/auth/password/forgot`. */
+export type ForgotPasswordRequest = {
+  email: string
+}
+
+/** Corpo di `POST /api/auth/password/reset`: l'email, il codice a 6 cifre e la nuova password. */
+export type ResetPasswordRequest = {
+  email: string
+  code: string
+  newPassword: string
+}
+
 /** Corpo di `POST /api/auth/login`. */
 export type LoginRequest = {
   email: string

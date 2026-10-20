@@ -5,18 +5,13 @@ import { ROUTES } from '@/app/routes'
 import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import { FieldError } from '@/components/ui/FieldError'
 import { useAppSelector } from '@/hooks/redux'
-import { errorCode } from '@/lib/api/baseQuery'
 import { suspensionOf } from '@/lib/api/apiSlice'
+import { getErrorCode } from '@/lib/errors/getErrorMessage'
 import { useLoginMutation } from '../api/authApi'
 import { AuthCard } from '../components/AuthCard'
 import { PasswordField } from '../components/PasswordField'
 import { SuspendedNotice } from '../components/SuspendedNotice'
 import { readAuthState } from '../locationState'
-
-/** Codice dell'errore di backend di una mutazione fallita, se c'è. */
-function backendCode(error: unknown): string | undefined {
-  return typeof error === 'object' && error !== null && 'data' in error ? errorCode(error.data) : undefined
-}
 
 /**
  * Pagina di accesso (progettazione, sezione 4.7). Un messaggio per ogni esito del backend: credenziali sbagliate,
@@ -46,10 +41,12 @@ export function Component() {
     await login({ email: trimmed, password })
   }
 
-  const code = backendCode(error)
+  const code = getErrorCode(error)
   // La sospensione arriva dal login appena fallito oppure dal refresh che ha chiuso la sessione (store)
   const suspensionDetails =
-    code === 'ACCOUNT_SUSPENDED' ? suspensionOf((error as { data: unknown }).data) : (!error && suspension) || null
+    code === 'ACCOUNT_SUSPENDED'
+      ? suspensionOf((error as { data: unknown }).data)
+      : (!error && suspension) || null
 
   return (
     <>
@@ -102,7 +99,12 @@ export function Component() {
             error={passwordError}
             aside={<Link to={ROUTES.forgotPassword}>Password dimenticata?</Link>}
           />
-          <Button type="submit" variant="primary" className="rs-auth-submit w-100" disabled={isLoading}>
+          <Button
+            type="submit"
+            variant="primary"
+            className="rs-auth-submit w-100"
+            disabled={isLoading}
+          >
             <span className="rs-auth-submit__label">Entra</span>
             <span className="rs-auth-submit__hint">…nella Zona</span>
           </Button>

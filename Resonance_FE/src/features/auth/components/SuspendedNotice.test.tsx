@@ -8,7 +8,10 @@ describe('SuspendedNotice', () => {
   it('mostra titolo, motivo e data di fine della sospensione', () => {
     render(
       <SuspendedNotice
-        details={{ suspensionReason: 'Violazione delle linee guida', suspendedUntil: '2026-10-30T12:00:00Z' }}
+        details={{
+          suspensionReason: 'Violazione delle linee guida',
+          suspendedUntil: '2026-10-30T12:00:00Z',
+        }}
       />,
     )
 
@@ -28,7 +31,10 @@ describe('SuspendedNotice', () => {
   it('mostra il contatto per i ricorsi come collegamento email', () => {
     render(<SuspendedNotice details={{ suspensionReason: 'Spam', suspendedUntil: null }} />)
 
-    expect(screen.getByRole('link', { name: APPEAL_CONTACT })).toHaveAttribute('href', `mailto:${APPEAL_CONTACT}`)
+    expect(screen.getByRole('link', { name: APPEAL_CONTACT })).toHaveAttribute(
+      'href',
+      `mailto:${APPEAL_CONTACT}`,
+    )
   })
 
   it('con il motivo vuoto (dettagli mancanti) non scrive "Motivo:"', () => {
@@ -40,7 +46,9 @@ describe('SuspendedNotice', () => {
 
   it('mostra il motivo come testo, mai come HTML', () => {
     render(
-      <SuspendedNotice details={{ suspensionReason: '<img src=x onerror=alert(1)>', suspendedUntil: null }} />,
+      <SuspendedNotice
+        details={{ suspensionReason: '<img src=x onerror=alert(1)>', suspendedUntil: null }}
+      />,
     )
 
     expect(screen.getByText(/<img src=x onerror=alert\(1\)>/)).toBeInTheDocument()

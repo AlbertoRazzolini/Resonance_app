@@ -1,6 +1,6 @@
 import { createBrowserRouter, type RouteObject } from 'react-router'
 import { RedirectIfAuthenticated } from '@/components/guards/RedirectIfAuthenticated'
-import { AuthLayout } from '@/components/layout/AuthLayout'
+import { AuthLayout, type AuthRouteHandle } from '@/components/layout/AuthLayout'
 import { AppShell } from '@/components/layout/AppShell'
 import { HydrateFallback } from './HydrateFallback'
 import { ROUTES } from './routes'
@@ -18,7 +18,26 @@ export const routes: RouteObject[] = [
       </RedirectIfAuthenticated>
     ),
     HydrateFallback,
-    children: [{ path: ROUTES.login, lazy: () => import('@/features/auth/pages/LoginPage') }],
+    children: [
+      { path: ROUTES.login, lazy: () => import('@/features/auth/pages/LoginPage') },
+      { path: ROUTES.register, lazy: () => import('@/features/auth/pages/RegisterPage') },
+      {
+        path: ROUTES.verify,
+        // Per correggere un'email sbagliata si torna alla registrazione (decisione 83)
+        handle: { backTo: ROUTES.register } satisfies AuthRouteHandle,
+        lazy: () => import('@/features/auth/pages/VerifyPage'),
+      },
+      {
+        path: ROUTES.forgotPassword,
+        lazy: () => import('@/features/auth/pages/ForgotPasswordPage'),
+      },
+      {
+        path: ROUTES.resetPassword,
+        // Per correggere un'email sbagliata si torna a "password dimenticata" (decisione 83)
+        handle: { backTo: ROUTES.forgotPassword } satisfies AuthRouteHandle,
+        lazy: () => import('@/features/auth/pages/ResetPasswordPage'),
+      },
+    ],
   },
   {
     path: ROUTES.home,

@@ -46,7 +46,11 @@ function renderLogin(state?: unknown, prepare?: (store: ReturnType<typeof makeSt
   return { router, store, user: userEvent.setup() }
 }
 
-async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>, email: string, password: string) {
+async function fillAndSubmit(
+  user: ReturnType<typeof userEvent.setup>,
+  email: string,
+  password: string,
+) {
   if (email) await user.type(screen.getByLabelText('Email'), email)
   if (password) await user.type(screen.getByLabelText('Password'), password)
   await user.click(screen.getByRole('button', { name: /entra/i }))
@@ -59,8 +63,14 @@ describe('LoginPage', () => {
     expect(screen.getByRole('heading', { name: 'Accedi' })).toBeInTheDocument()
     expect(screen.getByLabelText('Email')).toBeInTheDocument()
     expect(screen.getByLabelText('Password')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Registrati qui' })).toHaveAttribute('href', ROUTES.register)
-    expect(screen.getByRole('link', { name: 'Password dimenticata?' })).toHaveAttribute('href', ROUTES.forgotPassword)
+    expect(screen.getByRole('link', { name: 'Registrati qui' })).toHaveAttribute(
+      'href',
+      ROUTES.register,
+    )
+    expect(screen.getByRole('link', { name: 'Password dimenticata?' })).toHaveAttribute(
+      'href',
+      ROUTES.forgotPassword,
+    )
   })
 
   it('con i campi vuoti mostra i nostri messaggi sotto i campi e non chiama il server', async () => {
@@ -86,7 +96,7 @@ describe('LoginPage', () => {
     expect(screen.getByText('Scrivi la password.')).toBeInTheDocument()
   })
 
-  it('con le credenziali giuste apre la sessione e va alla home, inviando l\'email senza spazi ai lati', async () => {
+  it("con le credenziali giuste apre la sessione e va alla home, inviando l'email senza spazi ai lati", async () => {
     const calls: Request[] = []
     server.use(loginSucceeds(makeLoginResponse(), calls))
     const { user, store } = renderLogin()
@@ -107,7 +117,7 @@ describe('LoginPage', () => {
     expect(await screen.findByText('Pagina riservata')).toBeInTheDocument()
   })
 
-  it('durante l\'invio il pulsante è disattivato (niente doppio invio)', async () => {
+  it("durante l'invio il pulsante è disattivato (niente doppio invio)", async () => {
     server.use(
       http.post('*/api/auth/login', async () => {
         await delay(100)
@@ -142,10 +152,12 @@ describe('LoginPage', () => {
 
     await fillAndSubmit(user, 'fan@example.com', 'password-lunga')
 
-    expect(await screen.findByText('Troppi tentativi: attendi un momento e riprova.')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Troppi tentativi: attendi un momento e riprova.'),
+    ).toBeInTheDocument()
   })
 
-  it('EMAIL_NOT_VERIFIED mostra il collegamento alla verifica, con l\'email già pronta', async () => {
+  it("EMAIL_NOT_VERIFIED mostra il collegamento alla verifica, con l'email già pronta", async () => {
     server.use(loginRejected(403, 'EMAIL_NOT_VERIFIED'))
     const { user, router } = renderLogin({ from: '/riservata' })
 
@@ -157,7 +169,7 @@ describe('LoginPage', () => {
     expect(router.state.location.state).toEqual({ email: 'nuovo@example.com', from: '/riservata' })
   })
 
-  it('ACCOUNT_SUSPENDED mostra l\'avviso con motivo, scadenza e contatto, senza aprire la sessione', async () => {
+  it("ACCOUNT_SUSPENDED mostra l'avviso con motivo, scadenza e contatto, senza aprire la sessione", async () => {
     server.use(
       loginRejected(403, 'ACCOUNT_SUSPENDED', [], {
         suspensionReason: 'Violazione delle linee guida',
@@ -175,25 +187,29 @@ describe('LoginPage', () => {
     expect(store.getState().auth.status).toBe('anonymous')
   })
 
-  it('mostra l\'avviso di sospensione anche quando la sessione è stata chiusa dal refresh (stato dello store)', () => {
+  it("mostra l'avviso di sospensione anche quando la sessione è stata chiusa dal refresh (stato dello store)", () => {
     renderLogin(undefined, (store) =>
-      store.dispatch(sessionEnded({ suspension: { suspensionReason: 'Spam', suspendedUntil: null } })),
+      store.dispatch(
+        sessionEnded({ suspension: { suspensionReason: 'Spam', suspendedUntil: null } }),
+      ),
     )
 
     expect(screen.getByRole('heading', { name: 'Account sospeso' })).toBeInTheDocument()
     expect(screen.getByText('A tempo indeterminato')).toBeInTheDocument()
   })
 
-  it('dopo il reset della password mostra l\'avviso verde, solo se arriva da lì', () => {
+  it("dopo il reset della password mostra l'avviso verde, solo se arriva da lì", () => {
     renderLogin({ passwordChanged: true })
 
     expect(screen.getByText('Password cambiata. Accedi con la nuova password.')).toBeInTheDocument()
   })
 
-  it('senza lo stato del reset non mostra l\'avviso verde', () => {
+  it("senza lo stato del reset non mostra l'avviso verde", () => {
     renderLogin()
 
-    expect(screen.queryByText('Password cambiata. Accedi con la nuova password.')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('Password cambiata. Accedi con la nuova password.'),
+    ).not.toBeInTheDocument()
   })
 
   it('chi ha già la sessione non vede il form e va alla home', async () => {
@@ -204,7 +220,7 @@ describe('LoginPage', () => {
     await waitFor(() => expect(screen.getByText('Home')).toBeInTheDocument())
   })
 
-  it('una password con le emoji viene inviata così com\'è (il controllo dei 72 byte spetta alla registrazione)', async () => {
+  it("una password con le emoji viene inviata così com'è (il controllo dei 72 byte spetta alla registrazione)", async () => {
     const calls: Request[] = []
     server.use(loginSucceeds(makeLoginResponse(), calls))
     const { user } = renderLogin()

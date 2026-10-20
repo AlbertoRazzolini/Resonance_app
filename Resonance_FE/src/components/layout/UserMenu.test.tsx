@@ -30,18 +30,23 @@ function renderMenu(displayName: string | null) {
 }
 
 describe('UserMenu', () => {
-  it('per l\'anonimo mostra Accedi e Registrati, senza il menu dell\'account', () => {
+  it("per l'anonimo mostra Accedi e Registrati, senza il menu dell'account", () => {
     renderMenu(null)
 
     expect(screen.getByRole('link', { name: 'Accedi' })).toHaveAttribute('href', ROUTES.login)
-    expect(screen.getByRole('link', { name: 'Registrati' })).toHaveAttribute('href', ROUTES.register)
+    expect(screen.getByRole('link', { name: 'Registrati' })).toHaveAttribute(
+      'href',
+      ROUTES.register,
+    )
     expect(screen.queryByRole('button', { name: /Menu dell'account/ })).not.toBeInTheDocument()
   })
 
   it("per chi ha la sessione mostra l'iniziale del nome in maiuscolo, non Accedi e Registrati", () => {
     renderMenu('mattia verdi')
 
-    expect(screen.getByRole('button', { name: "Menu dell'account di mattia verdi" })).toHaveTextContent('M')
+    expect(
+      screen.getByRole('button', { name: "Menu dell'account di mattia verdi" }),
+    ).toHaveTextContent('M')
     expect(screen.queryByRole('link', { name: 'Accedi' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Registrati' })).not.toBeInTheDocument()
   })

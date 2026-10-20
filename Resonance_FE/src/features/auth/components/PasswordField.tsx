@@ -1,6 +1,7 @@
 import { useId, useState, type ReactNode } from 'react'
 import { Form } from 'react-bootstrap'
 import { FieldError } from '@/components/ui/FieldError'
+import { byteLength, PASSWORD_MAX } from '../validation'
 
 type PasswordFieldProps = {
   label: string
@@ -10,10 +11,20 @@ type PasswordFieldProps = {
   error?: string
   /** Collegamento a destra dell'etichetta (es. "Password dimenticata?"). */
   aside?: ReactNode
+  /** Mostra "N / 72 byte" sotto il campo: è il limite che conta per il backend (registrazione e reset). */
+  showByteCount?: boolean
 }
 
 /** Campo password con l'occhio per mostrarla o nasconderla (riuso adattato di `CampoPassword` di NoseY). */
-export function PasswordField({ label, value, onChange, autoComplete, error, aside }: PasswordFieldProps) {
+export function PasswordField({
+  label,
+  value,
+  onChange,
+  autoComplete,
+  error,
+  aside,
+  showByteCount = false,
+}: PasswordFieldProps) {
   const id = useId()
   const errorId = `${id}-error`
   const [visible, setVisible] = useState(false)
@@ -53,6 +64,11 @@ export function PasswordField({ label, value, onChange, autoComplete, error, asi
           </svg>
         </button>
       </div>
+      {showByteCount && (
+        <p className="rs-field-hint">
+          {byteLength(value)} / {PASSWORD_MAX} byte
+        </p>
+      )}
       <FieldError id={errorId} message={error} />
     </Form.Group>
   )

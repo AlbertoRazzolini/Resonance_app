@@ -17,7 +17,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   INTERNAL_ERROR: 'Si è verificato un problema imprevisto. Riprova tra poco.',
 
   // Registrazione, verifica, login
-  EMAIL_ALREADY_REGISTERED: 'Esiste già un account con questa email. Prova ad accedere.',
+  EMAIL_ALREADY_REGISTERED: 'Esiste già un account con questa email.',
   ALREADY_VERIFIED: 'Questo account è già verificato: puoi accedere.',
   CODE_INVALID: "Il codice non è corretto. Controlla l'email e riprova.",
   CODE_EXPIRED: 'Il codice è scaduto o hai esaurito i tentativi. Richiedine uno nuovo.',

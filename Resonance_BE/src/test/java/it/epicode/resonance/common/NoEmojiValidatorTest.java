@@ -33,7 +33,7 @@ class NoEmojiValidatorTest {
 
     @Test
     void passwordCharacters_areValid() {
-        // Cifre, # e * sono "emoji" per Unicode solo come base di una sequenza (1️⃣): da sole sono testo normale.
+        // Cifre, # e * sono "emoji" per Unicode solo come base di una sequenza (il tasto con cornice): da sole sono testo normale.
         assertThat(isValid("12345678")).isTrue();
         assertThat(isValid("Test #1 * P@ss w0rd!?")).isTrue();
     }
@@ -67,14 +67,14 @@ class NoEmojiValidatorTest {
 
     @Test
     void zwjSequence_isRejected() {
-        assertThat(isValid("👨‍👩‍👧")).isFalse();
+        assertThat(isValid("👨\u200D👩\u200D👧")).isFalse();
     }
 
     @Test
     void emojiSelector_isRejected() {
-        assertThat(isValid("❤️")).isFalse();
+        assertThat(isValid("❤\uFE0F")).isFalse();
         // Tasto 1 in cornice: cifra + selettore + cornice, senza nessuna emoji grafica.
-        assertThat(isValid("1️⃣")).isFalse();
+        assertThat(isValid("1\uFE0F\u20E3")).isFalse();
     }
 
     @Test

@@ -25,7 +25,8 @@ export function SuspendedNotice({ details }: { details: SuspensionDetails }) {
         <p className="rs-suspended__until">
           {suspendedUntil ? (
             <>
-              Sospeso fino al <span className="rs-suspended__date">{formatDate(suspendedUntil)}</span>
+              Sospeso fino al{' '}
+              <span className="rs-suspended__date">{formatDate(suspendedUntil)}</span>
             </>
           ) : (
             'A tempo indeterminato'

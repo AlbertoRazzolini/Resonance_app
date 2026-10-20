@@ -157,7 +157,12 @@ textarea {
   position: absolute;
   inset: 0 0 auto 0;
   height: 2px;
-  background: linear-gradient(to right, var(--rs-color-accent), var(--rs-color-border-strong), transparent);
+  background: linear-gradient(
+    to right,
+    var(--rs-color-accent),
+    var(--rs-color-border-strong),
+    transparent
+  );
 }
 
 .rs-auth-card__head {
@@ -248,6 +253,58 @@ textarea {
 
 .rs-password__toggle:hover {
   color: var(--rs-color-accent);
+}
+
+/* Caselle del codice di verifica (6 cifre) e reinvio del codice */
+.rs-otp {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--rs-space-2);
+}
+
+.rs-otp__box {
+  width: 100%;
+  height: 3rem;
+  padding: 0;
+  background: var(--rs-color-field);
+  border: 1px solid var(--rs-color-border-strong);
+  border-radius: var(--rs-radius-lg);
+  text-align: center;
+  font-size: var(--rs-text-xl);
+  font-weight: var(--rs-weight-heading);
+  color: var(--rs-color-text);
+}
+
+.rs-otp__box:focus {
+  border-color: var(--rs-color-accent);
+  outline: none;
+}
+
+.rs-otp__box[aria-invalid='true'] {
+  border-color: var(--rs-color-danger);
+}
+
+.rs-resend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rs-space-1);
+  margin: var(--rs-space-3) auto 0;
+  padding: var(--rs-space-1);
+  font-size: var(--rs-text-sm);
+  color: var(--rs-color-text-muted);
+}
+
+.rs-resend:not(:disabled):hover {
+  color: var(--rs-color-accent);
+}
+
+/* Contatore sotto un campo ("N / 72 byte"), a destra */
+.rs-field-hint {
+  margin: var(--rs-space-1) 0 0;
+  text-align: right;
+  font-size: var(--rs-text-xs);
+  color: var(--rs-color-text-muted);
 }
 
 .rs-field-error {

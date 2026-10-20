@@ -2498,6 +2498,22 @@ Ogni punto è stato proposto allo studente con alternative, pro, contro e raccom
   sotto il campo compare "Le emoji non sono ammesse nel nome." (o "…nella password.") e il pulsante non invia. Il backend applicherà
   la stessa regola con la card F7-05 (decisione 84): nome senza emoji né caratteri invisibili, password senza emoji, solo alla
   scrittura (non nel login e nella verifica). Le emoji restano ammesse nei messaggi della chat (FE-09b).
+- **Verifica (`/verifica`):** il campo "Email" c'è sempre (già scritto se si arriva dalla registrazione o dall'accesso, modificabile),
+  poi le sei caselle del codice e la password. Testo: "Abbiamo inviato un codice a 6 cifre alla tua email. Inseriscilo per confermare
+  la tua identità da palco." (l'email non è mascherata, perché il campo la mostra). `CODE_INVALID` e `CODE_EXPIRED` compaiono sotto
+  le caselle, che restano riempite e diventano rosse; gli altri errori in un avviso in alto; `ALREADY_VERIFIED` con "Vai all'accesso";
+  `ACCOUNT_SUSPENDED` con la scheda. Codice incompleto: "Scrivi le 6 cifre del codice."
+- **Reinvio del codice:** attesa di **60 secondi**, non 45: il backend accetta un invio ogni 60 (progettazione, sezione 4.6) e con 45
+  si vedrebbero errori `TOO_MANY_REQUESTS` causati dall'interfaccia. Il pulsante mostra "Invia di nuovo il codice (42 s)"; l'attesa
+  parte subito dopo una registrazione o dopo l'invio da "password dimenticata" (segno `codeSent` nello stato del router), non arrivando
+  dall'accesso o dopo un ricaricamento. Dopo un reinvio compare "Se l'indirizzo è in attesa di verifica, il codice sta arrivando. Non
+  puoi chiederne un altro subito: controlla se ti è arrivato, anche nella cartella spam." (non promette che il codice parta: il
+  backend risponde sempre 204, decisione 51). Con `TOO_MANY_REQUESTS` l'attesa riparte.
+- **Password dimenticata e reset:** `/password-dimenticata` dice "Ti verrà mandato un codice a 6 cifre per il ripristino password."
+  e ha il collegamento "Hai già un codice? Inseriscilo". A invio riuscito si va a `/password/reset` con l'email e il segno
+  `codeSent`, che mostra l'avviso neutro "Se l'indirizzo è registrato e verificato, ti abbiamo inviato un codice." Il reset ha email,
+  codice, nuova password (stesse regole della registrazione, con il contatore dei byte) e il reinvio del codice (stesso
+  componente, stesso endpoint di "password dimenticata"). A successo la sessione si chiude e si va all'accesso con l'avviso verde.
 - **Form:** gli errori dei campi compaiono all'invio e poi si aggiornano mentre si scrive; il pulsante si disattiva solo durante
   l'invio.
 - **Colori:** solo variabili `--rs-*` e Bootstrap, nessun colore scritto nei componenti, per poterli cambiare a fine frontend da
