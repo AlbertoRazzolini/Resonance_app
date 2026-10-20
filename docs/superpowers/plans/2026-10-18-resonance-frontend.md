@@ -184,6 +184,10 @@ le sue 3 h hanno consumato il margine del 23 (scelta dello studente del 19 ottob
 nessun taglio in partenza). Resta la mattina del 24; la riserva vera è l'ordine dei tagli, circa 7,5 h in
 tutto, da applicare **appena** un giorno sfora, senza aspettare il 23.
 
+**Aggiunta del 20 ottobre:** FE-03b (navigazione e footer, 6 h) si somma al totale, che sale a circa 62,5 h; la tabella non è
+ricalcolata. Lo studente stima di finire il frontend entro tre giorni e ha scelto di non tagliare per ora: l'ordine dei tagli sotto
+resta la riserva e si applica se un giorno sfora.
+
 ### Ordine dei tagli (se una card o un giorno sfora, avvisare subito)
 
 1. **ReactBits** in FE-12 (−1 h).
@@ -204,7 +208,7 @@ riattivazione, hide/restore), deploy integrato con CSP, responsive sui tre break
 
 ### Dipendenze fra card
 
-F7-04 → FE-01 → FE-02 → FE-03 (fase A). FE-04 crea l'area personale che FE-06, FE-07 e FE-08 completano;
+F7-04 → FE-01 → FE-02 → FE-03 → FE-03b (fase A; FE-03b è nata il 20 ottobre dalla decisione 83). FE-04 crea l'area personale che FE-06, FE-07 e FE-08 completano;
 FE-05 crea `Map`, `ExternalLink` e `LoadMore`; FE-06 crea `ConfirmDialog`; FE-07 crea `UserText`, che
 da lì si applica a ogni testo. FE-09a precede FE-09b (la chat nuova si apre solo fra amici); il pulsante
 "Scrivi" (FE-09a) e "Apri la chat" della candidatura (FE-08) funzionano dopo FE-09b. FE-10 usa i dettagli
@@ -378,7 +382,7 @@ ai file (`validation.test.ts`, `SuspendedNotice.test.tsx`, `LoginPage.test.tsx`,
   scadenza in ora locale o "a tempo indeterminato" e contatto; ritorno alla pagina richiesta; logout nel
   menu utente.
 - [ ] **2. Registrazione (60 min).** `/registrazione`: validazioni come il backend (email, password 8–72
-  caratteri e al massimo 72 byte con `TextEncoder`, `displayName` 2–50); 201 → `/verifica` con l'email;
+  caratteri e al massimo 72 byte con `TextEncoder`, niente emoji, `displayName` 3–30: decisione 84); 201 → `/verifica` con l'email;
   `EMAIL_ALREADY_REGISTERED` e gli altri codici con il loro testo.
 - [ ] **3. Verifica e reinvio (60 min).** `/verifica`: codice a 6 cifre (solo cifre, incolla), password;
   errori `CODE_INVALID`, `CODE_EXPIRED`, `WRONG_PASSWORD`, `ALREADY_VERIFIED`, `ACCOUNT_SUSPENDED`;
@@ -395,6 +399,46 @@ login, ricaricamento con sessione ripresa, logout, reset. Fase A chiusa: promemo
 `develop → main`; su Render login, cookie salvato, sessione ripresa dopo il ricaricamento, fallback SPA
 su un percorso profondo.
 **Commit proposto:** `feat(fe-auth): aggiunge registrazione, verifica, login e reset della password`
+**Nota del 20 ottobre:** la card è stata fatta in tre commit (login e logout; correzioni backend F7-05 per nome e password,
+decisione 84; registrazione, verifica e reset). Il promemoria del merge `develop → main` della fase A passa a FE-03b.
+
+### Card FE-03b · Navigazione e footer — stima 6 h
+
+**Nata da:** decisione 83 (scelte dello studente del 19 ottobre, dopo aver aperto il prototipo Stitch "Resonance v2"). Il piano
+originale prevedeva la barra in alto con il menu a scomparsa di FE-01; il prototipo ha invece le tab in basso su telefono e la
+colonna a sinistra su desktop, e lo studente ha scelto di seguirlo.
+**Riferimenti:** decisioni 78, 80 e 83; prototipo Stitch (progetto `697298539032039664`: schermate "Eventi & Concerti" per il
+telefono ed "Eventi vicini" per desktop e tablet); progettazione §5.3 e §6.12 (barra e menu utente: da rileggere all'inizio della
+card). Riuso NoseY: nessuno (la navigazione di NoseY usa Tailwind).
+**File (da confermare con lo studente all'inizio della card):** `src/components/layout/` (`AppShell`, `NavBar` → barra in alto,
+tab in basso, colonna a sinistra, `Footer`), `UserMenu` (già esistente), `src/app/routes.ts` (percorso dell'informativa privacy),
+pagina dell'informativa privacy, `index.css`; test accanto ai file.
+
+Regole già decise (decisione 83): su telefono barra in alto (logo, campanella, cerchio giallo del profilo) e barra di tab in basso
+(Eventi, Collab, Feed, Messaggi, Profilo); da 768 px colonna di navigazione a sinistra con in alto campanella e profilo; niente
+hamburger. Il footer compare a fondo pagina come pop-up dal basso, su telefono e su desktop; sul telefono si aggiunge alle tab
+(tutto sale, le tab restano visibili sopra il footer). Non copre né le tab, né la paginazione, né altre funzioni: il contenuto
+riserva in fondo uno spazio pari a tab e footer insieme. Contenuto del footer: informativa privacy (pagina vera e cliccabile) e,
+come link vuoti segnaposto, copyright e termini di servizio. Colori solo da `--rs-*`.
+
+Punti da chiedere allo studente all'inizio della card: quali tab e voci vede l'utente anonimo; dove portano le tab di pagine che
+nascono nelle card dopo (Collab, Feed, Messaggi); icone (nessuna libreria installata: SVG nei componenti o una libreria);
+testo dell'informativa privacy; aspetto e movimento del footer; dove va la campanella finché non esistono le notifiche.
+
+- [ ] **1. Barra in alto e tab in basso su telefono (90 min).** Logo, campanella, cerchio del profilo con `UserMenu`; cinque tab
+  con la voce attiva in giallo; l'`AppShell` sceglie la forma dalla larghezza (`useMediaQuery` o CSS).
+- [ ] **2. Colonna a sinistra su tablet e desktop (60 min).** Stesse voci, barra in alto con campanella e profilo.
+- [ ] **3. Footer e informativa privacy (90 min).** Pagina `/informativa-privacy` con il testo scritto con lo studente; footer a
+  comparsa a fondo pagina con il collegamento alla privacy e i due segnaposto.
+- [ ] **4. Spazio riservato in fondo alle pagine (45 min).** Margine inferiore pari a tab e footer insieme; prova con un elenco
+  lungo e una paginazione (`LoadMore`) in fondo: non deve essere coperta.
+- [ ] **5. Test e responsive (75 min).** Voci e percorsi delle tab; il footer compare solo a fondo pagina e non copre l'ultimo
+  elemento; nessun hamburger; controllo a 375, 768 e 1280 px.
+
+**Criterio:** navigazione come nel prototipo ai tre breakpoint, footer a comparsa che non copre mai tab o contenuti, informativa
+privacy raggiungibile; `npm run lint`, `npm test` e `npm run build` verdi. Fase A chiusa: promemoria merge `develop → main`; su
+Render login, cookie salvato, sessione ripresa dopo il ricaricamento, fallback SPA su un percorso profondo.
+**Commit proposto:** `feat(fe-nav): aggiunge la navigazione a tab e colonna e il footer con l'informativa privacy`
 
 ---
 
