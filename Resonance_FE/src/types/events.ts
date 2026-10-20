@@ -34,6 +34,27 @@ export type IndieEventResponse = EventBase & {
   status: IndieEventStatus
 }
 
+/**
+ * Corpo di `POST /api/official-concerts` (progettazione, sezione 6.6). I campi facoltativi vuoti non si inviano;
+ * `eventDate` è un istante ISO-8601 con offset (Review Focus 5).
+ */
+export type CreateConcertRequest = {
+  title: string
+  description?: string
+  venueName: string
+  address: string
+  eventDate: string
+  genreTags: string[]
+  coverImageUrl?: string
+  externalTicketUrl?: string
+}
+
+/** Corpo di `POST /api/indie-events`: come il concerto, con `isFree` e lo stato (bozza o pubblicato) al posto del biglietto. */
+export type CreateIndieEventRequest = Omit<CreateConcertRequest, 'externalTicketUrl'> & {
+  isFree: boolean
+  status: IndieEventStatus
+}
+
 /** Parametri delle ricerche nelle vicinanze (progettazione, sezione 10.2); la dimensione della pagina è quella del backend. */
 export type NearbyParams = {
   lat: number

@@ -2689,3 +2689,42 @@ Ogni punto è stato proposto allo studente con alternative, pro, contro e raccom
 - **`UserText` anticipato:** esce dalla card.
 - **Pagina «Pagina non trovata» generica per gli eventi:** link verso la home e testo non specifico.
 - **Skeleton anche su Avatar e profilo pubblico, o solo «Caricamento…»:** il primo tocca file di FE-04 in un giorno già pieno, il secondo fa lampeggiare l'elenco.
+
+## Decisione 88: pubblicazione, bozze e cancellazione degli eventi nel frontend (card FE-06, progettazione, sezioni 6.6 e 10.1)
+
+Ogni punto è stato proposto allo studente con alternative, pro, contro e raccomandazione, e approvato il 20 ottobre.
+
+### Scelta
+
+- **Data con offset:** il campo `datetime-local` è l'ora locale senza fuso; il form la converte con `new Date(valore).toISOString()` e invia l'istante in UTC (suffisso `Z`, Review Focus 5). Mai `"2026-10-21T21:00"`, che il backend rifiuta sul campo `eventDate` (decisione 56).
+- **Attesa della geocodifica senza timeout nel client:** mentre il backend risponde (fino a circa 15 s: 10 s di coda più il timeout di Nominatim, decisione 76) il pulsante dice «Sto cercando l'indirizzo…» ed è spento, e i campi sono fermi. Il backend risponde sempre, al più con 502 `GEOCODING_UNAVAILABLE`, quindi nessuna richiesta viene annullata a metà.
+- **Errori:** `ADDRESS_NOT_FOUND` e `VALIDATION_ERROR` si mostrano sotto il campo indicato da `fields` (l'errore sparisce appena si cambia quel campo); `GEOCODING_UNAVAILABLE` e `TOO_MANY_REQUESTS` sono un avviso in cima, con il form intatto e riinviabile.
+- **Generi a chip:** Invio aggiunge il genere scritto (senza spazi ai bordi, minuscolo, senza doppioni, 1–30 caratteri, al massimo 10), «×» lo toglie; Invio nel campo non invia il form.
+- **Pulsanti:** «Cancella» nella scheda e nel dettaglio, solo per il proprietario; «Pubblica» solo nella scheda e solo per le bozze. Nel form dell'indie event «Pubblica» è il pulsante principale e «Salva come bozza» il secondario; «Ingresso gratuito» parte spento.
+- **Dopo il salvataggio:** concerto, indie event pubblicato e bozza aprono il dettaglio. Dopo una cancellazione dal dettaglio si torna a `/profilo` con l'avviso «Evento cancellato.» (segno nello stato del router, come «Profilo aggiornato.»).
+- **Schede dell'area personale:** riga compatta nuova (data, etichette «Bozza» e «Concluso», titolo che porta al dettaglio, locale, azioni). Un avviso breve dice l'esito («Evento pubblicato.», «Evento cancellato.») e l'elenco si rilegge; gli errori (`EVENT_DATE_PAST`, `EVENT_ALREADY_PUBLISHED`, `NOT_OWNER`) mostrano il messaggio del loro codice. Scheda vuota: «Non sono ancora presenti eventi pubblicati.» con «Pubblica evento».
+- **Conferma di cancellazione:** `ConfirmDialog` con titolo «Cancellare l'evento?», testo «L'evento non sarà più visibile a nessuno. L'operazione non si può annullare.», campo «Motivo (facoltativo)» (massimo 500, come `OwnerDeleteRequest`) e pulsanti «Cancella evento» e «Annulla». Senza motivo il `DELETE` non ha body.
+- **Form in una colonna**, come «Modifica profilo»; testi dei form approvati nella bozza proposta (titoli «Pubblica concerto» e «Pubblica indie event», etichette, aiuti e messaggi dei campi).
+- **File in più rispetto al piano:** `components/ui/DateTimeField.tsx`, `GenreInput.tsx`, `EventFormFields.tsx` (campi comuni ai due form) e `MyEventRow.tsx` (la riga), con i loro test.
+- **Controllo visivo a 375, 768, 900 e 1280 px** (telefono, tablet, desktop piccolo e desktop), al posto delle tre larghezze del piano e delle cinque della decisione 86; i breakpoint del CSS restano quelli della decisione 85.
+- **Modifica dei propri contenuti:** non esiste nell'MVP (progettazione, sezione 1, P7); è registrata in Post-V1 (sezione 15). Per correggere un evento si cancella e si ricrea.
+
+### Motivazione
+
+- L'istante in UTC è la stessa forma che il backend restituisce e che il browser sa leggere in qualunque fuso; un offset scritto a mano cambierebbe con l'ora legale e darebbe lo stesso istante con più codice.
+- Annullare la richiesta nel client non annulla il lavoro del backend: l'evento potrebbe essere salvato lo stesso e un secondo invio creerebbe un doppione.
+- I chip evitano gli errori di battitura nei separatori e mostrano subito come il backend leggerà i generi.
+- «Pubblica» solo nella scheda rispetta il piano; la bozza si apre dal dettaglio solo per guardarla.
+- Dopo una cancellazione il dettaglio non esiste più (sarebbe un 404): `/profilo` ha l'elenco aggiornato.
+- Una riga compatta è più adatta di una card a un elenco di gestione, dove contano stato e azioni.
+
+### Alternative scartate
+
+- **Offset locale scritto a mano (`+02:00`):** più codice e stesso istante.
+- **Annullare la richiesta dopo 20 s nel client:** rischio di doppioni se l'utente riprova.
+- **Generi in un campo separati da virgola:** meno codice (30–40 min in meno), ma meno chiaro.
+- **«Pubblica» anche nel dettaglio:** 15 minuti in più e un'azione da testare, fuori dal piano.
+- **Dopo la bozza tornare alla scheda:** due destinazioni diverse a seconda del pulsante premuto.
+- **Dopo la cancellazione andare a `/eventi`:** nessuna conferma dell'esito e la bozza non compare lì.
+- **`EventCard` riusata nelle schede:** richiede di adattarla (distanza assente, azioni) per un elenco di gestione.
+- **Due colonne da 768 px:** più CSS e più prove, non richiesto dal piano.

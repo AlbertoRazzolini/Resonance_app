@@ -2,9 +2,16 @@ import { describe, expect, it } from 'vitest'
 import { makeStore } from '@/app/store'
 import { makeConcert, makeIndieEvent, makePage } from '@/test/fixtures/events'
 import {
+  concertCreated,
+  concertDeleted,
   concertFound,
   concertRejected,
+  indieDeleted,
+  indieEventCreated,
   indieEventFound,
+  indiePublished,
+  myConcertsFound,
+  myIndieFound,
   nearbyConcertsFound,
   nearbyConcertsRejected,
   nearbyIndieFound,
@@ -151,5 +158,93 @@ describe('eventsApi · dettagli', () => {
     expect(isEventNotFound(result.error)).toBe(false)
     expect(isEventNotFound({ status: 'FETCH_ERROR', error: 'boom' })).toBe(false)
     expect(isEventNotFound(undefined)).toBe(false)
+  })
+})
+
+describe('eventsApi · pubblicazione, elenchi propri e cancellazione', () => {
+  const body = {
+    title: 'Serata',
+    venueName: 'Viper',
+    address: 'Via Pistoiese 309, Firenze',
+    eventDate: '2099-01-01T20:00:00.000Z',
+    genreTags: ['rock'],
+  }
+
+  it('createConcert manda POST a /api/official-concerts con il corpo dato', async () => {
+    const calls: Request[] = []
+    server.use(concertCreated(makeConcert({ id: 'nuovo' }), calls))
+    const store = makeStore()
+
+    const result = await store.dispatch(eventsApi.endpoints.createConcert.initiate(body))
+
+    expect(calls[0].method).toBe('POST')
+    expect(new URL(calls[0].url).pathname).toBe('/api/official-concerts')
+    expect(await calls[0].json()).toEqual(body)
+    expect(result.data?.id).toBe('nuovo')
+  })
+
+  it('createIndieEvent manda POST a /api/indie-events con isFree e stato', async () => {
+    const calls: Request[] = []
+    server.use(indieEventCreated(makeIndieEvent({ id: 'ie' }), calls))
+    const store = makeStore()
+
+    await store.dispatch(eventsApi.endpoints.createIndieEvent.initiate({ ...body, isFree: true, status: 'DRAFT' }))
+
+    expect(new URL(calls[0].url).pathname).toBe('/api/indie-events')
+    expect(await calls[0].json()).toMatchObject({ isFree: true, status: 'DRAFT' })
+  })
+
+  it('i miei elenchi chiedono la pagina data a /mine', async () => {
+    const concertCalls: Request[] = []
+    const indieCalls: Request[] = []
+    server.use(
+      myConcertsFound([makePage([first]), makePage([second], { page: 1, totalPages: 2 })], concertCalls),
+      myIndieFound([makePage([makeIndieEvent()])], indieCalls),
+    )
+    const store = makeStore()
+
+    await store.dispatch(eventsApi.endpoints.getMyConcerts.initiate(1))
+    await store.dispatch(eventsApi.endpoints.getMyIndieEvents.initiate(0))
+
+    expect(new URL(concertCalls[0].url).pathname).toBe('/api/official-concerts/mine')
+    expect(new URL(concertCalls[0].url).searchParams.get('page')).toBe('1')
+    expect(new URL(indieCalls[0].url).pathname).toBe('/api/indie-events/mine')
+  })
+
+  it('ogni pagina di /mine ha la sua voce nella cache', async () => {
+    server.use(myConcertsFound([makePage([first], { totalPages: 2 }), makePage([second], { page: 1, totalPages: 2 })]))
+    const store = makeStore()
+
+    await store.dispatch(eventsApi.endpoints.getMyConcerts.initiate(0))
+    await store.dispatch(eventsApi.endpoints.getMyConcerts.initiate(1))
+
+    expect(eventsApi.endpoints.getMyConcerts.select(0)(store.getState()).data?.content[0].id).toBe('c1')
+    expect(eventsApi.endpoints.getMyConcerts.select(1)(store.getState()).data?.content[0].id).toBe('c2')
+  })
+
+  it('publishIndieEvent manda PATCH a /publish', async () => {
+    const calls: Request[] = []
+    server.use(indiePublished(makeIndieEvent({ id: 'd1' }), calls))
+    const store = makeStore()
+
+    await store.dispatch(eventsApi.endpoints.publishIndieEvent.initiate('d1'))
+
+    expect(calls[0].method).toBe('PATCH')
+    expect(new URL(calls[0].url).pathname).toBe('/api/indie-events/d1/publish')
+  })
+
+  it("la cancellazione manda il motivo nel body solo se c'è", async () => {
+    const calls: Request[] = []
+    server.use(concertDeleted(calls), indieDeleted(calls))
+    const store = makeStore()
+
+    await store.dispatch(eventsApi.endpoints.deleteConcert.initiate({ id: 'c1', reason: 'Errore' }))
+    await store.dispatch(eventsApi.endpoints.deleteIndieEvent.initiate({ id: 'e1' }))
+    await store.dispatch(eventsApi.endpoints.deleteIndieEvent.initiate({ id: 'e2', reason: '' }))
+
+    expect(calls.map((call) => call.method)).toEqual(['DELETE', 'DELETE', 'DELETE'])
+    expect(await calls[0].json()).toEqual({ reason: 'Errore' })
+    expect(await calls[1].text()).toBe('')
+    expect(await calls[2].text()).toBe('')
   })
 })

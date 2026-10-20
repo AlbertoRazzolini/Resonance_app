@@ -1,26 +1,38 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
-import { MemoryRouter, Route, Routes } from 'react-router'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { makeStore } from '@/app/store'
+import { sessionStarted } from '@/features/auth/authSlice'
 import { makeConcert } from '@/test/fixtures/events'
-import { concertFound, concertRejected } from '@/test/handlers/events'
+import { makeLoginResponse, makeMe } from '@/test/fixtures/users'
+import { concertDeleted, concertDeleteRejected, concertFound, concertRejected } from '@/test/handlers/events'
 import { server } from '@/test/server'
+import type { MeResponse } from '@/types/users'
 import { Component as ConcertDetailPage } from './ConcertDetailPage'
 
 // Dettaglio di un concerto ufficiale: dati dell'evento, biglietto con conferma, testo degli utenti inerte,
 // copertina che sparisce se non si carica, e "non trovato" per 404 (Review Focus 6: contenuto nascosto aperto da un link).
-function renderPage(id = 'c1') {
+function renderPage(id = 'c1', user?: MeResponse) {
+  const store = makeStore()
+  if (user) store.dispatch(sessionStarted(makeLoginResponse({ user })))
   render(
-    <Provider store={makeStore()}>
+    <Provider store={store}>
       <MemoryRouter initialEntries={[`/concerti/${id}`]}>
         <Routes>
           <Route path="/concerti/:id" element={<ConcertDetailPage />} />
+          <Route path="/profilo" element={<ProfileProbe />} />
         </Routes>
       </MemoryRouter>
     </Provider>,
   )
+}
+
+/** Mostra a cosa è arrivata la navigazione dopo una cancellazione, e lo stato passato. */
+function ProfileProbe() {
+  const location = useLocation()
+  return <p>Profilo con stato {JSON.stringify(location.state)}</p>
 }
 
 // Un istante costruito dall'ora locale: l'ora scritta resta la stessa in qualunque fuso orario (23 ottobre 2026 è un venerdì)
@@ -160,5 +172,63 @@ describe('ConcertDetailPage · non trovato e errori', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Riprova' }))
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Ritorno' })).toBeInTheDocument()
+  })
+})
+
+describe('ConcertDetailPage · cancellazione del proprietario', () => {
+  const host = { id: 'h1', displayName: 'Teatro Puccini srl', avatarUrl: null }
+  const owner = makeMe({ id: 'h1', roles: ['FAN', 'HOST'] })
+
+  it('un anonimo non vede «Cancella»', async () => {
+    server.use(concertFound(makeConcert({ host })))
+    renderPage()
+    await screen.findByRole('heading', { level: 1 })
+
+    expect(screen.queryByRole('button', { name: 'Cancella' })).not.toBeInTheDocument()
+  })
+
+  it('un altro utente, anche admin, non vede «Cancella»', async () => {
+    server.use(concertFound(makeConcert({ host })))
+    renderPage('c1', makeMe({ id: 'altro', roles: ['FAN', 'ADMIN'] }))
+    await screen.findByRole('heading', { level: 1 })
+
+    expect(screen.queryByRole('button', { name: 'Cancella' })).not.toBeInTheDocument()
+  })
+
+  it('il proprietario cancella con un motivo: DELETE, poi torna al profilo con il segno della cancellazione', async () => {
+    const calls: Request[] = []
+    server.use(concertFound(makeConcert({ id: 'c1', host })), concertDeleted(calls))
+    renderPage('c1', owner)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancella' }))
+    await userEvent.type(screen.getByLabelText('Motivo (facoltativo)'), 'Annullato')
+    await userEvent.click(screen.getByRole('button', { name: 'Cancella evento' }))
+
+    expect(await screen.findByText(/Profilo con stato/)).toHaveTextContent('"eventDeleted":true')
+    expect(new URL(calls[0].url).pathname).toBe('/api/official-concerts/c1')
+    expect(await calls[0].json()).toEqual({ reason: 'Annullato' })
+  })
+
+  it('«Annulla» nella conferma non cancella niente', async () => {
+    const calls: Request[] = []
+    server.use(concertFound(makeConcert({ host })), concertDeleted(calls))
+    renderPage('c1', owner)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancella' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Annulla' }))
+
+    expect(calls).toHaveLength(0)
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
+  })
+
+  it('un errore del server resta nella pagina con il suo messaggio', async () => {
+    server.use(concertFound(makeConcert({ host })), concertDeleteRejected(403, 'NOT_OWNER'))
+    renderPage('c1', owner)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancella' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Cancella evento' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent("Solo chi l'ha creato può farlo.")
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
   })
 })

@@ -5,7 +5,10 @@ import { describe, expect, it } from 'vitest'
 import { ROUTES } from '@/app/routes'
 import { makeStore } from '@/app/store'
 import { sessionStarted } from '@/features/auth/authSlice'
+import { makePage } from '@/test/fixtures/events'
 import { makeLoginResponse, makeMe } from '@/test/fixtures/users'
+import { myConcertsFound } from '@/test/handlers/events'
+import { server } from '@/test/server'
 import type { MeResponse } from '@/types/users'
 import { Component as ProfilePage } from './ProfilePage'
 
@@ -66,6 +69,7 @@ describe('ProfilePage', () => {
   })
 
   it('sotto il profilo mostra le schede dei contenuti secondo i ruoli', () => {
+    server.use(myConcertsFound([makePage([])]))
     renderProfile(makeMe({ roles: ['FAN', 'HOST'] }))
 
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Concerti', 'Post'])
@@ -81,5 +85,17 @@ describe('ProfilePage', () => {
     renderProfile(makeMe())
 
     expect(screen.queryByText('Profilo aggiornato.')).not.toBeInTheDocument()
+  })
+
+  it('dopo una cancellazione dal dettaglio mostra «Evento cancellato.»', () => {
+    renderProfile(makeMe(), { eventDeleted: true })
+
+    expect(screen.getByRole('status')).toHaveTextContent('Evento cancellato.')
+  })
+
+  it("lo stato di un altro tipo non mostra l'avviso della cancellazione", () => {
+    renderProfile(makeMe(), { profileUpdated: true })
+
+    expect(screen.queryByText('Evento cancellato.')).not.toBeInTheDocument()
   })
 })

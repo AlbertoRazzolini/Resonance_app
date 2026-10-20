@@ -4,7 +4,10 @@ import { Provider } from 'react-redux'
 import { describe, expect, it } from 'vitest'
 import { makeStore } from '@/app/store'
 import { sessionStarted } from '@/features/auth/authSlice'
+import { makePage } from '@/test/fixtures/events'
 import { makeLoginResponse, makeMe } from '@/test/fixtures/users'
+import { myConcertsFound } from '@/test/handlers/events'
+import { server } from '@/test/server'
 import type { Role } from '@/types/users'
 import { AREA_TABS, type AreaTab } from '../areaTabs'
 import { AreaTabs } from './AreaTabs'
@@ -32,6 +35,7 @@ describe('AreaTabs', () => {
   })
 
   it('a un HOST mostra «Concerti» e «Post»', () => {
+    server.use(myConcertsFound([makePage([])]))
     renderTabs(['FAN', 'HOST'])
 
     expect(titles()).toEqual(['Concerti', 'Post'])
@@ -49,12 +53,19 @@ describe('AreaTabs', () => {
     expect(titles()).toEqual(['Concerti', 'Indie event', 'Annunci', 'Post'])
   })
 
-  it('la prima scheda è aperta e mostra «Questa sezione arriva presto.»', () => {
+  it('la prima scheda è aperta e mostra il suo contenuto (finché una card non lo completa, «Questa sezione arriva presto.»)', () => {
+    renderTabs(['FAN'])
+
+    expect(screen.getByRole('tab', { name: 'Post' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveTextContent('Questa sezione arriva presto.')
+  })
+
+  it('la prima scheda di un HOST è «Concerti», aperta, e gli altri non lo sono', () => {
+    server.use(myConcertsFound([makePage([])]))
     renderTabs(['FAN', 'HOST'])
 
     expect(screen.getByRole('tab', { name: 'Concerti' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tab', { name: 'Post' })).toHaveAttribute('aria-selected', 'false')
-    expect(screen.getByRole('tabpanel')).toHaveTextContent('Questa sezione arriva presto.')
   })
 
   it('un clic apre un\'altra scheda', async () => {

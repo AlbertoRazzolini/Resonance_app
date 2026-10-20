@@ -1196,3 +1196,87 @@ textarea {
   inset: 0;
   display: block;
 }
+
+/* Form di pubblicazione degli eventi (FE-06): fieldset senza cornice, chip dei generi */
+.rs-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.rs-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rs-space-2);
+  margin: var(--rs-space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rs-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rs-space-1);
+  padding: 0 var(--rs-space-2);
+  border: 1px solid var(--rs-color-border-strong);
+  border-radius: var(--rs-radius-sm);
+  background: var(--rs-color-field);
+  font-size: var(--rs-text-sm);
+}
+
+.rs-chip__remove {
+  min-width: 1.5rem;
+  min-height: 1.5rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--rs-color-text-muted);
+  line-height: 1;
+}
+
+.rs-chip__remove:hover,
+.rs-chip__remove:focus-visible {
+  color: var(--rs-color-accent);
+}
+
+/* Schede degli eventi dell'utente (FE-06): righe compatte con le azioni a destra, a capo sul telefono */
+.rs-my-events {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rs-space-3);
+}
+
+.rs-my-event {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rs-space-3);
+  padding: var(--rs-space-4);
+  border: 1px solid var(--rs-color-border);
+  border-radius: var(--rs-radius-lg);
+  background: var(--rs-color-surface);
+}
+
+.rs-my-event__main {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.rs-my-event__title {
+  margin: 0;
+  font-size: var(--rs-text-lg);
+  overflow-wrap: anywhere;
+}
+
+.rs-my-event__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rs-space-2);
+}
+
+/* Azioni del proprietario nel dettaglio di un evento (FE-06) */
+.rs-event-detail__owner {
+  margin-top: var(--rs-space-5);
+}

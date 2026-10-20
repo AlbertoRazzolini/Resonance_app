@@ -1,12 +1,19 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Button } from 'react-bootstrap'
+import { Link, useNavigate } from 'react-router'
 import { ROUTES, userPath } from '@/app/routes'
 import type { EventKind } from '@/components/map'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import { ExternalLink } from '@/components/ui/ExternalLink'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { selectCurrentUser } from '@/features/auth/authSlice'
+import { useAppSelector } from '@/hooks/redux'
 import { formatEventDateLong } from '@/lib/format/dates'
 import { parseHttpUrl } from '@/lib/urls'
 import type { IndieEventResponse, OfficialConcertResponse } from '@/types/events'
+import { useDeleteConcertMutation, useDeleteIndieEventMutation } from '../api/eventsApi'
+import type { EventLocationState } from '../eventForm'
 
 type EventDetailProps =
   | { kind: 'official'; event: OfficialConcertResponse }
@@ -47,6 +54,52 @@ function Cover({ url, title }: { url: string | null; title: string }) {
 }
 
 /**
+ * «Cancella» del proprietario con conferma e motivo facoltativo (decisione 77): a cancellazione riuscita il dettaglio non
+ * esiste più, quindi si torna al profilo con il segno per l'avviso. Un non proprietario non vede niente: la protezione
+ * vera è il 403 `NOT_OWNER` del backend.
+ */
+function OwnerActions(props: EventDetailProps) {
+  const navigate = useNavigate()
+  const [confirming, setConfirming] = useState(false)
+  const [deleteConcert, deletingConcert] = useDeleteConcertMutation()
+  const [deleteIndieEvent, deletingIndie] = useDeleteIndieEventMutation()
+  const [error, setError] = useState<unknown>(null)
+  const busy = deletingConcert.isLoading || deletingIndie.isLoading
+
+  async function handleDelete(reason?: string) {
+    setError(null)
+    try {
+      const args = { id: props.event.id, reason }
+      await (props.kind === 'official' ? deleteConcert(args) : deleteIndieEvent(args)).unwrap()
+      const state: EventLocationState = { eventDeleted: true }
+      navigate(ROUTES.profile, { state })
+    } catch (failure) {
+      setError(failure)
+    }
+    setConfirming(false)
+  }
+
+  return (
+    <div className="rs-event-detail__owner">
+      <ErrorAlert error={error} />
+      <Button variant="outline-light" size="sm" onClick={() => setConfirming(true)}>
+        Cancella
+      </Button>
+      <ConfirmDialog
+        show={confirming}
+        title="Cancellare l'evento?"
+        body="L'evento non sarà più visibile a nessuno. L'operazione non si può annullare."
+        confirmLabel="Cancella evento"
+        withReason
+        busy={busy}
+        onConfirm={(reason) => void handleDelete(reason)}
+        onCancel={() => setConfirming(false)}
+      />
+    </div>
+  )
+}
+
+/**
  * Dettaglio di un concerto o di un indie event (progettazione, sezione 6.6). I testi scritti dall'organizzatore
  * (titolo, locale, descrizione) passano solo dall'escape di React; la descrizione va a capo con CSS. `UserText` (FE-07)
  * li sostituirà aggiungendo i link.
@@ -54,6 +107,7 @@ function Cover({ url, title }: { url: string | null; title: string }) {
 export function EventDetail(props: EventDetailProps) {
   const { kind, event } = props
   const author = kind === 'official' ? props.event.host : props.event.musician
+  const currentUser = useAppSelector(selectCurrentUser)
   // Il biglietto lo ha scritto un utente: senza un indirizzo http/https non si mostra niente
   const ticketUrl = kind === 'official' ? parseHttpUrl(props.event.externalTicketUrl)?.href : undefined
 
@@ -99,6 +153,7 @@ export function EventDetail(props: EventDetailProps) {
       )}
 
       {event.description && <div className="rs-event-detail__description">{event.description}</div>}
+      {currentUser?.id === author.id && <OwnerActions {...props} />}
     </article>
   )
 }

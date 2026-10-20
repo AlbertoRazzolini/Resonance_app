@@ -1,25 +1,38 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
-import { MemoryRouter, Route, Routes } from 'react-router'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { makeStore } from '@/app/store'
+import { sessionStarted } from '@/features/auth/authSlice'
 import { makeIndieEvent } from '@/test/fixtures/events'
-import { indieEventFound, indieEventRejected } from '@/test/handlers/events'
+import { makeLoginResponse, makeMe } from '@/test/fixtures/users'
+import { indieDeleted, indieEventFound, indieEventRejected } from '@/test/handlers/events'
 import { server } from '@/test/server'
+import type { MeResponse } from '@/types/users'
 import { Component as IndieEventDetailPage } from './IndieEventDetailPage'
 
 // Dettaglio di un indie event: musicista, ingresso gratuito o a pagamento, etichetta Bozza per il proprietario,
 // "non trovato" per 404 (una bozza di un altro utente è un 404: Review Focus 6).
-function renderPage(id = 'e1') {
+function renderPage(id = 'e1', user?: MeResponse) {
+  const store = makeStore()
+  if (user) store.dispatch(sessionStarted(makeLoginResponse({ user })))
   render(
-    <Provider store={makeStore()}>
+    <Provider store={store}>
       <MemoryRouter initialEntries={[`/indie/${id}`]}>
         <Routes>
           <Route path="/indie/:id" element={<IndieEventDetailPage />} />
+          <Route path="/profilo" element={<ProfileProbe />} />
         </Routes>
       </MemoryRouter>
     </Provider>,
   )
+}
+
+/** Mostra a cosa è arrivata la navigazione dopo una cancellazione, e lo stato passato. */
+function ProfileProbe() {
+  const location = useLocation()
+  return <p>Profilo con stato {JSON.stringify(location.state)}</p>
 }
 
 describe('IndieEventDetailPage', () => {
@@ -72,5 +85,38 @@ describe('IndieEventDetailPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Evento non trovato' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Torna agli eventi' })).toHaveAttribute('href', '/eventi')
+  })
+})
+
+describe('IndieEventDetailPage · cancellazione del proprietario', () => {
+  const musician = { id: 'm1', displayName: 'Gazebo Penguins', avatarUrl: null }
+
+  it('il proprietario vede «Cancella», anche su una bozza, e cancella tornando al profilo', async () => {
+    const calls: Request[] = []
+    server.use(indieEventFound(makeIndieEvent({ id: 'e1', musician, status: 'DRAFT' })), indieDeleted(calls))
+    renderPage('e1', makeMe({ id: 'm1', roles: ['FAN', 'MUSICIAN'] }))
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancella' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Cancella evento' }))
+
+    expect(await screen.findByText(/Profilo con stato/)).toHaveTextContent('"eventDeleted":true')
+    expect(new URL(calls[0].url).pathname).toBe('/api/indie-events/e1')
+    expect(await calls[0].text()).toBe('')
+  })
+
+  it('un anonimo non vede «Cancella»', async () => {
+    server.use(indieEventFound(makeIndieEvent({ musician })))
+    renderPage()
+    await screen.findByRole('heading', { level: 1 })
+
+    expect(screen.queryByRole('button', { name: 'Cancella' })).not.toBeInTheDocument()
+  })
+
+  it('un altro utente loggato non vede «Cancella»', async () => {
+    server.use(indieEventFound(makeIndieEvent({ musician })))
+    renderPage('e1', makeMe({ id: 'altro', roles: ['FAN', 'MUSICIAN'] }))
+    await screen.findByRole('heading', { level: 1 })
+
+    expect(screen.queryByRole('button', { name: 'Cancella' })).not.toBeInTheDocument()
   })
 })
