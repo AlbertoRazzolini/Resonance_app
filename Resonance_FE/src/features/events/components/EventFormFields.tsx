@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { Form } from 'react-bootstrap'
 import { DateTimeField } from '@/components/ui/DateTimeField'
 import { FieldError } from '@/components/ui/FieldError'
+import { GenreInput } from '@/components/ui/GenreInput'
 import { DESCRIPTION_MAX, type EventErrors, type EventFormKind, type EventFormValues } from '../eventForm'
-import { GenreInput } from './GenreInput'
 
 type EventFormFieldsProps = {
   kind: EventFormKind

@@ -2461,7 +2461,7 @@ Ogni punto è stato proposto allo studente con alternative, pro, contro e raccom
   il codice è presentato con l'email mascherata ("m***@dominio.it"). I testi che il prototipo non ha (registrazione, reset, errori del
   client) restano quelli approvati il 19 ottobre, nello stesso tono.
 - **Account sospeso:** scheda con bordo ambra, badge "RESTRIZIONE ATTIVA", titolo "Account sospeso", "Sospeso fino al" con la data in
-  ora locale (formato breve, es. 30 ott 2026) oppure "A tempo indeterminato", "Motivo: …" e "Per un ricorso scrivi a …" con il contatto.
+  ora locale (formato breve, es. 30/10/2026: dal 21 ottobre tutto in numeri, decisione 90) oppure "A tempo indeterminato", "Motivo: …" e "Per un ricorso scrivi a …" con il contatto.
   Serve un colore ambra nei token (`--rs-color-warning`).
 - **Campi vuoti all'accesso:** messaggi nostri sotto il campo ("Scrivi la tua email.", "Scrivi la password.") con l'icona di errore del
   prototipo; il server non viene chiamato. Niente attributo `required` del browser.
@@ -2755,7 +2755,7 @@ Ogni punto è stato proposto allo studente con alternative, pro, contro e raccom
   rileggono le pagine aperte. Il like cambia subito il post in tutte le voci dove compare (feed e scheda «Post»), a
   risposta arrivata prende i numeri del server e con un errore torna com'era.
 - **Scheda «Post» dell'area personale:** le stesse card del feed (like e «Cancella»).
-- **Testi dell'interfaccia** approvati dallo studente il 21 ottobre; data del post in forma breve («21 ott 2026»).
+- **Testi dell'interfaccia** approvati dallo studente il 21 ottobre; data del post in forma breve (dal 21 ottobre tutta in numeri, «21/10/2026», decisione 90).
 
 ### Motivazione
 
@@ -2782,3 +2782,98 @@ Ogni punto è stato proposto allo studente con alternative, pro, contro e raccom
 - **Una sola voce di cache con `merge`:** dopo una rilettura accoda l'ultima pagina e duplica i post.
 - **Riga compatta di sola lettura nella scheda «Post»:** secondo componente senza like né immagine.
 - **Importare `useSearchCenter` e `RadiusSelector` da `features/events/`:** dipendenza fra due aree contro la regola della struttura.
+
+## Decisione 90: bacheca collab, candidature e scheda «Annunci» nel frontend (card FE-08, progettazione, sezioni 6.7 e 6.9)
+
+### Scelta
+
+- **Percorsi:** `/collab/:id` per il dettaglio (aperto a tutti, anche se l'annuncio è chiuso) e `/collab/nuovo` per la
+  creazione, riservata ai MUSICIAN con `RequireRole` come `/indie/nuovo`. In `routes.ts`: `ROUTES.collabPost`,
+  `ROUTES.newCollab`, `collabPath(id)` e `chatPath(conversationId)`.
+- **Bacheca senza filtri:** solo l'elenco degli annunci aperti dal più recente con «Carica altri» (il mock-up mostra
+  anche «Sale prove» e i chip degli strumenti, ma l'API non ha filtri). Sottotitolo «Annunci per progetti, musicisti e
+  collaborazioni.» (senza «in zona»: la bacheca non filtra per zona). «Pubblica annuncio» e l'invito dello stato vuoto
+  solo ai MUSICIAN. Ogni card ha «Candidati / Scrivi», che porta al dettaglio; la bacheca non mostra mai annunci chiusi,
+  quindi la card non ha un caso «chiuso».
+- **Candidatura nel dettaglio:** il modulo (messaggio 1–1800 con contatore, «Invia candidatura») sta solo nel dettaglio.
+  Non compare sul proprio annuncio; su un annuncio chiuso lo sostituisce «L'annuncio è chiuso e non accetta più
+  candidature.» (non mostrato al proprietario, che vede «Chiuso»). Un anonimo vede il modulo e, all'invio, va
+  all'accesso e poi torna alla stessa pagina, come per il «Mi piace» del feed. A 201 il modulo lascia il posto a
+  «Candidatura inviata. Puoi continuare la conversazione in chat.» con il link «Apri la chat» verso
+  `/chat/:conversationId`: la pagina nasce in FE-09b, fino ad allora il link porta a «Pagina non trovata». Gli errori
+  `COLLAB_CLOSED`, `CANNOT_APPLY_OWN_POST` e `TOO_MANY_REQUESTS` mostrano i testi già in `errorMessages.ts` e il
+  messaggio scritto resta.
+- **Chiusura e cancellazione, nel dettaglio e nella scheda «Annunci», con la stessa conferma:** «Chiudi annuncio» ha una
+  conferma che avvisa dell'effetto sulla chat («Dopo la chiusura nessuno potrà più candidarsi. Chi non è tuo amico non
+  potrà più scriverti in chat: se vuoi continuare una conversazione, prima aggiungilo agli amici.»), perché lo sblocco
+  dura finché l'annuncio è aperto (sezione 6.9) e il backend non ha la riapertura (decisione 60); «Cancella» ha la
+  conferma con il motivo facoltativo, come gli eventi. Dal dettaglio una cancellazione riuscita porta al profilo con
+  l'avviso «Annuncio cancellato.» (stato di navigazione `collabDeleted`, come `eventDeleted`).
+- **Scheda «Annunci»:** ogni riga mostra data, stato «Aperto» o «Chiuso», titolo, ruolo cercato e le azioni «Apri»
+  (collegamento al dettaglio), «Chiudi» (solo se aperto) e «Cancella»; il titolo non è un collegamento per non averne
+  due verso lo stesso posto. Avvisi «Annuncio chiuso.» e «Annuncio cancellato.»; elenco vuoto «Non hai ancora
+  pubblicato annunci.» con «Pubblica annuncio». Una voce di cache per pagina, come `MyEventsTab`.
+- **Generi condivisi:** `GenreInput` passa da `features/events/components/` a `components/ui/`; `addGenre`, `GENRE_MAX`
+  e `GENRES_MAX` passano da `eventForm.ts` a `lib/genres.ts` con i loro test (regola della struttura: ciò che serve a
+  più aree sta fuori da `features/`).
+- **Data breve tutta in numeri, con lo zero:** `formatDate` scrive «21/10/2026» e «05/11/2026» invece di «21 ott 2026».
+  Vale per la card del feed e per la fine della sospensione (decisioni 85 e 89); le date degli eventi restano a parole
+  («ven 23 ott · 21:30», «venerdì 23 ottobre 2026 · 21:30») perché il giorno della settimana aiuta a scegliere.
+- **Uscite dal dettaglio, per tutti:** in fondo al dettaglio, dopo la pubblicazione e sempre, «Torna su Collab» (alla
+  bacheca) e «Torna alla home» (a `/`, che porta agli Eventi vicini). Dicono all'utente che la creazione è finita e che
+  è sul dettaglio dell'annuncio; li vedono anche anonimi e altri utenti, mentre «Chiudi annuncio» e «Cancella» restano
+  solo al proprietario. Dopo la creazione il dettaglio resta la pagina d'arrivo, come per gli eventi.
+- **Animazione delle icone sulla voce intera:** nella colonna a sinistra e nelle tab del telefono (FE-03b) l'icona
+  animata parte ora quando il mouse entra nella voce o la si tocca, anche sulla scritta, e non solo sull'icona di 22 px
+  (`AnimateIcon` con `asChild` attorno a `NavLink`). Prima sembrava in ritardo (segnalato dallo studente il 21 ottobre).
+  Nei test `matchMedia` non dice più «riduci animazioni» per ogni query senza larghezza (`test/viewport.ts`).
+- **Cursore sul primo campo sbagliato:** dopo un invio con errori (del client o dei campi del server) i moduli «Pubblica
+  annuncio», «Pubblica concerto» e «Pubblica indie event» portano il cursore e lo schermo sul primo campo con
+  `aria-invalid` (hook `useFocusFirstInvalid`). Senza, sul telefono «Pubblica» sta in fondo e l'errore in cima resta fuori
+  dallo schermo: sembra che non succeda niente (riprodotto in Edge a 375 px, segnalato dallo studente il 21 ottobre).
+- **Generi a chip senza spostamenti:** l'elenco dei chip c'è sempre e riserva l'altezza di una riga. Prima la prima card
+  faceva scorrere «Pubblica» mentre il clic toglieva il focus al campo dei generi, e il clic andava a vuoto (ne servivano
+  due). Il genere scritto si aggiunge già con Invio o uscendo dal campo.
+- **Un solo occhio nel campo password:** `index.css` nasconde l'occhio che Edge aggiunge da solo (`::-ms-reveal`) nei
+  campi `.rs-password`, perché c'è già il pulsante «Mostra la password» di `PasswordField` (correzione alla pagina di
+  accesso di FE-03, chiesta dallo studente il 21 ottobre; un test controlla che la regola esista).
+- **Funzioni future** registrate in `progettazione.md`, sezione 15 (Post-V1): filtri della bacheca per ruolo o
+  strumento (servono parametri nell'API) e candidature con accettazione o rifiuto dell'autore (servono una tabella con
+  lo stato, endpoint, notifiche e migrazione; l'accettazione potrebbe tenere lo sblocco della chat anche dopo la
+  chiusura).
+- **Altre funzioni future** (segnalate dallo studente il 21 ottobre, tutte in `progettazione.md`, sezione 15):
+  elenco di generi da scegliere a chip (solo frontend), carosello degli eventi principali (Post-V1) e titolo nei post del
+  feed (candidato alle rifiniture, FE-12, se avanza tempo; richiede una modifica al backend).
+- **Suggerimento degli indirizzi** (segnalato dallo studente il 21 ottobre): non nell'MVP, registrato in Post-V1 con la
+  stessa riga; si implementa solo se avanza tempo prima della consegna. Serve un endpoint nel backend (il frontend non
+  può chiamare Nominatim: CSP e policy d'uso).
+- **Testi dell'interfaccia** approvati dallo studente il 21 ottobre.
+
+### Motivazione
+
+- Un solo punto per la candidatura (il dettaglio) dà un solo modulo da mantenere e da provare, e tiene insieme le
+  regole su proprio annuncio, annuncio chiuso e anonimo.
+- Nel backend la candidatura non ha uno stato da accettare: l'autore la legge come messaggio in chat (decisione 24) e
+  chiude quando vuole; l'avviso nella conferma evita la sorpresa dello sblocco che finisce con la chiusura.
+- Il collegamento «Apri la chat» già nel piano di FE-08 evita di tornare su questa card dopo FE-09b.
+- La data numerica è compatta e non si spezza su due righe sul telefono.
+- I generi servono ora a eventi e annunci: importarli da `features/events/` creerebbe una dipendenza fra aree.
+
+### Alternative scartate
+
+- **Filtro dei chip nel browser:** filtrerebbe solo le pagine già scaricate, e «Sale prove» non è nei dati.
+- **Tempo trascorso («2 h fa») al posto della data:** serve una funzione nuova con test che dipendono dall'ora.
+- **Percorsi `/annunci/...`:** parola diversa dalla voce di menu «Collab», senza vantaggi.
+- **Modulo di candidatura in una finestra sopra la bacheca:** due punti da mantenere; su telefono è più scomodo.
+- **Solo l'avviso senza «Apri la chat» fino a FE-09b:** FE-09b dovrebbe tornare su FE-08 e il criterio della card non
+  sarebbe soddisfatto.
+- **Chiusura con un solo clic:** un clic sbagliato chiude l'annuncio per sempre.
+- **Tornare alla bacheca o al profilo da sola dopo la creazione:** l'utente non vedrebbe l'annuncio appena pubblicato.
+- **Scheda «Annunci» con il solo elenco e link:** più passaggi per chiudere o cancellare.
+- **Importare `GenreInput` da `features/events/`:** dipendenza fra due aree contro la regola della struttura.
+- **Data numerica senza zero («5/11/2026»):** la larghezza cambia da una data all'altra.
+- **Tenere i due occhi o togliere il nostro:** il pulsante dell'app ha il testo accessibile e funziona in ogni browser; quello di Edge no.
+- **Animazione solo sull'icona di 22 px:** il mouse sulla scritta non la fa partire e sembra in ritardo.
+- **Chip dei generi che compaiono solo con il primo genere:** sposterebbero i pulsanti e il clic su «Pubblica» andrebbe a vuoto.
+- **Lasciare ai moduli lo scorrimento del browser:** non arriva al campo in cima quando si preme «Pubblica» in fondo.
+- **Date numeriche anche negli eventi:** nel dettaglio il giorno della settimana a parole si legge meglio.

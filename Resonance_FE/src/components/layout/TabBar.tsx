@@ -1,3 +1,4 @@
+import { AnimateIcon } from '@animate-ui/react/icons'
 import { NavLink } from 'react-router'
 import { NAV_ITEMS } from './navItems'
 
@@ -9,10 +10,13 @@ export function TabBar() {
   return (
     <nav aria-label="Navigazione principale" className="rs-tabbar">
       {NAV_ITEMS.map(({ label, to, Icon }) => (
-        <NavLink key={to} to={to} className="rs-tab">
-          <Icon size={24} animateOnTap />
-          <span>{label}</span>
-        </NavLink>
+        // L'animazione sta sulla voce intera: parte toccando anche la scritta, non solo l'icona
+        <AnimateIcon key={to} animateOnTap asChild>
+          <NavLink to={to} className="rs-tab">
+            <Icon size={24} />
+            <span>{label}</span>
+          </NavLink>
+        </AnimateIcon>
       ))}
     </nav>
   )

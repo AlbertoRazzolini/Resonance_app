@@ -1,3 +1,4 @@
+import { AnimateIcon } from '@animate-ui/react/icons'
 import { Link, NavLink } from 'react-router'
 import { ROUTES } from '@/app/routes'
 import { Logo } from '@/components/ui/Logo'
@@ -17,10 +18,13 @@ export function SideNav({ showLogo }: { showLogo: boolean }) {
       )}
       <nav aria-label="Navigazione principale" className="rs-sidenav__list">
         {NAV_ITEMS.map(({ label, to, Icon }) => (
-          <NavLink key={to} to={to} className="rs-side-item">
-            <Icon size={22} animateOnHover />
-            <span>{label}</span>
-          </NavLink>
+          // L'animazione sta sulla voce intera, non sull'icona di 22 px: parte appena il mouse entra, anche sulla scritta
+          <AnimateIcon key={to} animateOnHover asChild>
+            <NavLink to={to} className="rs-side-item">
+              <Icon size={22} />
+              <span>{label}</span>
+            </NavLink>
+          </AnimateIcon>
         ))}
       </nav>
     </aside>

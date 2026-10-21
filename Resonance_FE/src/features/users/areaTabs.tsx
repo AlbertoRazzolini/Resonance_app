@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { MyCollabTab } from '@/features/collab/components/MyCollabTab'
 import { MyEventsTab } from '@/features/events/components/MyEventsTab'
 import { MyPostsTab } from '@/features/feed/components/MyPostsTab'
 import type { Role } from '@/types/users'
@@ -11,9 +12,6 @@ export type AreaTab = {
   element: ReactNode
 }
 
-/** Contenuto provvisorio: lo sostituisce la card che porta la scheda (FE-08 annunci). */
-const COMING_SOON = <p className="text-body-secondary">Questa sezione arriva presto.</p>
-
 /**
  * Registro delle schede dei contenuti dell'utente (decisione 77): ogni card successiva sostituisce `element` della
  * propria scheda. L'ordine è quello della pagina. I ruoli servono solo a mostrare o nascondere: l'elenco vero lo
@@ -22,6 +20,6 @@ const COMING_SOON = <p className="text-body-secondary">Questa sezione arriva pre
 export const AREA_TABS: AreaTab[] = [
   { key: 'concerts', title: 'Concerti', roles: ['HOST'], element: <MyEventsTab kind="official" /> },
   { key: 'indie-events', title: 'Indie event', roles: ['MUSICIAN'], element: <MyEventsTab kind="indie" /> },
-  { key: 'collab', title: 'Annunci', roles: ['MUSICIAN'], element: COMING_SOON },
+  { key: 'collab', title: 'Annunci', roles: ['MUSICIAN'], element: <MyCollabTab /> },
   { key: 'posts', title: 'Post', element: <MyPostsTab /> },
 ]

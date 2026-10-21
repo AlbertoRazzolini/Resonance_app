@@ -34,6 +34,13 @@ describe('GenreInput', () => {
     expect(screen.getByLabelText('Generi')).toHaveValue('')
   })
 
+  it("l'elenco dei chip c'è anche senza generi, così la prima card non sposta il pulsante sotto il mouse", () => {
+    render(<Harness />)
+
+    expect(screen.getByRole('list', { name: 'Generi scelti' })).toBeInTheDocument()
+    expect(screen.queryAllByRole('listitem')).toHaveLength(0)
+  })
+
   it('Invio nel campo non invia il form', async () => {
     const user = userEvent.setup()
     let submitted = 0

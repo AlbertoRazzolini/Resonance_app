@@ -52,6 +52,14 @@ describe('ConcertForm', () => {
     expect(screen.getByRole('link', { name: 'Annulla' })).toHaveAttribute('href', ROUTES.profile)
   })
 
+  it('dopo un invio con errori il cursore va sul primo campo sbagliato', async () => {
+    const { user } = renderForm()
+
+    await user.click(submitButton())
+
+    expect(screen.getByLabelText('Titolo')).toHaveFocus()
+  })
+
   it('con i campi vuoti non chiama il server e scrive un messaggio sotto ogni campo obbligatorio', async () => {
     const calls: Request[] = []
     server.use(concertCreated(makeConcert(), calls))

@@ -11,8 +11,6 @@ export const TITLE_MAX = 150
 export const DESCRIPTION_MAX = 5000
 export const VENUE_MAX = 150
 export const ADDRESS_MAX = 255
-export const GENRE_MAX = 30
-export const GENRES_MAX = 10
 export const URL_MAX = 2048
 
 /** Valori dei form: i campi di testo sono sempre stringhe (il vuoto è `''`), `eventDate` quella del campo `datetime-local`. */
@@ -54,18 +52,6 @@ export const EMPTY_EVENT_VALUES: EventFormValues = {
  */
 export function eventDateToIso(local: string): string {
   return new Date(local).toISOString()
-}
-
-/**
- * Aggiunge un genere alla lista: senza spazi ai bordi e in minuscolo, come il backend. Il vuoto e un genere già presente
- * non cambiano niente; un genere troppo lungo o l'undicesimo tornano con un messaggio.
- */
-export function addGenre(tags: string[], raw: string): { tags: string[]; error?: string } {
-  const tag = raw.trim().toLowerCase()
-  if (!tag || tags.includes(tag)) return { tags }
-  if (tag.length > GENRE_MAX) return { tags, error: `Un genere può avere al massimo ${GENRE_MAX} caratteri.` }
-  if (tags.length >= GENRES_MAX) return { tags, error: `Puoi indicare al massimo ${GENRES_MAX} generi.` }
-  return { tags: [...tags, tag] }
 }
 
 /** Errore di un indirizzo facoltativo (copertina, biglietto): vuoto va bene, altrimenti solo `http`/`https`. */
@@ -163,6 +149,8 @@ export function useEventFormState(kind: EventFormKind) {
   const [values, setValues] = useState<EventFormValues>(EMPTY_EVENT_VALUES)
   const [submitted, setSubmitted] = useState(false)
   const [failure, setFailure] = useState<Failure | null>(null)
+  // Invii falliti per errori dei campi: li usa `useFocusFirstInvalid` per portare il cursore sul primo campo sbagliato
+  const [invalidAttempts, setInvalidAttempts] = useState(0)
 
   const errors: EventErrors = { ...failure?.fields, ...(submitted ? validateEvent(values, kind) : {}) }
 
@@ -181,7 +169,9 @@ export function useEventFormState(kind: EventFormKind) {
   function validate(): boolean {
     setSubmitted(true)
     setFailure(null)
-    return Object.keys(validateEvent(values, kind)).length === 0
+    const valid = Object.keys(validateEvent(values, kind)).length === 0
+    if (!valid) setInvalidAttempts((current) => current + 1)
+    return valid
   }
 
   /** Registra l'errore di un invio fallito, separando i campi da evidenziare dall'avviso generale. */
@@ -192,7 +182,8 @@ export function useEventFormState(kind: EventFormKind) {
       if (field) fields[field] = message
     }
     setFailure({ error, alert: Object.keys(fields).length === 0, fields })
+    if (Object.keys(fields).length > 0) setInvalidAttempts((current) => current + 1)
   }
 
-  return { values, errors, change, validate, fail, alertError: failure?.alert ? failure.error : null }
+  return { values, errors, change, validate, fail, invalidAttempts, alertError: failure?.alert ? failure.error : null }
 }

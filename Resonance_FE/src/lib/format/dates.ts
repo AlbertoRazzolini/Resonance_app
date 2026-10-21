@@ -1,10 +1,10 @@
 const SHORT_DATE = new Intl.DateTimeFormat('it-IT', {
-  day: 'numeric',
-  month: 'short',
+  day: '2-digit',
+  month: '2-digit',
   year: 'numeric',
 })
 
-/** Data breve in italiano e in ora locale del browser (es. "30 ott 2026") da un istante ISO-8601. */
+/** Data breve tutta in numeri e in ora locale del browser (es. "30/10/2026", "05/11/2026") da un istante ISO-8601. */
 export function formatDate(iso: string): string {
   return SHORT_DATE.format(new Date(iso))
 }

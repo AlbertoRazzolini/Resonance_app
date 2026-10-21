@@ -2,8 +2,10 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import { RouterProvider, createMemoryRouter } from 'react-router'
 import { sessionEnded, sessionStarted } from '@/features/auth/authSlice'
+import { makeCollabPost } from '@/test/fixtures/collab'
 import { makeConcert, makeIndieEvent, makePage } from '@/test/fixtures/events'
 import { makeLoginResponse, makeMe, makePublicUser } from '@/test/fixtures/users'
+import { collabFound, collabPostFound } from '@/test/handlers/collab'
 import { concertFound, indieEventFound, nearbyConcertsFound } from '@/test/handlers/events'
 import { feedFound } from '@/test/handlers/feed'
 import { publicUserFound } from '@/test/handlers/users'
@@ -12,7 +14,7 @@ import { setViewportWidth } from '@/test/viewport'
 import type { Role } from '@/types/users'
 import { makeStore } from './store'
 import { routes } from './router'
-import { concertPath, indieEventPath, ROUTES, userPath } from './routes'
+import { collabPath, concertPath, indieEventPath, ROUTES, userPath } from './routes'
 
 // Prova del router: home verso gli eventi, pagine segnaposto delle tab (Messaggi e Profilo dietro il login), pagina
 // "non trovato", frecce indietro delle pagine di accesso e navigazione del telefono senza menu a scomparsa.
@@ -41,11 +43,19 @@ describe('router', () => {
     expect(router.state.location.pathname).toBe(ROUTES.events)
   })
 
-  it("/collab è aperta all'anonimo e mostra il segnaposto", async () => {
+  it("/collab è aperta all'anonimo e mostra la bacheca", async () => {
+    server.use(collabFound([makePage([])]))
     const router = renderAt(ROUTES.collab)
-    expect(await screen.findByRole('heading', { name: 'Collab' })).toBeInTheDocument()
-    expect(screen.getByText('Questa sezione arriva presto.')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Collab' })).toBeInTheDocument()
+    expect(await screen.findByText('Nessun annuncio aperto.')).toBeInTheDocument()
     expect(router.state.location.pathname).toBe(ROUTES.collab)
+  })
+
+  it("/collab/:id è aperta all'anonimo e mostra il dettaglio, anche di un annuncio chiuso", async () => {
+    server.use(collabPostFound(makeCollabPost({ title: 'Cercasi bassista', isOpen: false })))
+    const router = renderAt(collabPath('a1'))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Cercasi bassista' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe(collabPath('a1'))
   })
 
   it("/feed è aperta all'anonimo e mostra il feed con l'invito ad accedere", async () => {
@@ -117,7 +127,7 @@ describe('router', () => {
     expect(router.state.location.pathname).toBe(userPath('abc'))
   })
 
-  it.each([ROUTES.newConcert, ROUTES.newIndieEvent])(
+  it.each([ROUTES.newConcert, ROUTES.newIndieEvent, ROUTES.newCollab])(
     "%s manda l'anonimo all'accesso, ricordando la pagina richiesta",
     async (path) => {
       const router = renderAt(path)
@@ -129,6 +139,7 @@ describe('router', () => {
   it.each([
     [ROUTES.newConcert, ['FAN', 'MUSICIAN'] as Role[]],
     [ROUTES.newIndieEvent, ['FAN', 'HOST'] as Role[]],
+    [ROUTES.newCollab, ['FAN', 'HOST'] as Role[]],
   ])('%s mostra «Accesso negato» a chi non ha il ruolo giusto', async (path, roles) => {
     const router = renderAt(path, { loggedIn: true, roles })
     expect(await screen.findByRole('heading', { name: 'Accesso negato' })).toBeInTheDocument()
@@ -138,7 +149,8 @@ describe('router', () => {
   it.each([
     [ROUTES.newConcert, 'HOST' as Role, 'Pubblica concerto'],
     [ROUTES.newIndieEvent, 'MUSICIAN' as Role, 'Pubblica indie event'],
-  ])('%s mostra il segnaposto a chi ha il ruolo giusto', async (path, role, title) => {
+    [ROUTES.newCollab, 'MUSICIAN' as Role, 'Pubblica annuncio'],
+  ])('%s mostra la pagina a chi ha il ruolo giusto', async (path, role, title) => {
     renderAt(path, { loggedIn: true, roles: ['FAN', role] })
     expect(await screen.findByRole('heading', { name: title })).toBeInTheDocument()
   })

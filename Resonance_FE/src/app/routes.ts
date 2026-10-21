@@ -12,9 +12,12 @@ export const ROUTES = {
   publicUser: '/utenti/:id',
   newConcert: '/concerti/nuovo',
   newIndieEvent: '/indie/nuovo',
+  newCollab: '/collab/nuovo',
   /** Modelli delle rotte dei dettagli; per un collegamento si usano `concertPath(id)` e `indieEventPath(id)`. */
   concert: '/concerti/:id',
   indieEvent: '/indie/:id',
+  /** Modello della rotta del dettaglio di un annuncio; per un collegamento si usa `collabPath(id)`. */
+  collabPost: '/collab/:id',
   privacy: '/informativa-privacy',
   cookies: '/informativa-cookie',
   login: '/accesso',
@@ -32,3 +35,9 @@ export const concertPath = (id: string) => `/concerti/${encodeURIComponent(id)}`
 
 /** Percorso del dettaglio di un indie event. */
 export const indieEventPath = (id: string) => `/indie/${encodeURIComponent(id)}`
+
+/** Percorso del dettaglio di un annuncio collab. */
+export const collabPath = (id: string) => `/collab/${encodeURIComponent(id)}`
+
+/** Percorso di una conversazione: la pagina nasce in FE-09b, il collegamento della candidatura la usa già. */
+export const chatPath = (conversationId: string) => `/chat/${encodeURIComponent(conversationId)}`

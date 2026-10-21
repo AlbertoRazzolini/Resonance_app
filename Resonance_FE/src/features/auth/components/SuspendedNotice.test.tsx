@@ -18,7 +18,7 @@ describe('SuspendedNotice', () => {
     expect(screen.getByRole('heading', { name: 'Account sospeso' })).toBeInTheDocument()
     expect(screen.getByText('Restrizione attiva')).toBeInTheDocument()
     expect(screen.getByText(/Violazione delle linee guida/)).toBeInTheDocument()
-    expect(screen.getByText(/Sospeso fino al/)).toHaveTextContent('Sospeso fino al 30 ott 2026')
+    expect(screen.getByText(/Sospeso fino al/)).toHaveTextContent('Sospeso fino al 30/10/2026')
   })
 
   it('senza scadenza dice "A tempo indeterminato"', () => {

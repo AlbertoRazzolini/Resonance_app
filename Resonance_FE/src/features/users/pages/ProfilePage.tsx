@@ -2,6 +2,7 @@ import { Alert } from 'react-bootstrap'
 import { Link, useLocation } from 'react-router'
 import { ROUTES } from '@/app/routes'
 import { selectCurrentUser } from '@/features/auth/authSlice'
+import { wasCollabDeleted } from '@/features/collab/collabForm'
 import { wasEventDeleted } from '@/features/events/eventForm'
 import { useAppSelector } from '@/hooks/redux'
 import { AreaTabs } from '../components/AreaTabs'
@@ -29,6 +30,11 @@ export function Component() {
       {wasEventDeleted(location.state) && (
         <Alert variant="success" role="status">
           Evento cancellato.
+        </Alert>
+      )}
+      {wasCollabDeleted(location.state) && (
+        <Alert variant="success" role="status">
+          Annuncio cancellato.
         </Alert>
       )}
       <ProfileHeader

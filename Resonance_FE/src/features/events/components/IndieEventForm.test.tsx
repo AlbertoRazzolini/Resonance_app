@@ -50,6 +50,14 @@ describe('IndieEventForm', () => {
     expect(screen.getByRole('link', { name: 'Annulla' })).toHaveAttribute('href', ROUTES.profile)
   })
 
+  it('dopo un invio con errori il cursore va sul primo campo sbagliato', async () => {
+    const { user } = renderForm()
+
+    await user.click(publishButton())
+
+    expect(screen.getByLabelText('Titolo')).toHaveFocus()
+  })
+
   it('con i campi vuoti nessuno dei due pulsanti chiama il server', async () => {
     const calls: Request[] = []
     server.use(indieEventCreated(makeIndieEvent(), calls))

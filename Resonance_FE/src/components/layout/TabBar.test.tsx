@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it } from 'vitest'
@@ -55,5 +56,18 @@ describe('TabBar', () => {
     renderTabBar(ROUTES.events)
 
     expect(screen.getByRole('navigation', { name: 'Navigazione principale' })).toBeInTheDocument()
+  })
+
+  it("l'animazione dell'icona parte toccando la scritta, non solo l'icona", async () => {
+    const user = userEvent.setup()
+    renderTabBar(ROUTES.feed)
+    const link = screen.getByRole('link', { name: 'Eventi' })
+    const iconStyles = () => [...link.querySelectorAll('svg *')].map((node) => node.getAttribute('style') ?? '').join('|')
+    const before = iconStyles()
+
+    // Si preme sulla scritta senza rilasciare, per non cambiare pagina: l'icona deve già animarsi
+    await user.pointer({ keys: '[MouseLeft>]', target: link.querySelector('span')! })
+
+    await waitFor(() => expect(iconStyles()).not.toBe(before))
   })
 })

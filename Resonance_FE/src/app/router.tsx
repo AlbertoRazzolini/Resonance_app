@@ -63,6 +63,13 @@ export const routes: RouteObject[] = [
         lazy: () => import('@/features/collab/pages/CollabBoardPage'),
       },
       {
+        // Dettaglio di un annuncio: aperto anche agli anonimi e anche se chiuso, come `GET /api/collab-posts/{id}` (sezione 6.7).
+        // La rotta statica `/collab/nuovo` vince su `:id` (ordine per specificità di React Router)
+        path: ROUTES.collabPost,
+        handle: titled('Annuncio'),
+        lazy: () => import('@/features/collab/pages/CollabDetailPage'),
+      },
+      {
         path: ROUTES.feed,
         handle: titled('Feed'),
         lazy: () => import('@/features/feed/pages/FeedPage'),
@@ -137,6 +144,12 @@ export const routes: RouteObject[] = [
             path: ROUTES.newIndieEvent,
             handle: titled('Pubblica indie event'),
             lazy: () => import('@/features/events/pages/NewIndieEventPage'),
+          },
+          {
+            // Pubblicazione degli annunci collab: solo MUSICIAN (progettazione, sezione 6.7)
+            path: ROUTES.newCollab,
+            handle: titled('Pubblica annuncio'),
+            lazy: () => import('@/features/collab/pages/NewCollabPage'),
           },
         ],
       },

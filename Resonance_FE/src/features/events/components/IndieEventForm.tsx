@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router'
 import { indieEventPath, ROUTES } from '@/app/routes'
 import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import type { IndieEventStatus } from '@/types/events'
+import { useFocusFirstInvalid } from '@/hooks/useFocusFirstInvalid'
 import { useCreateIndieEventMutation } from '../api/eventsApi'
 import { buildIndieEventRequest, useEventFormState } from '../eventForm'
 import { EventFormFields } from './EventFormFields'
@@ -17,6 +18,7 @@ export function IndieEventForm() {
   const navigate = useNavigate()
   const [createIndieEvent, { isLoading }] = useCreateIndieEventMutation()
   const form = useEventFormState('indie')
+  const formRef = useFocusFirstInvalid(form.invalidAttempts)
   // Quale pulsante ha inviato: è quello che mostra l'attesa della geocodifica
   const [submitting, setSubmitting] = useState<IndieEventStatus>('PUBLISHED')
 
@@ -34,7 +36,7 @@ export function IndieEventForm() {
 
   const waiting = "Sto cercando l'indirizzo…"
   return (
-    <Form noValidate onSubmit={(event) => void submit(event, 'PUBLISHED')}>
+    <Form ref={formRef} noValidate onSubmit={(event) => void submit(event, 'PUBLISHED')}>
       <ErrorAlert error={form.alertError} />
       <fieldset disabled={isLoading} className="rs-fieldset">
         <EventFormFields kind="indie" values={form.values} errors={form.errors} onChange={form.change} />

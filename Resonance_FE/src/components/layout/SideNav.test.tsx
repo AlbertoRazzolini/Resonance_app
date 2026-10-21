@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it } from 'vitest'
@@ -62,5 +63,18 @@ describe('SideNav', () => {
     renderSideNav(ROUTES.events, false)
 
     expect(screen.getByRole('navigation', { name: 'Navigazione principale' })).toBeInTheDocument()
+  })
+
+  it("l'animazione dell'icona parte con il mouse sulla scritta, non solo sull'icona", async () => {
+    const user = userEvent.setup()
+    renderSideNav(ROUTES.feed, false)
+    const link = screen.getByRole('link', { name: 'Eventi' })
+    const iconStyles = () => [...link.querySelectorAll('svg *')].map((node) => node.getAttribute('style') ?? '').join('|')
+    const before = iconStyles()
+
+    // La scritta, fuori dall'icona di 22 px: il mouse qui deve già far partire l'animazione
+    await user.hover(link.querySelector('span')!)
+
+    await waitFor(() => expect(iconStyles()).not.toBe(before))
   })
 })

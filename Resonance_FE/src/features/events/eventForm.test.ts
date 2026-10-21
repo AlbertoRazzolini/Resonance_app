@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  addGenre,
   buildConcertRequest,
   buildIndieEventRequest,
   EMPTY_EVENT_VALUES,
@@ -10,7 +9,7 @@ import {
   type EventFormValues,
 } from './eventForm'
 
-// Logica pura dei form di pubblicazione: data con offset (Review Focus 5), generi normalizzati, controlli come quelli
+// Logica pura dei form di pubblicazione: data con offset (Review Focus 5), controlli come quelli
 // del backend (progettazione, sezione 6.6), corpi delle richieste con i campi vuoti omessi.
 const NOW = new Date(2026, 9, 20, 12, 0)
 
@@ -29,36 +28,6 @@ describe('eventDateToIso', () => {
     expect(iso).toBe(new Date(2026, 9, 21, 21, 0).toISOString())
     expect(iso).toMatch(/Z$|[+-]\d{2}:\d{2}$/)
     expect(iso).not.toBe('2026-10-21T21:00')
-  })
-})
-
-describe('addGenre', () => {
-  it('toglie gli spazi e scrive in minuscolo', () => {
-    expect(addGenre([], '  Post-Punk ').tags).toEqual(['post-punk'])
-  })
-
-  it('un genere già presente (anche con maiuscole diverse) non si aggiunge due volte', () => {
-    expect(addGenre(['rock'], 'ROCK').tags).toEqual(['rock'])
-  })
-
-  it('un testo vuoto o di soli spazi non aggiunge niente e non è un errore', () => {
-    expect(addGenre(['rock'], '   ')).toEqual({ tags: ['rock'] })
-  })
-
-  it('oltre 30 caratteri è rifiutato con un messaggio', () => {
-    const result = addGenre([], 'a'.repeat(31))
-
-    expect(result.tags).toEqual([])
-    expect(result.error).toBe('Un genere può avere al massimo 30 caratteri.')
-  })
-
-  it("con 10 generi non ne entra un altro", () => {
-    const ten = Array.from({ length: 10 }, (_, index) => `g${index}`)
-
-    const result = addGenre(ten, 'undicesimo')
-
-    expect(result.tags).toEqual(ten)
-    expect(result.error).toBe('Puoi indicare al massimo 10 generi.')
   })
 })
 

@@ -3,6 +3,7 @@ import { Button, Form } from 'react-bootstrap'
 import { Link, useNavigate } from 'react-router'
 import { concertPath, ROUTES } from '@/app/routes'
 import { ErrorAlert } from '@/components/ui/ErrorAlert'
+import { useFocusFirstInvalid } from '@/hooks/useFocusFirstInvalid'
 import { useCreateConcertMutation } from '../api/eventsApi'
 import { buildConcertRequest, useEventFormState } from '../eventForm'
 import { EventFormFields } from './EventFormFields'
@@ -17,6 +18,7 @@ export function ConcertForm() {
   const navigate = useNavigate()
   const [createConcert, { isLoading }] = useCreateConcertMutation()
   const form = useEventFormState('concert')
+  const formRef = useFocusFirstInvalid(form.invalidAttempts)
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -30,7 +32,7 @@ export function ConcertForm() {
   }
 
   return (
-    <Form noValidate onSubmit={(event) => void handleSubmit(event)}>
+    <Form ref={formRef} noValidate onSubmit={(event) => void handleSubmit(event)}>
       <ErrorAlert error={form.alertError} />
       <fieldset disabled={isLoading} className="rs-fieldset">
         <EventFormFields kind="concert" values={form.values} errors={form.errors} onChange={form.change} />

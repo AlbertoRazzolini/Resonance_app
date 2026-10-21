@@ -1,7 +1,7 @@
 import { useState, type KeyboardEvent } from 'react'
 import { Form } from 'react-bootstrap'
 import { FieldError } from '@/components/ui/FieldError'
-import { addGenre, GENRES_MAX } from '../eventForm'
+import { addGenre, GENRES_MAX } from '@/lib/genres'
 
 type GenreInputProps = {
   id: string
@@ -12,8 +12,10 @@ type GenreInputProps = {
 }
 
 /**
- * Generi come chip (progettazione, sezione 6.6): Invio aggiunge quello scritto, «×» lo toglie. Anche uscire dal campo
+ * Generi come chip, per eventi e annunci (progettazione, sezioni 6.6 e 6.7): Invio aggiunge quello scritto, «×» lo toglie. Anche uscire dal campo
  * (per esempio cliccando «Pubblica») aggiunge il genere già scritto, così non si perde. Invio non invia mai il form.
+ * L'elenco dei chip riserva sempre una riga: se comparisse solo con il primo genere, il clic su «Pubblica» che toglie il
+ * focus al campo sposterebbe il pulsante da sotto il mouse e l'invio andrebbe a vuoto.
  */
 export function GenreInput({ id, tags, onChange, error }: GenreInputProps) {
   const [text, setText] = useState('')
@@ -58,23 +60,22 @@ export function GenreInput({ id, tags, onChange, error }: GenreInputProps) {
         </span>
       </p>
       <FieldError id={`${id}-error`} message={message} />
-      {tags.length > 0 && (
-        <ul className="rs-chips">
-          {tags.map((tag) => (
-            <li key={tag} className="rs-chip">
-              <span>{tag}</span>
-              <button
-                type="button"
-                className="rs-chip__remove"
-                aria-label={`Togli ${tag}`}
-                onClick={() => onChange(tags.filter((current) => current !== tag))}
-              >
-                ×
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      {/* Sempre presente, con l'altezza di una riga: la prima card non sposta i pulsanti sotto il campo */}
+      <ul className="rs-chips" aria-label="Generi scelti">
+        {tags.map((tag) => (
+          <li key={tag} className="rs-chip">
+            <span>{tag}</span>
+            <button
+              type="button"
+              className="rs-chip__remove"
+              aria-label={`Togli ${tag}`}
+              onClick={() => onChange(tags.filter((current) => current !== tag))}
+            >
+              ×
+            </button>
+          </li>
+        ))}
+      </ul>
     </Form.Group>
   )
 }

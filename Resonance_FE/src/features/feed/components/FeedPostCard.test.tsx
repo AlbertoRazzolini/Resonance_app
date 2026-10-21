@@ -51,7 +51,7 @@ describe('FeedPostCard · contenuto', () => {
     )
 
     expect(screen.getByRole('link', { name: 'Giulia' })).toHaveAttribute('href', '/utenti/a1')
-    expect(screen.getByText('20 ott 2026')).toBeInTheDocument()
+    expect(screen.getByText('20/10/2026')).toBeInTheDocument()
     expect(screen.getByText('Prove aperte domani')).toBeInTheDocument()
   })
 

@@ -8,6 +8,8 @@ let width = DEFAULT_VIEWPORT_WIDTH
 const listeners = new Set<() => void>()
 
 function matches(query: string): boolean {
+  // Le animazioni restano accese: senza questa riga ogni query senza larghezza risulterebbe vera, anche «riduci animazioni»
+  if (/prefers-reduced-motion/.test(query)) return false
   const min = /min-width:\s*([\d.]+)px/.exec(query)
   const max = /max-width:\s*([\d.]+)px/.exec(query)
   return (!min || width >= Number(min[1])) && (!max || width <= Number(max[1]))

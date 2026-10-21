@@ -697,6 +697,10 @@ sospensione dall'area admin che chiude la sessione WebSocket dell'altro, hide e 
 **Riferimenti:** brief §12 (strumenti e UI); decisione 78; skill impeccable; ReactBits.
 **File:** `src/styles/*` e componenti delle schermate; `src/components/motion/*` (componenti ReactBits).
 
+**Rischio di tempo (21 ottobre):** i sotto-task 3 e 4 si sommano alle 3 h della card, e il 23 ottobre non ha margine (vedi
+"Calendario e stime"). Se il giorno sfora, il documento dei costi si scrive il 24 mattina o si riduce a una tabella con le voci e le cifre, e la
+landing page si riduce a una sola schermata statica o si taglia (nell'ordine: prima la landing, poi il documento dei costi, da confermare con lo studente).
+
 **Aggiunta del 20 ottobre (decisione 85):** scrivere i testi di **copyright** e **termini di servizio**, oggi link vuoti nel
 footer (`Footer.tsx`), con lo studente; le due informative sono già vere. Sostituire anche i contatti segnaposto di
 `src/config.ts` (`APPEAL_CONTACT`, `PRIVACY_CONTACT`) se la consegna è reale.
@@ -709,6 +713,16 @@ footer (`Footer.tsx`), con lo studente; le due informative sono già vere. Sosti
   **Candidato fuori dal perimetro "senza WebGL":** MagicRings (sfondo animato in WebGL2, solo desktop). Il codice è
   salvato in locale in `docs/magic-rings.md` (non versionato), con le note per adattarlo. Si decide in FE-12 con la
   prova di peso, CSP e consumo, scelta per scelta con lo studente; se si sceglie, la decisione 78 si aggiorna allora.
+- [ ] **3. Analisi dei costi operativi (documento a parte, `docs/analisi-costi.md`; stima da concordare).**
+  Proiezione generica di quanto costerebbe tenere l'applicazione attiva nel tempo, **non solo con i piani gratuiti di
+  oggi**: hosting (Render), database, email (Brevo), geocodifica (Nominatim), eventuale dominio, con più scenari di
+  crescita degli utenti. Si scrive con lo studente a fine progetto; nessuna modifica al codice. Aggiunta dello
+  studente il 21 ottobre.
+- [ ] **4. Pagina di presentazione (landing page; stima da concordare).** Una home che spiega cos'è Resonance, i ruoli
+  (fan, musicista, host), le funzioni (eventi vicini, collab, feed, chat) e porta ad accedere o registrarsi, come in altri
+  siti. Solo frontend, contenuto statico. Da decidere con lo studente quando si arriva: dove sta (oggi `/` porta agli
+  Eventi vicini: decisione 85 e test del router), che cosa vede chi ha già fatto l'accesso, il mock-up in Stitch e i testi.
+  Aggiunta dello studente il 21 ottobre.
 
 **Commit proposto:** `style(fe-ui): rifinisce l'interfaccia e aggiunge componenti animati`
 

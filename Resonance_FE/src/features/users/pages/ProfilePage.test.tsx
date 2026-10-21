@@ -101,6 +101,13 @@ describe('ProfilePage', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Evento cancellato.')
   })
 
+  it('dopo la cancellazione di un annuncio collab dal dettaglio mostra «Annuncio cancellato.»', () => {
+    renderProfile(makeMe(), { collabDeleted: true })
+
+    expect(screen.getByRole('status')).toHaveTextContent('Annuncio cancellato.')
+    expect(screen.queryByText('Evento cancellato.')).not.toBeInTheDocument()
+  })
+
   it("lo stato di un altro tipo non mostra l'avviso della cancellazione", () => {
     renderProfile(makeMe(), { profileUpdated: true })
 

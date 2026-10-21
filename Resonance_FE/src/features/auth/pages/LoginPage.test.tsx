@@ -182,7 +182,7 @@ describe('LoginPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Account sospeso' })).toBeInTheDocument()
     expect(screen.getByText(/Violazione delle linee guida/)).toBeInTheDocument()
-    expect(screen.getByText(/Sospeso fino al/)).toHaveTextContent('30 ott 2026')
+    expect(screen.getByText(/Sospeso fino al/)).toHaveTextContent('30/10/2026')
     expect(screen.getByRole('link', { name: APPEAL_CONTACT })).toBeInTheDocument()
     expect(store.getState().auth.status).toBe('anonymous')
   })
