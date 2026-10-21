@@ -724,6 +724,11 @@ footer (`Footer.tsx`), con lo studente; le due informative sono già vere. Sosti
   Eventi vicini: decisione 85 e test del router), che cosa vede chi ha già fatto l'accesso, il mock-up in Stitch e i testi.
   Aggiunta dello studente il 21 ottobre.
 
+**Candidato se avanza tempo (21 ottobre):** titolo nei post del feed. Richiede una modifica al backend (colonna in
+`feed_posts` con migrazione, DTO, Postman), fuori dal "nessuna modifica al backend" del piano: si decide con lo studente
+solo a fine frontend, con il calendario davanti. Le altre funzioni emerse (suggerimento degli indirizzi, elenco di generi
+a chip, carosello degli eventi, filtri della bacheca, candidature con accettazione) sono in `progettazione.md`, sezione 15.
+
 **Commit proposto:** `style(fe-ui): rifinisce l'interfaccia e aggiunge componenti animati`
 
 ### Card FE-11 · Deploy integrato, CSP e prova della demo — stima 4 h
