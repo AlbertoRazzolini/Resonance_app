@@ -24,6 +24,7 @@ const gpsGranted = () => stubGeolocation((ok) => ok({ coords: { latitude: 44.494
 const gpsDenied = () => stubGeolocation((_ok, fail) => fail({ code: 1, PERMISSION_DENIED: 1 }))
 
 afterEach(() => {
+  vi.unstubAllGlobals()
   // @ts-expect-error: jsdom non ha `geolocation`, si toglie lo stub per i test seguenti
   delete navigator.geolocation
 })
@@ -86,6 +87,33 @@ describe('NewPostForm · campi e controlli', () => {
 
     expect(await screen.findByText('Inserisci un indirizzo che inizi con http:// o https://.')).toBeInTheDocument()
     expect(calls).toHaveLength(0)
+  })
+})
+
+describe('NewPostForm · immagine che non si carica', () => {
+  /** `Image` finta che fallisce sempre, come una pagina di ricerca al posto del file. */
+  class BrokenImage {
+    onerror: (() => void) | null = null
+    referrerPolicy = ''
+    set src(_value: string) {
+      queueMicrotask(() => this.onerror?.())
+    }
+  }
+
+  it('avvisa sotto il campo ma non impedisce di pubblicare', async () => {
+    vi.stubGlobal('Image', BrokenImage)
+    const calls: Request[] = []
+    server.use(postCreated(makeFeedPost(), calls))
+    const { user, onPublished } = renderForm()
+
+    await user.type(bodyField(), 'Guarda')
+    await user.type(imageField(), 'https://www.bing.com/images/search?q=x')
+    expect(await screen.findByText("Non riesco a caricare l'immagine: controlla l'indirizzo.")).toBeInTheDocument()
+
+    await user.click(submit())
+
+    await waitFor(() => expect(onPublished).toHaveBeenCalled())
+    expect(await calls[0].json()).toEqual({ body: 'Guarda', imageUrl: 'https://www.bing.com/images/search?q=x' })
   })
 })
 

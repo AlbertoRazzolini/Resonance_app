@@ -2745,7 +2745,10 @@ Ogni punto è stato proposto allo studente con alternative, pro, contro e raccom
 - **Posizione facoltativa del post:** casella «Aggiungi la mia posizione»; si prova il GPS del browser, poi le
   coordinate del profilo, poi niente, e in ogni caso un avviso dice che cosa è successo.
 - **Immagine del post:** solo l'indirizzo (l'upload resta in Post-V1, progettazione sezione 15). Nel post è un `<img>`
-  senza `Referer`, con caricamento differito, che sparisce senza lasciare un buco se non si carica.
+  senza `Referer`, con caricamento differito, che sparisce senza lasciare un buco se non si carica. Nel modulo, se il
+  browser non riesce a caricare l'indirizzo (per esempio una pagina di ricerca invece del file), un avviso sotto il
+  campo lo dice: «Non riesco a caricare l'immagine: controlla l'indirizzo.» La prova parte 600 ms dopo l'ultimo tasto,
+  senza `Referer`, e non blocca la pubblicazione (aggiunta il 21 ottobre dopo la prova in locale).
 - **Cancellare un proprio post:** conferma semplice, **senza motivo** (in FE-06 per gli eventi il motivo c'è): è un
   contenuto proprio e il motivo serve a chi legge quando a cancellare è un admin.
 - **Elenchi a pagine:** una voce di cache per pagina, come `MyEventsTab`; dopo una creazione o una cancellazione si
@@ -2774,6 +2777,8 @@ Ogni punto è stato proposto allo studente con alternative, pro, contro e raccom
 - **Motivo facoltativo nella cancellazione:** un campo in più che l'autore non sa perché compilare.
 - **Upload delle immagini:** richiede endpoint, controllo dei byte, storage esterno e CSP; fuori dall'MVP (sezione 15).
 - **Solo link «Apri immagine»:** un feed senza immagini visibili.
+- **Avviso sull'immagine rotta solo nel post, o sia nel modulo sia nel post:** chi scrive lo scoprirebbe dopo la
+  pubblicazione; il doppio avviso raddoppia i comportamenti da provare.
 - **Una sola voce di cache con `merge`:** dopo una rilettura accoda l'ultima pagina e duplica i post.
 - **Riga compatta di sola lettura nella scheda «Post»:** secondo componente senza like né immagine.
 - **Importare `useSearchCenter` e `RadiusSelector` da `features/events/`:** dipendenza fra due aree contro la regola della struttura.

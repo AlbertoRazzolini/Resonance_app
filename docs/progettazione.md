@@ -1902,6 +1902,7 @@ modifiche distruttive.
 | `indie_events.official_concert_id` | colonna nullable aggiunta con una nuova migrazione |
 | Appeal delle sospensioni | i campi di sospensione esistono già |
 | Upload immagini | oggi solo URL |
+| Centratura delle immagini scelta dall'utente | oggi le immagini dei post sono ritagliate al centro (`object-fit: cover`); servirebbe un punto di interesse scelto dall'utente per ogni immagine (salvato col post) e `object-position` nella card, anche per foto profilo e copertine |
 | Partecipazione agli eventi ("parteciperò") ed elenco degli eventi a cui si partecipa | tabella con chiave composta (utente, evento) per concerti e indie event, base per i `tickets`; gli elenchi dei contenuti creati sono già nell'MVP (decisione 77) |
 | Testo ricco nei contenuti (grassetto, menzioni, markdown) | `UserText` è l'unico punto di visualizzazione: DOMPurify rientra lì con una lista di tag ammessi (decisione 79) |
 | Profilo pubblico visibile a un anonimo solo se l'utente ha contenuti pubblicati | oggi `GET /api/users/{id}` è pubblico per ogni utente verificato (sezione 6.5); la regola richiede un controllo nel backend (404 per l'anonimo senza concerti, indie event, annunci o post pubblici) e cambia il design (decisione 86) |

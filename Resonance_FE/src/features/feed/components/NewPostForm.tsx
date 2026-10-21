@@ -8,6 +8,7 @@ import { useBrowserPosition } from '@/hooks/useBrowserPosition'
 import { getFieldErrors } from '@/lib/errors/getErrorMessage'
 import { useCreatePostMutation } from '../api/feedApi'
 import { buildPostRequest, POST_BODY_MAX, validatePost, type PostValues } from '../postForm'
+import { ImageLoadWarning } from './ImageLoadWarning'
 
 type NewPostFormProps = {
   /** Il post è stato pubblicato: gli avvisi da mostrare («Post pubblicato.» e, se serve, quello sulla posizione). */
@@ -20,7 +21,8 @@ const EMPTY: PostValues = { body: '', imageUrl: '' }
  * Modulo «Nuovo post» (progettazione, sezione 6.8): testo 1–2000, indirizzo dell'immagine facoltativo (solo URL, D2) e
  * casella «Aggiungi la mia posizione». La posizione si chiede al browser solo all'invio e solo con la casella
  * spuntata (decisione 30); se il browser non la dà si usa quella del profilo, se c'è, e in ogni caso un avviso dice
- * che cosa è successo. I controlli del client seguono quelli del backend; gli errori dei campi del server compaiono
+ * che cosa è successo. Un indirizzo dell'immagine che il browser non riesce a caricare è segnalato sotto il campo, senza
+ * bloccare la pubblicazione. I controlli del client seguono quelli del backend; gli errori dei campi del server compaiono
  * sotto i campi e il testo scritto resta.
  */
 export function NewPostForm({ onPublished }: NewPostFormProps) {
@@ -97,6 +99,7 @@ export function NewPostForm({ onPublished }: NewPostFormProps) {
         <Form.Label htmlFor="post-image">Indirizzo dell'immagine (facoltativo)</Form.Label>
         <Form.Control type="url" inputMode="url" placeholder="https://…" {...control('imageUrl', 'post-image')} />
         <FieldError id="post-image-error" message={errorOf('imageUrl')} />
+        <ImageLoadWarning url={values.imageUrl.trim()} />
       </Form.Group>
       <Form.Check
         id="post-position"
