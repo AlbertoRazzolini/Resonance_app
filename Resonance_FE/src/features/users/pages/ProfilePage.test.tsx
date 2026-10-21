@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { describe, expect, it } from 'vitest'
@@ -44,6 +44,14 @@ describe('ProfilePage', () => {
     expect(screen.queryByText('Host')).not.toBeInTheDocument()
     expect(screen.getByText('Bologna')).toBeInTheDocument()
     expect(screen.getByText('Suono la chitarra')).toBeInTheDocument()
+  })
+
+  it('nella bio un indirizzo https è un link con conferma e un javascript: resta testo', () => {
+    renderProfile(makeMe({ bio: 'Ascoltami su https://example.com/musica o javascript:alert(1)' }))
+
+    expect(screen.getByRole('button', { name: 'https://example.com/musica' })).toBeInTheDocument()
+    // Solo l'indirizzo https è un pulsante: il javascript: resta testo dentro la bio
+    expect(within(screen.getByTestId('profile-bio')).getAllByRole('button')).toHaveLength(1)
   })
 
   it('con città e bio vuote non disegna righe vuote', () => {

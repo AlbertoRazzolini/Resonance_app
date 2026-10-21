@@ -1,5 +1,5 @@
 import { Button, ButtonGroup } from 'react-bootstrap'
-import { RADIUS_LEVELS } from '../hooks/useSearchCenter'
+import { RADIUS_LEVELS } from '@/hooks/useSearchCenter'
 
 type RadiusSelectorProps = {
   /** Raggio attuale in km. */

@@ -778,13 +778,12 @@ textarea {
   color: var(--rs-color-text-muted);
 }
 
-/* La bio mantiene gli a capo di chi l'ha scritta e non rompe il layout con una parola lunghissima */
+/* La bio non rompe il layout con una parola lunghissima (gli a capo li tiene UserText) */
 .rs-profile__bio {
   margin: var(--rs-space-4) 0;
   padding: var(--rs-space-3);
   background: var(--rs-color-bg);
   border-radius: var(--rs-radius-md);
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
@@ -1173,10 +1172,15 @@ textarea {
   overflow-wrap: anywhere;
 }
 
-/* Testo scritto dall'organizzatore: a capo come l'ha scritto, mai HTML (FE-07 lo passerà da UserText) */
+/* Testo scritto dall'organizzatore: passa da UserText, che tiene gli a capo; qui solo la parola lunga */
 .rs-event-detail__description {
   max-width: 100%;
-  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Testo degli utenti (UserText): a capo come l'ha scritto, indirizzi lunghi spezzati invece di uscire dal riquadro */
+.rs-user-text {
+  white-space: pre-line;
   overflow-wrap: anywhere;
 }
 
@@ -1284,4 +1288,100 @@ textarea {
 /* Azioni del proprietario nel dettaglio di un evento (FE-06) */
 .rs-event-detail__owner {
   margin-top: var(--rs-space-5);
+}
+
+/* Post del feed (FE-07): riquadro come le card degli eventi, testo che va a capo e immagine a tutta larghezza */
+.rs-post {
+  padding: var(--rs-space-4);
+  border: 1px solid var(--rs-color-border);
+  border-radius: var(--rs-radius-lg);
+  background: var(--rs-color-surface);
+  box-shadow: var(--rs-shadow-card);
+}
+
+.rs-post__head {
+  display: flex;
+  align-items: center;
+  gap: var(--rs-space-3);
+}
+
+.rs-post__who {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rs-post__author {
+  font-weight: var(--rs-weight-strong);
+  overflow-wrap: anywhere;
+}
+
+.rs-post__date {
+  color: var(--rs-color-text-muted);
+  font-size: var(--rs-text-sm);
+}
+
+.rs-post__body {
+  margin: var(--rs-space-3) 0;
+  overflow-wrap: anywhere;
+}
+
+.rs-post__image {
+  display: block;
+  width: 100%;
+  max-height: 24rem;
+  margin-bottom: var(--rs-space-3);
+  object-fit: cover;
+  border-radius: var(--rs-radius-md);
+}
+
+.rs-post__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rs-space-2);
+}
+
+.rs-post__like--on {
+  border-color: var(--rs-color-accent);
+  color: var(--rs-color-accent);
+}
+
+/* Elenco dei post (feed e scheda «Post»): una colonna con aria fra le card */
+.rs-posts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rs-space-3);
+}
+
+/* Dove si scrive un nuovo post: riquadro in cima al feed da 768 px, su telefono solo il pulsante che apre la finestra */
+.rs-new-post-panel {
+  margin-bottom: var(--rs-space-4);
+}
+
+@media (min-width: 768px) {
+  .rs-new-post-panel {
+    padding: var(--rs-space-4);
+    border: 1px solid var(--rs-color-border);
+    border-radius: var(--rs-radius-lg);
+    background: var(--rs-color-surface);
+  }
+}
+
+.rs-new-post-panel--anonymous {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rs-space-3);
+}
+
+.rs-new-post-panel--anonymous p {
+  margin: 0;
+}
+
+/* Feed e scheda «Post» sulla colonna del corpo: il testo lungo e gli indirizzi vanno a capo, mai fuori dal riquadro */
+.rs-posts,
+.rs-my-posts {
+  min-width: 0;
 }

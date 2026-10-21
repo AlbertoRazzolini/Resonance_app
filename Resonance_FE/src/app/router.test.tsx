@@ -5,6 +5,7 @@ import { sessionEnded, sessionStarted } from '@/features/auth/authSlice'
 import { makeConcert, makeIndieEvent, makePage } from '@/test/fixtures/events'
 import { makeLoginResponse, makeMe, makePublicUser } from '@/test/fixtures/users'
 import { concertFound, indieEventFound, nearbyConcertsFound } from '@/test/handlers/events'
+import { feedFound } from '@/test/handlers/feed'
 import { publicUserFound } from '@/test/handlers/users'
 import { server } from '@/test/server'
 import { setViewportWidth } from '@/test/viewport'
@@ -40,14 +41,20 @@ describe('router', () => {
     expect(router.state.location.pathname).toBe(ROUTES.events)
   })
 
-  it.each([
-    [ROUTES.collab, 'Collab'],
-    [ROUTES.feed, 'Feed'],
-  ])("%s è aperta all'anonimo e mostra il segnaposto", async (path, title) => {
-    const router = renderAt(path)
-    expect(await screen.findByRole('heading', { name: title })).toBeInTheDocument()
+  it("/collab è aperta all'anonimo e mostra il segnaposto", async () => {
+    const router = renderAt(ROUTES.collab)
+    expect(await screen.findByRole('heading', { name: 'Collab' })).toBeInTheDocument()
     expect(screen.getByText('Questa sezione arriva presto.')).toBeInTheDocument()
-    expect(router.state.location.pathname).toBe(path)
+    expect(router.state.location.pathname).toBe(ROUTES.collab)
+  })
+
+  it("/feed è aperta all'anonimo e mostra il feed con l'invito ad accedere", async () => {
+    server.use(feedFound([makePage([])]))
+    const router = renderAt(ROUTES.feed)
+    expect(await screen.findByRole('heading', { level: 1, name: 'Feed' })).toBeInTheDocument()
+    expect(await screen.findByText('Ancora nessun post.')).toBeInTheDocument()
+    expect(screen.getByText('Accedi per scrivere un post.')).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe(ROUTES.feed)
   })
 
   it("/eventi è aperta all'anonimo e mostra gli eventi vicini", async () => {

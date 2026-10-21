@@ -1,12 +1,14 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
+import { MemoryRouter } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { makeStore } from '@/app/store'
 import { sessionStarted } from '@/features/auth/authSlice'
 import { makePage } from '@/test/fixtures/events'
 import { makeLoginResponse, makeMe } from '@/test/fixtures/users'
 import { myConcertsFound } from '@/test/handlers/events'
+import { myPostsFound } from '@/test/handlers/feed'
 import { server } from '@/test/server'
 import type { Role } from '@/types/users'
 import { AREA_TABS, type AreaTab } from '../areaTabs'
@@ -19,7 +21,9 @@ function renderTabs(roles: Role[], tabs?: AreaTab[]) {
   store.dispatch(sessionStarted(makeLoginResponse({ user: makeMe({ roles }) })))
   render(
     <Provider store={store}>
-      <AreaTabs tabs={tabs} />
+      <MemoryRouter>
+        <AreaTabs tabs={tabs} />
+      </MemoryRouter>
     </Provider>,
   )
   return userEvent.setup()
@@ -53,11 +57,12 @@ describe('AreaTabs', () => {
     expect(titles()).toEqual(['Concerti', 'Indie event', 'Annunci', 'Post'])
   })
 
-  it('la prima scheda è aperta e mostra il suo contenuto (finché una card non lo completa, «Questa sezione arriva presto.»)', () => {
+  it('la prima scheda è aperta e mostra il suo contenuto (la scheda «Post» dei propri post)', async () => {
+    server.use(myPostsFound([makePage([])]))
     renderTabs(['FAN'])
 
     expect(screen.getByRole('tab', { name: 'Post' })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByRole('tabpanel')).toHaveTextContent('Questa sezione arriva presto.')
+    expect(await screen.findByText('Non hai ancora scritto post.')).toBeInTheDocument()
   })
 
   it('la prima scheda di un HOST è «Concerti», aperta, e gli altri non lo sono', () => {

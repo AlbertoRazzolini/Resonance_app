@@ -7,6 +7,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import { ExternalLink } from '@/components/ui/ExternalLink'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { UserText } from '@/components/ui/UserText'
 import { selectCurrentUser } from '@/features/auth/authSlice'
 import { useAppSelector } from '@/hooks/redux'
 import { formatEventDateLong } from '@/lib/format/dates'
@@ -152,7 +153,11 @@ export function EventDetail(props: EventDetailProps) {
         </p>
       )}
 
-      {event.description && <div className="rs-event-detail__description">{event.description}</div>}
+      {event.description && (
+        <div className="rs-event-detail__description">
+          <UserText text={event.description} />
+        </div>
+      )}
       {currentUser?.id === author.id && <OwnerActions {...props} />}
     </article>
   )

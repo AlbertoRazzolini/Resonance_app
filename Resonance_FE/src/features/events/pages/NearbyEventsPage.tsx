@@ -6,18 +6,18 @@ import { Map, MarkerLegend, type EventKind } from '@/components/map'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import { LoadMore } from '@/components/ui/LoadMore'
+import { RadiusSelector } from '@/components/ui/RadiusSelector'
 import { Skeleton, SkeletonLine } from '@/components/ui/Skeleton'
-import { formatDistance, zoomForRadius } from '@/lib/format/distance'
-import type { IndieEventResponse, OfficialConcertResponse } from '@/types/events'
-import { useGetNearbyConcertsQuery, useGetNearbyIndieEventsQuery } from '../api/eventsApi'
-import { EventCard } from '../components/EventCard'
-import { RadiusSelector } from '../components/RadiusSelector'
 import {
   DEFAULT_RADIUS_KM,
   parseRadius,
   useSearchCenter,
   type CenterSource,
-} from '../hooks/useSearchCenter'
+} from '@/hooks/useSearchCenter'
+import { formatDistance, zoomForRadius } from '@/lib/format/distance'
+import type { IndieEventResponse, OfficialConcertResponse } from '@/types/events'
+import { useGetNearbyConcertsQuery, useGetNearbyIndieEventsQuery } from '../api/eventsApi'
+import { EventCard } from '../components/EventCard'
 
 /** Zoom iniziale della mappa: l'Italia intera dall'alto, finché i risultati non arrivano (decisione dello studente, 20 ottobre). */
 const ITALY_ZOOM = 5

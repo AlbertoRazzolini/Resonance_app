@@ -2728,3 +2728,52 @@ Ogni punto è stato proposto allo studente con alternative, pro, contro e raccom
 - **Dopo la cancellazione andare a `/eventi`:** nessuna conferma dell'esito e la bozza non compare lì.
 - **`EventCard` riusata nelle schede:** richiede di adattarla (distanza assente, azioni) per un elenco di gestione.
 - **Due colonne da 768 px:** più CSS e più prove, non richiesto dal piano.
+
+## Decisione 89: feed, like e testo degli utenti nel frontend (card FE-07, progettazione, sezioni 6.8 e 8.6)
+
+### Scelta
+
+- **`UserText` solo sui testi lunghi:** bio, descrizione degli eventi e corpo dei post. Titoli, nomi, locali e generi
+  restano testo semplice. Nel testo l'indirizzo `http`/`https` si legge **com'è scritto**, a capo se lungo; la
+  punteggiatura finale (`. , ; : ! ?` e `)`) resta testo e non fa parte del link. Gli a capo li tiene lo stile
+  (`white-space: pre-line`).
+- **Filtro «Vicino a me» nell'indirizzo** (`/feed?vicino=1&raggio=25`), come Eventi vicini; centro e livelli del raggio
+  vengono da `useSearchCenter` e `RadiusSelector`, che passano da `features/events/` a `hooks/` e `components/ui/`
+  (regola della struttura: ciò che serve a più aree sta fuori da `features/`).
+- **Nuovo post:** da 768 px il modulo sta in cima al feed; su telefono c'è il pulsante «Nuovo post» che apre una
+  finestra, chiusa a pubblicazione riuscita. Un anonimo legge l'invito ad accedere e, dopo l'accesso, torna al feed.
+- **Posizione facoltativa del post:** casella «Aggiungi la mia posizione»; si prova il GPS del browser, poi le
+  coordinate del profilo, poi niente, e in ogni caso un avviso dice che cosa è successo.
+- **Immagine del post:** solo l'indirizzo (l'upload resta in Post-V1, progettazione sezione 15). Nel post è un `<img>`
+  senza `Referer`, con caricamento differito, che sparisce senza lasciare un buco se non si carica.
+- **Cancellare un proprio post:** conferma semplice, **senza motivo** (in FE-06 per gli eventi il motivo c'è): è un
+  contenuto proprio e il motivo serve a chi legge quando a cancellare è un admin.
+- **Elenchi a pagine:** una voce di cache per pagina, come `MyEventsTab`; dopo una creazione o una cancellazione si
+  rileggono le pagine aperte. Il like cambia subito il post in tutte le voci dove compare (feed e scheda «Post»), a
+  risposta arrivata prende i numeri del server e con un errore torna com'era.
+- **Scheda «Post» dell'area personale:** le stesse card del feed (like e «Cancella»).
+- **Testi dell'interfaccia** approvati dallo studente il 21 ottobre; data del post in forma breve («21 ott 2026»).
+
+### Motivazione
+
+- Titoli e nomi stanno dentro un `Link`: un collegamento dentro un collegamento è HTML non valido.
+- Mostrare l'indirizzo com'è scritto fa vedere dove porta il link; la punteggiatura finale è quasi sempre del testo.
+- Il filtro nell'indirizzo fa ritrovare lo stato con «Indietro» e riusa la logica già provata in FE-05.
+- Il modulo in pagina da 768 px tiene il testo a portata di mano; la finestra su telefono evita un feed allungato.
+- Il GPS dice dove si trova davvero l'utente; il profilo evita di perdere la posizione se il permesso è negato.
+- Una voce di cache per pagina evita i doppioni che un accodamento con `merge` produrrebbe dopo una rilettura.
+
+### Alternative scartate
+
+- **`UserText` anche su titoli e nomi:** collegamenti annidati da gestire con casi speciali.
+- **Solo il dominio come etichetta del link:** l'utente non vede il percorso.
+- **Il link arriva fino al primo spazio:** `https://example.com.` porterebbe a un indirizzo con il punto in fondo.
+- **Stato del filtro solo nella pagina:** tornando dal profilo di un autore si perde.
+- **Modulo sempre in una finestra, o in una pagina `/feed/nuovo`:** più passaggi per un testo breve.
+- **Solo GPS o solo profilo per la posizione:** si perde la posizione nei casi che l'altra fonte copre.
+- **Motivo facoltativo nella cancellazione:** un campo in più che l'autore non sa perché compilare.
+- **Upload delle immagini:** richiede endpoint, controllo dei byte, storage esterno e CSP; fuori dall'MVP (sezione 15).
+- **Solo link «Apri immagine»:** un feed senza immagini visibili.
+- **Una sola voce di cache con `merge`:** dopo una rilettura accoda l'ultima pagina e duplica i post.
+- **Riga compatta di sola lettura nella scheda «Post»:** secondo componente senza like né immagine.
+- **Importare `useSearchCenter` e `RadiusSelector` da `features/events/`:** dipendenza fra due aree contro la regola della struttura.

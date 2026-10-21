@@ -107,6 +107,13 @@ describe('ConcertDetailPage · evento trovato', () => {
     expect(document.querySelector('img[src="x"]')).toBeNull()
   })
 
+  it('un indirizzo https nella descrizione è un link con conferma', async () => {
+    server.use(concertFound(makeConcert({ description: 'Programma completo su https://example.com/programma.' })))
+    renderPage()
+
+    expect(await screen.findByRole('button', { name: 'https://example.com/programma' })).toBeInTheDocument()
+  })
+
   it('senza descrizione non lascia un blocco vuoto', async () => {
     server.use(concertFound(makeConcert({ description: null })))
     renderPage()

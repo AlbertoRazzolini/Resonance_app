@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Avatar } from '@/components/ui/Avatar'
+import { UserText } from '@/components/ui/UserText'
 import { ROLE_LABELS, type Role } from '@/types/users'
 
 type ProfileHeaderProps = {
@@ -14,7 +15,7 @@ type ProfileHeaderProps = {
 
 /**
  * Scheda di un profilo, uguale per il proprio e per quello pubblico: foto, nome, ruoli, città e bio. La bio è testo
- * semplice (React la scrive come testo, mai come HTML); gli URL cliccabili li aggiunge `UserText` con FE-07.
+ * passa da `UserText` (testo di React, mai HTML; gli indirizzi `http`/`https` hanno la conferma d'uscita).
  */
 export function ProfileHeader({ displayName, avatarUrl, city, bio, roles, children }: ProfileHeaderProps) {
   return (
@@ -39,7 +40,7 @@ export function ProfileHeader({ displayName, avatarUrl, city, bio, roles, childr
       </div>
       {bio && (
         <p className="rs-profile__bio" data-testid="profile-bio">
-          {bio}
+          <UserText text={bio} />
         </p>
       )}
       {children}
