@@ -18,6 +18,8 @@ export const ERROR_MESSAGES: Record<string, string> = {
 
   // Registrazione, verifica, login
   EMAIL_ALREADY_REGISTERED: 'Esiste già un account con questa email.',
+  // Errore del campo nome: lo scrive il form sotto il campo (getFieldErrors) e ErrorAlert non lo ripete
+  DISPLAY_NAME_TAKEN: 'Nome già utilizzato.',
   ALREADY_VERIFIED: 'Questo account è già verificato: puoi accedere.',
   CODE_INVALID: "Il codice non è corretto. Controlla l'email e riprova.",
   CODE_EXPIRED: 'Il codice è scaduto o hai esaurito i tentativi. Richiedine uno nuovo.',

@@ -68,7 +68,7 @@ export function ProfileForm({ user }: { user: MeResponse }) {
       <ErrorAlert error={error} />
       <Form.Group className="mb-4">
         <Form.Label htmlFor="profile-name" className="rs-required">
-          Nome visibile
+          Nome utente
         </Form.Label>
         <Form.Control type="text" autoComplete="nickname" {...control('displayName', 'profile-name')} />
         <FieldError id="profile-name-error" message={errorOf('displayName')} />

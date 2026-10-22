@@ -4,6 +4,9 @@ import { ERROR_MESSAGES, NETWORK_ERROR_MESSAGE, TIMEOUT_ERROR_MESSAGE } from './
 /** Codici per cui `ErrorResponse.fields` indica i campi del form da evidenziare (progettazione, sezione 6.1). */
 const CODES_WITH_FIELDS = ['VALIDATION_ERROR', 'ADDRESS_NOT_FOUND']
 
+/** Codice del nome utente già in uso: si mostra sotto il campo del nome, non nell'avviso in alto. */
+export const DISPLAY_NAME_TAKEN = 'DISPLAY_NAME_TAKEN'
+
 /** Stati di un proxy o di Render che si sta riavviando: la risposta non viene dal backend (non è JSON). */
 const GATEWAY_STATUSES = [502, 503, 504]
 
@@ -53,8 +56,13 @@ export function getErrorCode(error: unknown): string | undefined {
   return backendError(error)?.code
 }
 
-/** Errori dei singoli campi (`nome campo → messaggio`), solo per `VALIDATION_ERROR` e `ADDRESS_NOT_FOUND`. */
+/**
+ * Errori dei singoli campi (`nome campo → messaggio`): i `fields` di `VALIDATION_ERROR` e `ADDRESS_NOT_FOUND`, più
+ * `DISPLAY_NAME_TAKEN`, che il backend non manda con i campi (come `EMAIL_ALREADY_REGISTERED`) ma è sempre un
+ * errore del nome, quindi il testo italiano del codice va sul campo `displayName` (decisione 96).
+ */
 export function getFieldErrors(error: unknown): Record<string, string> {
   const response = backendError(error)
+  if (response?.code === DISPLAY_NAME_TAKEN) return { displayName: ERROR_MESSAGES[DISPLAY_NAME_TAKEN] }
   return response && CODES_WITH_FIELDS.includes(response.code) ? { ...response.fields } : {}
 }

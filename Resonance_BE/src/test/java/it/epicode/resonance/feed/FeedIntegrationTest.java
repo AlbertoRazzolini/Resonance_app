@@ -75,7 +75,7 @@ class FeedIntegrationTest extends IntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.author.id").value(fan.getId().toString()))
-                .andExpect(jsonPath("$.author.displayName").value("Utente"))
+                .andExpect(jsonPath("$.author.displayName").value("fan"))
                 .andExpect(jsonPath("$.author.email").doesNotExist())
                 .andExpect(jsonPath("$.body").value("Che serata!"))
                 .andExpect(jsonPath("$.imageUrl").value("https://example.com/foto.jpg"))
@@ -151,7 +151,7 @@ class FeedIntegrationTest extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(post.getId().toString()))
                 .andExpect(jsonPath("$.body").value("Un post"))
-                .andExpect(jsonPath("$.author.displayName").value("Utente"))
+                .andExpect(jsonPath("$.author.displayName").value("fan"))
                 .andExpect(jsonPath("$.author.email").doesNotExist())
                 .andExpect(jsonPath("$.likedByMe").value(false))
                 .andExpect(jsonPath("$.distanceKm").value(nullValue()));
@@ -188,7 +188,7 @@ class FeedIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.totalElements").value(3))
                 .andExpect(jsonPath("$.content[*].id", contains(newest.getId().toString(),
                         located.getId().toString(), oldest.getId().toString())))
-                .andExpect(jsonPath("$.content[0].author.displayName").value("Utente"))
+                .andExpect(jsonPath("$.content[0].author.displayName").value("fan"))
                 .andExpect(jsonPath("$.content[0].author.email").doesNotExist())
                 .andExpect(jsonPath("$.content[0].likedByMe").value(false))
                 .andExpect(jsonPath("$.content[0].distanceKm").value(nullValue()));
@@ -675,7 +675,7 @@ class FeedIntegrationTest extends IntegrationTest {
     }
 
     private User userWith(String email, Role... userRoles) {
-        User user = new User(email, "hash-di-prova", "Utente");
+        User user = new User(email, "hash-di-prova", email.substring(0, email.indexOf('@')));
         user.setEmailVerified(true);
         users.save(user);
         for (Role role : userRoles) {

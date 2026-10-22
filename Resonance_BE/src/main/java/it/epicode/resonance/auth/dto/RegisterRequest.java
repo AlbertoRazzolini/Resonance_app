@@ -3,6 +3,7 @@ package it.epicode.resonance.auth.dto;
 import it.epicode.resonance.auth.PasswordMax72Bytes;
 import it.epicode.resonance.common.NoEmoji;
 import it.epicode.resonance.common.NoInvisibleChars;
+import it.epicode.resonance.user.DisplayNames;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -23,7 +24,8 @@ public record RegisterRequest(
     // Normalizzazione qui, prima della validazione: @Email vede gia' il valore pulito.
     public RegisterRequest {
         email = email == null ? null : email.strip().toLowerCase(Locale.ROOT);
-        displayName = displayName == null ? null : displayName.strip();
+        // Trim e spazi ripetuti ridotti a uno, cosi' l'unicita' vede il nome come verra' salvato (decisione 96).
+        displayName = DisplayNames.normalize(displayName);
     }
 
     // La password non deve finire nei log nemmeno per errore (progettazione, sezione 8.9).

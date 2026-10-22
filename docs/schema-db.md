@@ -18,8 +18,9 @@ creato e si aggiorna a ogni migrazione che modifica lo schema, nello stesso sott
 | `V7__feed_and_likes` | F4-02 | tabelle `feed_posts`, `post_likes` | Applicata |
 | `V8__friendships` | F4-04 | enum `friendship_status`; tabella `friendships` | Applicata |
 | `V9__chat` | F5-02 | enum `chat_unlock_source`; tabelle `chat_conversations`, `chat_messages`, `chat_unlocks` | Applicata |
+| `V10__unique_display_name` | F7-08 | indice unico `uq_users_display_name_lower` su `lower(display_name)` | Applicata |
 
-Tutte le migrazioni previste dalla progettazione, sezione 3.6, sono applicate.
+Le migrazioni V1–V9 sono quelle previste dalla progettazione, sezione 3.6; V10 nasce dalla card F7-08 (decisione 96).
 
 ## Convenzioni
 
@@ -52,7 +53,7 @@ Tutte le migrazioni previste dalla progettazione, sezione 3.6, sono applicate.
 | `id` | uuid | PK `pk_users`, default `gen_random_uuid()` |
 | `email` | varchar(255) | NOT NULL, univoca `uq_users_email`; sempre minuscola (la normalizza l'applicazione) |
 | `password_hash` | varchar(100) | NOT NULL (BCrypt) |
-| `display_name` | varchar(50) | NOT NULL |
+| `display_name` | varchar(50) | NOT NULL; unico senza distinguere le maiuscole, indice `uq_users_display_name_lower` su `lower(display_name)` (V10) |
 | `avatar_url` | varchar(2048) | NULL; solo http/https (validato dall'applicazione) |
 | `email_verified` | boolean | NOT NULL, default `false` |
 | `status` | user_status | NOT NULL, default `ACTIVE` |
@@ -73,6 +74,12 @@ Vincoli di controllo:
 - `ck_users_suspension`: se `status = 'ACTIVE'` i quattro campi di sospensione sono nulli; se
   `status = 'SUSPENDED'` `suspended_at`, `suspended_by` e `suspension_reason` sono valorizzati
   (`suspended_until` resta facoltativo).
+
+Indici:
+
+- `uq_users_display_name_lower` (V10): indice unico sull'espressione `lower(display_name)`, senza colonna nuova. Due utenti
+  non possono avere lo stesso nome nemmeno con maiuscole diverse; vale anche per gli account non verificati, che il
+  job orario elimina dopo 24 ore dall'ultimo invio del codice (decisione 96).
 
 ### user_roles
 
@@ -418,7 +425,7 @@ erDiagram
         uuid id PK
         varchar email UK
         varchar password_hash
-        varchar display_name
+        varchar display_name UK "unico senza maiuscole"
         varchar avatar_url
         boolean email_verified
         user_status status
@@ -656,7 +663,7 @@ erDiagram
         uuid id PK
         varchar email UK
         varchar password_hash
-        varchar display_name
+        varchar display_name UK "unico senza maiuscole"
         varchar avatar_url
         boolean email_verified
         user_status status

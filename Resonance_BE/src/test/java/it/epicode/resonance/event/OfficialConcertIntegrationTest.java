@@ -56,7 +56,7 @@ class OfficialConcertIntegrationTest extends IntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.host.id").value(host.getId().toString()))
-                .andExpect(jsonPath("$.host.displayName").value("Utente"))
+                .andExpect(jsonPath("$.host.displayName").value("host"))
                 .andExpect(jsonPath("$.title").value("Concerto di prova"))
                 .andExpect(jsonPath("$.venueName").value("Teatro Test"))
                 .andExpect(jsonPath("$.address").value(StubGeocodingConfig.FLORENCE_ADDRESS))
@@ -283,7 +283,7 @@ class OfficialConcertIntegrationTest extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(concert.getId().toString()))
                 .andExpect(jsonPath("$.title").value("Concerto"))
-                .andExpect(jsonPath("$.host.displayName").value("Utente"))
+                .andExpect(jsonPath("$.host.displayName").value("host"))
                 // Nessun dato privato dell'autore (sezione 6.6: AuthorSummary).
                 .andExpect(jsonPath("$.host.email").doesNotExist());
     }
@@ -556,7 +556,7 @@ class OfficialConcertIntegrationTest extends IntegrationTest {
     }
 
     private User userWith(String email, Role... userRoles) {
-        User user = new User(email, "hash-di-prova", "Utente");
+        User user = new User(email, "hash-di-prova", email.substring(0, email.indexOf('@')));
         user.setEmailVerified(true);
         users.save(user);
         for (Role role : userRoles) {

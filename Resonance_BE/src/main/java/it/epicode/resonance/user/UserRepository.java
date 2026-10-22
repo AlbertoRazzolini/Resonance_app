@@ -67,6 +67,34 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
     Page<User> searchByDisplayName(String pattern, UserStatus status, UUID me, Pageable pageable);
 
     /**
+     * Vero se un utente qualsiasi, anche non verificato, ha gia' il nome senza distinguere le maiuscole. Stesso
+     * confronto dell'indice uq_users_display_name_lower (decisione 96).
+     */
+    @Query("select count(u) > 0 from User u where lower(u.displayName) = lower(:name)")
+    boolean existsByDisplayNameIgnoreCase(String name);
+
+    /**
+     * Come {@link #existsByDisplayNameIgnoreCase}, ma senza contare l'utente indicato: serve a chi tiene il proprio nome
+     * e cambia solo le maiuscole, o si registra di nuovo con la stessa email non verificata.
+     */
+    @Query("select count(u) > 0 from User u where lower(u.displayName) = lower(:name) and u.id <> :excludedId")
+    boolean existsByDisplayNameIgnoreCaseExcluding(String name, UUID excludedId);
+
+    /**
+     * Elimina gli utenti non verificati il cui ultimo invio del codice di verifica e' precedente a {@code before};
+     * senza codice conta la creazione dell'account. Un solo DELETE atomico: una verifica che arriva nello stesso istante
+     * ha il lock sulla riga e l'utente, riletto dopo, risulta gia' verificato. Righe collegate cancellate in cascata.
+     * Nativa per il confronto con il tipo enum di PostgreSQL. Restituisce le righe eliminate.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query(nativeQuery = true, value = """
+            delete from users u
+            where u.email_verified = false
+              and coalesce((select c.sent_at from email_codes c
+                            where c.user_id = u.id and c.purpose = 'EMAIL_VERIFICATION'), u.created_at) < :before""")
+    int deleteUnverifiedWithoutRecentCode(Instant before);
+
+    /**
      * Quanti utenti hanno il ruolo e lo stato indicati, escluso l'utente indicato: serve al controllo "ultimo
      * SUPERADMIN" (progettazione, sezione 5.5).
      */

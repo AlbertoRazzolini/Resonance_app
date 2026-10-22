@@ -32,8 +32,8 @@ describe('validateRegister · valori giusti', () => {
 
 describe('validateRegister · nome', () => {
   it('vuoto o di soli spazi: chiede il nome', () => {
-    expect(check({ displayName: '' }).displayName).toBe('Scrivi il nome visibile.')
-    expect(check({ displayName: '    ' }).displayName).toBe('Scrivi il nome visibile.')
+    expect(check({ displayName: '' }).displayName).toBe('Scrivi il nome utente.')
+    expect(check({ displayName: '    ' }).displayName).toBe('Scrivi il nome utente.')
   })
 
   it('da 3 a 30 caratteri dopo aver tolto gli spazi ai lati (come il backend)', () => {
@@ -143,7 +143,7 @@ describe('validateRegister · password', () => {
 describe('validateRegister · più campi', () => {
   it('restituisce un errore per ogni campo sbagliato', () => {
     expect(validateRegister({ displayName: '', email: 'x', password: '' })).toEqual({
-      displayName: 'Scrivi il nome visibile.',
+      displayName: 'Scrivi il nome utente.',
       email: 'Scrivi un indirizzo email valido.',
       password: 'Scrivi la password.',
     })

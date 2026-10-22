@@ -247,7 +247,7 @@ class AdminRoleIntegrationTest extends IntegrationTest {
      * Crea un utente verificato con FAN piu' i ruoli indicati.
      */
     private User userWith(Role... extraRoles) {
-        User user = new User("utente-" + UUID.randomUUID() + "@example.com", "hash-di-prova", "Utente");
+        User user = new User("utente-" + UUID.randomUUID() + "@example.com", "hash-di-prova", "Utente " + UUID.randomUUID());
         user.setEmailVerified(true);
         users.save(user);
         roles.save(new UserRole(user.getId(), Role.FAN));
@@ -259,7 +259,7 @@ class AdminRoleIntegrationTest extends IntegrationTest {
 
     private User suspended(User user, java.time.Instant until) {
         // La sospensione richiede un autore (ck_users_suspension e fk_users_suspended_by).
-        User moderator = users.save(new User("mod-" + UUID.randomUUID() + "@example.com", "hash-di-prova", "Mod"));
+        User moderator = users.save(new User("mod-" + UUID.randomUUID() + "@example.com", "hash-di-prova", "Mod " + UUID.randomUUID()));
         user.setStatus(UserStatus.SUSPENDED);
         user.setSuspendedAt(clock.instant());
         user.setSuspendedBy(moderator.getId());

@@ -140,7 +140,7 @@ class LikeConcurrencyTest extends IntegrationTest {
     }
 
     private User user(String email) {
-        User user = new User(email, "hash-di-prova", "Utente");
+        User user = new User(email, "hash-di-prova", email.substring(0, email.indexOf('@')));
         user.setEmailVerified(true);
         return users.save(user);
     }

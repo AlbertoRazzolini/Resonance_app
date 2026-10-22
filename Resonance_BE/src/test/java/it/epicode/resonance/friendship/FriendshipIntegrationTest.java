@@ -609,12 +609,12 @@ class FriendshipIntegrationTest extends IntegrationTest {
         User sent = user("s@example.com", "Sara");
         User received = user("r@example.com", "Rita");
         User stranger = user("x@example.com", "Xavier");
-        User suspendedStranger = suspended(user("u1@example.com", "Ugo"), me);
-        User suspendedFriend = suspended(user("u2@example.com", "Ugo"), me);
-        User unverified = user("u3@example.com", "Ugo");
+        User suspendedStranger = suspended(user("u1@example.com", "Ugo Uno"), me);
+        User suspendedFriend = suspended(user("u2@example.com", "Ugo Due"), me);
+        User unverified = user("u3@example.com", "Ugo Tre");
         unverified.setEmailVerified(false);
         users.save(unverified);
-        User removedMe = user("u4@example.com", "Ugo");
+        User removedMe = user("u4@example.com", "Ugo Quattro");
         row(me, friend, FriendshipStatus.ACCEPTED);
         Friendship sentRow = row(me, sent, FriendshipStatus.PENDING);
         Friendship receivedRow = row(received, me, FriendshipStatus.PENDING);

@@ -3171,3 +3171,73 @@ più spento e la campanella non mostra più solo le richieste (testo del pannell
 - **Riavviare `npm run dev` a mano a ogni modifica:** facile da dimenticare e fa perdere tempo nelle sessioni lunghe.
 - **Spostare il progetto fuori da OneDrive:** risolverebbe alla radice ma cambia l'ambiente dello studente a pochi giorni dalla consegna.
 - **Intervallo più basso (100 ms, il valore predefinito):** più reattivo ma con un costo di processore inutile per uno schermo di prova.
+
+## Decisione 96: nome utente unico e pulizia degli account non verificati (card F7-08, progettazione, sezioni 3.2, 4.4 e 6.4)
+
+Ogni punto è stato proposto allo studente con alternative, pro, contro e raccomandazione, e approvato il 22 ottobre (nome unico: richiesta dello
+studente, soluzione A fra tre; nome e cognome restano tra le funzioni future, progettazione §15).
+
+### Scelta
+
+- **Unicità:** il nome (`displayName`) è unico **senza distinguere le maiuscole**. Migrazione `V10__unique_display_name`: indice unico
+  `uq_users_display_name_lower` su `lower(display_name)`, nessuna colonna nuova. Su Render, prima della migrazione, una `SELECT` di sola
+  lettura ha trovato 5 utenti e nessun nome doppio.
+- **Nomi occupati subito:** il nome vale anche per gli account con l'email non ancora verificata. Un nome lasciato da chi lo cambia torna
+  disponibile.
+- **Spazi:** restano ammessi nel nome (nomi di gruppo e di locale). Gli spazi ripetuti dentro il nome si riducono a uno (`DisplayNames.normalize`,
+  chiamata nel costruttore dei due DTO insieme al trim), prima della validazione e del controllo. Vale solo lo spazio normale.
+- **Nomi riservati:** admin, superadmin, resonance, staff, support, moderator, official, system, root (`ReservedDisplayNames`), rifiutati
+  quando il **nome intero** coincide con uno dell'elenco, senza distinguere le maiuscole: «Admin Mario» passa. Errore: 400 `VALIDATION_ERROR`
+  sul campo `displayName`, «Questo nome utente non è disponibile». Il controllo scatta solo quando il nome **cambia**: il superadmin
+  («Superadmin», creato da `SuperadminBootstrap`, che non cambia) può modificare la bio rimandando lo stesso nome. La regola non è
+  retroattiva (come la decisione 84): su Render un utente ha già un nome riservato.
+- **Nome già preso:** 409 `DISPLAY_NAME_TAKEN`, messaggio «Nome già utilizzato», senza `fields` (come `EMAIL_ALREADY_REGISTERED`). Lo decide
+  `DisplayNamePolicy` (nuovo componente del package `user`, usato da `AuthService.register` e da `UserService.updateProfile`) con una query che
+  esclude l'utente stesso: cambiare solo le maiuscole del proprio nome, o registrarsi di nuovo con la stessa email non verificata, non è un
+  conflitto. Due richieste insieme: la seconda urta l'indice e `GlobalExceptionHandler` lo traduce nello stesso 409 (`saveAndFlush`, quindi
+  l'errore nasce dentro il metodo e non al commit). Nome e conflitto nella registrazione si controllano prima del codice email: un nome
+  non disponibile non consuma un invio.
+- **Ordine dei controlli:** validazione del DTO (lunghezza, emoji, caratteri invisibili), poi riservato, poi nome preso: chi prova un nome
+  riservato non scopre se qualcuno lo usa.
+- **Pulizia degli account mai verificati:** `UnverifiedAccountCleaner` (package `auth`), `@Scheduled(fixedDelay = 1h)` (gira anche all'avvio),
+  con un solo `DELETE` elimina gli utenti con `email_verified = false` il cui ultimo invio del codice di verifica (`email_codes.sent_at`) è più
+  vecchio di 24 ore; senza codice conta `created_at`. Chi si registra di nuovo riceve un codice nuovo e l'account riparte. Le righe collegate
+  (`user_roles`, `email_codes`, `refresh_tokens`) vanno via con `ON DELETE CASCADE`.
+- **Nomi quasi uguali (lettere simili, spazi che non sono lo spazio normale):** limite noto, accettato. Si confronta solo `lower(...)`.
+- **Frontend:** etichetta «Nome utente» (registrazione e modifica del profilo) e messaggio «Scrivi il nome utente.» a campo vuoto;
+  `DISPLAY_NAME_TAKEN` si mostra **solo sotto il campo** con «Nome già utilizzato.» (`getFieldErrors` lo mappa su `displayName`, `ErrorAlert` non
+  lo ripete); nessun elenco di nomi riservati nel frontend: l'errore del server compare sul campo come quello delle emoji. L'informativa
+  privacy non cambia (testi approvati in FE-03b).
+- **Test:** le fixture dei test che creavano più utenti con lo stesso nome fisso («Utente», «Admin», «Mario», «Ugo») ora hanno nomi
+  diversi (dalla parte dell'email prima della `@`, o con un UUID); nessun codice di produzione cambia per questo.
+
+### Motivazione
+
+- Gli utenti non hanno nome e cognome: il nome è il solo segno di riconoscimento e due utenti con lo stesso nome si scambiano a vista (chat,
+  feed, amicizie). Un indice sull'espressione dà l'unicità senza colonne da tenere allineate, e l'indice resta l'ultima difesa anche se il
+  controllo del service viene aggirato da due richieste insieme.
+- Con i nomi occupati subito non esiste una gara fra due non verificati né un errore a sorpresa alla verifica, ma serve la pulizia: senza, un
+  account mai confermato terrebbe il nome per sempre e le righe si accumulerebbero nel database gratuito di Render. Il job orario (e non
+  giornaliero) rende la durata prevedibile, e contare dall'ultimo invio del codice evita di eliminare chi si registra di nuovo.
+- Il riservato è una regola di validazione (come le emoji, decisione 84), non un conflitto con un altro utente: per questo 400 e non 409.
+- Il «nome intero» non blocca nomi d'arte legittimi ("Radmin", "Systemic"); «solo se cambia» evita di bloccare chi ha già un nome riservato.
+
+### Alternative scartate
+
+- **Colonna con il nome normalizzato (NFKC, minuscole, senza spazi) e indice su quella:** rende uguali anche «Marco Rossi» e «MarcoRossi», ma
+  cambia la soluzione A approvata (nessuna colonna nuova) e va oltre la richiesta.
+- **Tabella delle sostituzioni per le lettere simili (I/l, O/0, alfabeti diversi):** lavoro senza fine, mai completo, e blocca nomi diversi
+  ma legittimi.
+- **Rifiutare le parole riservate anche dentro il nome:** blocca nomi d'arte come «Moderator Jazz Trio».
+- **Elenco di soli tre nomi riservati:** lascia staff, support e moderator per spacciarsi per l'amministrazione.
+- **Il nome conta solo dopo la verifica dell'email:** due non verificati possono avere lo stesso nome e il secondo che verifica riceve un
+  errore in un punto dove oggi non ce ne sono; più codice e più test.
+- **Pulizia in una card a parte:** avrebbe lasciato il nome bloccato per sempre fino alla card successiva; la scelta «occupato subito» la
+  richiede subito.
+- **Pulizia una volta al giorno:** un account vivrebbe fra 24 e 48 ore, e su Render il servizio si sospende.
+- **Contare le 24 ore dalla creazione dell'account:** chi si registra di nuovo dopo un giorno si vedrebbe eliminare l'account.
+- **Vietare gli spazi nel nome:** riapre una scelta approvata e peggiora i nomi di gruppo e di locale (decisione 84: 30 caratteri per quelli).
+- **Ridurre o rifiutare i doppi spazi con un errore sul campo:** più attrito per un errore di battitura banale.
+- **409 `DISPLAY_NAME_TAKEN` anche per i riservati:** nessun utente ha preso quei nomi; il codice sarebbe meno preciso.
+- **Elenco dei riservati anche nel frontend:** due elenchi da tenere uguali.
+- **«Nome già utilizzato» anche nell'avviso rosso in alto:** lo stesso testo due volte sullo schermo.

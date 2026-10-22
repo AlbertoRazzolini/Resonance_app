@@ -5,6 +5,7 @@ import it.epicode.resonance.common.AppException;
 import it.epicode.resonance.common.ErrorCode;
 import it.epicode.resonance.common.RateLimit;
 import it.epicode.resonance.common.RateLimitService;
+import it.epicode.resonance.user.DisplayNamePolicy;
 import it.epicode.resonance.user.User;
 import it.epicode.resonance.user.UserRepository;
 import it.epicode.resonance.user.UserRoleRepository;
@@ -57,6 +58,8 @@ class AuthServiceTest {
     private EmailCodeService emailCodes;
     @Mock
     private ApplicationEventPublisher events;
+    @Mock
+    private DisplayNamePolicy displayNames;
 
     private AuthService service;
 
@@ -64,7 +67,7 @@ class AuthServiceTest {
     void createService() {
         when(passwordEncoder.encode(anyString())).thenReturn(DUMMY_HASH);
         service = new AuthService(users, userRoles, userAccess, passwordEncoder, rateLimits, accessTokens, refreshTokens,
-                emailCodes, events);
+                emailCodes, events, displayNames);
     }
 
     @Test

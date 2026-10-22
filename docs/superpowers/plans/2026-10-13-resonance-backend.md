@@ -680,6 +680,7 @@ maiuscole, con nomi riservati (admin, superadmin, resonance); nessuna colonna nu
 funzioni future (§15). Descrizione, scelte approvate, punti aperti da porre allo studente a inizio card e sotto-task nel piano del frontend
 (`docs/superpowers/plans/2026-10-18-resonance-frontend.md`, sezione «Nome utente unico»). Si fa **prima** di F7-06 (la sua migrazione precede
 quella delle notifiche). Ciclo del backend: TDD, `./mvnw -q verify`, Postman (409), `schema-db.md`. **Sicurezza: sì.**
+Scelte e aggiunte approvate a inizio card (migrazione `V10`, nomi riservati, pulizia degli account non verificati): decisione 96.
 **Commit proposto:** `feat(users): rende unico il nome utente`
 
 ### Card F7-06 · Notifiche persistenti (backend) — stima 3,5 h (provvisoria)

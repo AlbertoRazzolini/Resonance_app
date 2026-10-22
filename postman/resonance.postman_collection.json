@@ -187,6 +187,102 @@
           "response": []
         },
         {
+          "name": "Register con nome già usato (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 DISPLAY_NAME_TAKEN', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('DISPLAY_NAME_TAKEN');",
+                  "    pm.expect(body.message).to.eql('Nome già utilizzato');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"altro-{{$timestamp}}@example.com\",\n  \"password\": \"{{userPassword}}\",\n  \"displayName\": \"UTENTE DI PROVA\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Errore significativo (decisione 96). Il nome utente è unico senza distinguere le maiuscole: «UTENTE DI PROVA» è lo stesso nome di «Utente di prova» della richiesta Register (201), che lo tiene occupato anche se l'email non è ancora verificata (un account mai verificato si elimina dopo 24 ore dall'ultimo invio del codice). Eseguire dopo Register (201). Nessun account viene creato."
+          },
+          "response": []
+        },
+        {
+          "name": "Register con nome riservato (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR con fields.displayName', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(body.fields.displayName).to.eql('Questo nome utente non è disponibile');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\",\n  \"displayName\": \"ADMIN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Errore significativo (decisione 96). Nomi riservati: admin, superadmin, resonance, staff, support, moderator, official, system, root (nome intero, senza distinguere le maiuscole). È una regola di validazione: 400 VALIDATION_ERROR sul campo displayName, non un conflitto."
+          },
+          "response": []
+        },
+        {
           "name": "Verify con codice sbagliato (400)",
           "event": [
             {
@@ -909,6 +1005,153 @@
               ]
             },
             "description": "Errore significativo (decisione 84). Il displayName ha da 3 a 30 caratteri, senza emoji ne' caratteri invisibili; il nome precedente resta invariato."
+          },
+          "response": []
+        },
+        {
+          "name": "Registra un secondo utente (201)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const name = 'Secondo ' + Math.floor(Date.now() / 1000);",
+                  "pm.collectionVariables.set('secondName', name);",
+                  "pm.collectionVariables.set('secondNameUpper', name.toUpperCase());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 con la sola email', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(pm.response.json().email).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"secondo-{{$timestamp}}@example.com\",\n  \"password\": \"{{userPassword}}\",\n  \"displayName\": \"{{secondName}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Preparazione per la richiesta successiva: crea un secondo account non verificato con un nome nuovo ogni volta («Secondo» + secondi dell'ora), così si può ripetere la collection senza urtare il nome del giro precedente. Il nome resta occupato anche senza verifica."
+          },
+          "response": []
+        },
+        {
+          "name": "Modifica con un nome già usato (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 DISPLAY_NAME_TAKEN', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('DISPLAY_NAME_TAKEN');",
+                  "    pm.expect(body.message).to.eql('Nome già utilizzato');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"{{secondNameUpper}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Errore significativo (decisione 96). Il nome del secondo utente, scritto in maiuscolo, è lo stesso nome: 409 DISPLAY_NAME_TAKEN. Eseguire dopo «Registra un secondo utente (201)»; il nome precedente resta invariato."
+          },
+          "response": []
+        },
+        {
+          "name": "Modifica con un nome riservato (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR con fields.displayName', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.code).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(body.fields.displayName).to.eql('Questo nome utente non è disponibile');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Moderator\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Errore significativo (decisione 96). Un nome riservato si rifiuta solo quando cambia: chi lo ha già (il superadmin, «Superadmin») può salvare la bio rimandando lo stesso nome."
           },
           "response": []
         },

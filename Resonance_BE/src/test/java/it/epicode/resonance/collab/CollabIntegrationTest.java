@@ -59,7 +59,7 @@ class CollabIntegrationTest extends IntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.musician.id").value(musician.getId().toString()))
-                .andExpect(jsonPath("$.musician.displayName").value("Utente"))
+                .andExpect(jsonPath("$.musician.displayName").value("musicista"))
                 .andExpect(jsonPath("$.title").value("Cerco batterista"))
                 .andExpect(jsonPath("$.roleNeeded").value("Batterista"))
                 .andExpect(jsonPath("$.genreTags", contains("rock", "jazz")))
@@ -175,7 +175,7 @@ class CollabIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.totalElements").value(2))
                 .andExpect(jsonPath("$.content[*].id", contains(newest.getId().toString(),
                         oldest.getId().toString())))
-                .andExpect(jsonPath("$.content[0].musician.displayName").value("Utente"))
+                .andExpect(jsonPath("$.content[0].musician.displayName").value("musicista"))
                 .andExpect(jsonPath("$.content[0].musician.email").doesNotExist());
     }
 
@@ -452,7 +452,7 @@ class CollabIntegrationTest extends IntegrationTest {
     }
 
     private User userWith(String email, Role... userRoles) {
-        User user = new User(email, "hash-di-prova", "Utente");
+        User user = new User(email, "hash-di-prova", email.substring(0, email.indexOf('@')));
         user.setEmailVerified(true);
         users.save(user);
         for (Role role : userRoles) {

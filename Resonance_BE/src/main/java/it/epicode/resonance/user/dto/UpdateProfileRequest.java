@@ -4,6 +4,7 @@ import it.epicode.resonance.common.HttpUrl;
 import it.epicode.resonance.common.NoEmoji;
 import it.epicode.resonance.common.NoInvisibleChars;
 import it.epicode.resonance.common.NotBlankIfPresent;
+import it.epicode.resonance.user.DisplayNames;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Size;
@@ -26,7 +27,7 @@ public record UpdateProfileRequest(
 
     // Trim qui, prima della validazione: "  " diventa "" e viene trattato come vuoto, non come testo.
     public UpdateProfileRequest {
-        displayName = strip(displayName);
+        displayName = DisplayNames.normalize(displayName);
         avatarUrl = strip(avatarUrl);
         bio = strip(bio);
         city = strip(city);

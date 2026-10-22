@@ -36,7 +36,8 @@ public class GlobalExceptionHandler {
      * introduce un vincolo che ha un codice proprio (es. uq_users_email); gli altri sono CONFLICT.
      */
     private static final Map<String, ErrorCode> CODES_BY_CONSTRAINT = Map.of(
-            "uq_users_email", ErrorCode.EMAIL_ALREADY_REGISTERED);
+            "uq_users_email", ErrorCode.EMAIL_ALREADY_REGISTERED,
+            "uq_users_display_name_lower", ErrorCode.DISPLAY_NAME_TAKEN);
 
     private final Clock clock;
 

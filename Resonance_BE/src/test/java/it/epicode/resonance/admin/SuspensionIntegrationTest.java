@@ -382,7 +382,7 @@ class SuspensionIntegrationTest extends IntegrationTest {
      * dei login falliti e' in memoria e sopravvive fra un test e l'altro.
      */
     private User userWith(Role... extraRoles) {
-        User user = new User("utente-" + UUID.randomUUID() + "@example.com", passwordEncoder.encode(PASSWORD), "Utente");
+        User user = new User("utente-" + UUID.randomUUID() + "@example.com", passwordEncoder.encode(PASSWORD), "Utente " + UUID.randomUUID());
         user.setEmailVerified(true);
         users.save(user);
         roles.save(new UserRole(user.getId(), Role.FAN));

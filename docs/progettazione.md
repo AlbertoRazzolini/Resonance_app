@@ -266,7 +266,7 @@ Legenda: **[brief]** = campo del brief; **[P#]/[dett.]** = aggiunta approvata ne
 | id | uuid | PK | brief |
 | email | varchar(255) | NOT NULL, `uq_users_email`, sempre minuscola | brief |
 | password_hash | varchar(100) | NOT NULL (BCrypt) | brief |
-| display_name | varchar(50) | NOT NULL | brief |
+| display_name | varchar(50) | NOT NULL; unico senza maiuscole: indice `uq_users_display_name_lower` su `lower(display_name)` (decisione 96) | brief, F7-08 |
 | avatar_url | varchar(2048) | NULL, solo http/https | brief |
 | email_verified | boolean | NOT NULL DEFAULT false | brief |
 | status | user_status | NOT NULL DEFAULT 'ACTIVE' | brief |
@@ -603,7 +603,8 @@ funziona su HTTP.
 `POST /api/auth/register` `{email, password, displayName}` → 201 `{email}` (senza l'id: al client non serve, deve solo verificare l'email e fare il login).
 
 1. Email normalizzata (trim, minuscole); password 8–72 caratteri e massimo 72 byte UTF-8, senza emoji; `displayName` dopo
-   il trim da 3 a 30 caratteri, senza emoji né caratteri invisibili (decisione 84).
+   il trim da 3 a 30 caratteri, senza emoji né caratteri invisibili (decisione 84); gli spazi ripetuti dentro il
+   nome si riducono a uno (decisione 96).
 2. Lock sulla riga dell'utente con quell'email (`SELECT ... FOR UPDATE`).
 3. Email già verificata o account sospeso → 409 `EMAIL_ALREADY_REGISTERED`.
 4. Email esistente ma non verificata: controllo dei limiti di invio (4.6), poi i nuovi dati
@@ -612,6 +613,16 @@ funziona su HTTP.
 6. Codice `EMAIL_VERIFICATION` generato in `email_codes`; `saveAndFlush` (una registrazione
    concorrente sulla stessa email nuova fa scattare `uq_users_email` → 409).
 7. Evento `VerificationCodeEmailEvent` → email inviata dopo il commit, in modo asincrono.
+
+**Nome utente unico (decisione 96).** Prima del codice (e quindi prima di consumare un invio) si controlla il nome: riservato
+(admin, superadmin, resonance, staff, support, moderator, official, system, root, il nome intero senza distinguere le maiuscole) → 400
+`VALIDATION_ERROR` sul campo `displayName`; già usato da un altro utente, anche non verificato → 409
+`DISPLAY_NAME_TAKEN`. Il nome che l'account già tiene non è un conflitto. Due registrazioni insieme sullo stesso nome: la
+seconda urta l'indice `uq_users_display_name_lower` e riceve lo stesso 409.
+
+**Account mai verificati.** `UnverifiedAccountCleaner` (`@Scheduled(fixedDelay = 1h)`, gira anche all'avvio) elimina gli utenti con
+`email_verified = false` il cui ultimo invio del codice di verifica risale a più di 24 ore (senza codice conta `created_at`):
+il nome torna libero e le righe collegate vanno via in cascata.
 
 ### 4.5 Verifica email
 
@@ -889,6 +900,7 @@ nascosto → 404. Nessuna cancellazione fisica.
 | `TOO_MANY_REQUESTS` | 429 | Limiti di frequenza |
 | `INTERNAL_ERROR` | 500 | Errore inatteso (loggato) |
 | `EMAIL_ALREADY_REGISTERED` | 409 | Registrazione |
+| `DISPLAY_NAME_TAKEN` | 409 | Registrazione e `PATCH /api/users/me`: nome utente già usato (decisione 96) |
 | `ALREADY_VERIFIED` | 409 | Verifica |
 | `CODE_INVALID` / `CODE_EXPIRED` | 400 | Verifica (entrambi). Reset: solo `CODE_INVALID`, anche per codice scaduto, esaurito o assente (decisione 51) |
 | `WRONG_PASSWORD` | 400 | Verifica con password diversa |
@@ -955,7 +967,7 @@ status, createdAt}`. L'`id` compare solo nel proprio profilo: il frontend lo con
 hanno un id solo se serve a un'azione successiva; la registrazione risponde `{email}`.
 
 Validazioni: email `@Email` max 255; password 8–72 caratteri, 72 byte e senza emoji (anche `newPassword` del reset);
-`displayName` 3–30 caratteri, senza emoji né caratteri invisibili; `code` `\d{6}`. Le regole sulle emoji valgono solo
+`displayName` 3–30 caratteri, senza emoji né caratteri invisibili, spazi ripetuti ridotti a uno, non riservato (400 sul campo) e unico senza distinguere le maiuscole (409 `DISPLAY_NAME_TAKEN`, decisione 96); `code` `\d{6}`. Le regole sulle emoji valgono solo
 quando si scrive la password o il nome: login e verifica confrontano password già esistenti e non le applicano, e gli
 utenti già presenti non sono toccati (decisione 84).
 

@@ -35,12 +35,12 @@ const INVISIBLE = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 /**
- * Nome visibile: il backend lo valida dopo il trim e lo conta in caratteri (unità UTF-16, come `@Size`). Lo usano
+ * Nome utente: il backend lo valida dopo il trim e lo conta in caratteri (unità UTF-16, come `@Size`). Lo usano
  * anche il form del profilo (FE-04), così la regola resta una sola.
  */
 export function displayNameError(raw: string): string | undefined {
   const name = raw.trim()
-  if (!name) return 'Scrivi il nome visibile.'
+  if (!name) return 'Scrivi il nome utente.'
   if (EMOJI.test(name)) return 'Le emoji non sono ammesse nel nome.'
   if (INVISIBLE.test(name)) return 'Il nome non può contenere caratteri invisibili.'
   if (name.length < DISPLAY_NAME_MIN || name.length > DISPLAY_NAME_MAX) {

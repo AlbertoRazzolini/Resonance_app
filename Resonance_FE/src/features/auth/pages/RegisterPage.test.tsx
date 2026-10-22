@@ -44,7 +44,7 @@ function renderRegister(state?: unknown) {
 type User = ReturnType<typeof userEvent.setup>
 
 async function fill(user: User, values: { name?: string; email?: string; password?: string }) {
-  if (values.name) await user.type(screen.getByLabelText('Nome visibile'), values.name)
+  if (values.name) await user.type(screen.getByLabelText('Nome utente'), values.name)
   if (values.email) await user.type(screen.getByLabelText('Email'), values.email)
   if (values.password) await user.type(screen.getByLabelText('Password'), values.password)
 }
@@ -58,7 +58,7 @@ describe('RegisterPage', () => {
     renderRegister()
 
     expect(screen.getByRole('heading', { name: 'Crea il tuo account' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Nome visibile')).toHaveAttribute(
+    expect(screen.getByLabelText('Nome utente')).toHaveAttribute(
       'placeholder',
       'Come ti vedranno gli altri',
     )
@@ -83,7 +83,7 @@ describe('RegisterPage', () => {
 
     await submit(user)
 
-    expect(screen.getByText('Scrivi il nome visibile.')).toBeInTheDocument()
+    expect(screen.getByText('Scrivi il nome utente.')).toBeInTheDocument()
     expect(screen.getByText('Scrivi la tua email.')).toBeInTheDocument()
     expect(screen.getByText('Scrivi la password.')).toBeInTheDocument()
     expect(calls).toHaveLength(0)
@@ -93,8 +93,8 @@ describe('RegisterPage', () => {
     const { user } = renderRegister()
     await submit(user)
 
-    await user.type(screen.getByLabelText('Nome visibile'), 'Mario')
-    expect(screen.queryByText('Scrivi il nome visibile.')).not.toBeInTheDocument()
+    await user.type(screen.getByLabelText('Nome utente'), 'Mario')
+    expect(screen.queryByText('Scrivi il nome utente.')).not.toBeInTheDocument()
 
     await user.type(screen.getByLabelText('Email'), 'mario')
     expect(screen.getByText('Scrivi un indirizzo email valido.')).toBeInTheDocument()
@@ -198,6 +198,35 @@ describe('RegisterPage', () => {
       'href',
       ROUTES.login,
     )
+  })
+
+  it('DISPLAY_NAME_TAKEN: «Nome già utilizzato.» solo sotto il campo, senza avviso in alto, e resta nella pagina', async () => {
+    server.use(registerRejected(409, 'DISPLAY_NAME_TAKEN'))
+    const { user, router } = renderRegister()
+
+    await fill(user, GOOD)
+    await submit(user)
+
+    expect(await screen.findByText('Nome già utilizzato.')).toBeInTheDocument()
+    expect(screen.getAllByText('Nome già utilizzato.')).toHaveLength(1)
+    // Un solo role=alert: quello del campo, non anche l'avviso rosso in alto
+    expect(screen.getAllByRole('alert')).toHaveLength(1)
+    expect(screen.getByLabelText('Nome utente')).toBeInvalid()
+    expect(router.state.location.pathname).toBe(ROUTES.register)
+  })
+
+  it('nome riservato: il VALIDATION_ERROR del server compare sotto il nome, senza elenco nel frontend', async () => {
+    server.use(
+      registerRejected(400, 'VALIDATION_ERROR', {
+        displayName: 'Questo nome utente non è disponibile',
+      }),
+    )
+    const { user } = renderRegister()
+
+    await fill(user, { ...GOOD, name: 'Admin' })
+    await submit(user)
+
+    expect(await screen.findByText('Questo nome utente non è disponibile')).toBeInTheDocument()
   })
 
   it("VALIDATION_ERROR del server: i messaggi vanno sotto i campi giusti, più l'avviso generico", async () => {

@@ -22,6 +22,7 @@ const DESIGN_CODES = [
   'TOO_MANY_REQUESTS',
   'INTERNAL_ERROR',
   'EMAIL_ALREADY_REGISTERED',
+  'DISPLAY_NAME_TAKEN',
   'ALREADY_VERIFIED',
   'CODE_INVALID',
   'CODE_EXPIRED',
@@ -135,6 +136,11 @@ describe('getFieldErrors', () => {
       fields: { address: 'Indirizzo non trovato' },
     })
     expect(getFieldErrors(error)).toEqual({ address: 'Indirizzo non trovato' })
+  })
+
+  it('DISPLAY_NAME_TAKEN: il nome occupato è un errore del campo displayName, anche senza fields', () => {
+    const error = rtkError(409, 'DISPLAY_NAME_TAKEN')
+    expect(getFieldErrors(error)).toEqual({ displayName: 'Nome già utilizzato.' })
   })
 
   it('ignora i campi di altri codici', () => {

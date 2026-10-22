@@ -75,7 +75,7 @@ export function Component() {
       <Form noValidate onSubmit={(event) => void handleSubmit(event)}>
         <Form.Group className="mb-4">
           <Form.Label htmlFor="register-name" className="rs-required">
-            Nome visibile
+            Nome utente
           </Form.Label>
           <Form.Control
             id="register-name"

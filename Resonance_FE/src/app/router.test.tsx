@@ -119,7 +119,7 @@ describe('router', () => {
   it('/profilo/modifica mostra il form a chi ha la sessione', async () => {
     renderAt(ROUTES.profileEdit, { loggedIn: true })
     expect(await screen.findByRole('heading', { name: 'Modifica profilo' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Nome visibile')).toHaveValue('Fan di prova')
+    expect(screen.getByLabelText('Nome utente')).toHaveValue('Fan di prova')
   })
 
   it("/utenti/:id è aperta all'anonimo e mostra il profilo pubblico", async () => {

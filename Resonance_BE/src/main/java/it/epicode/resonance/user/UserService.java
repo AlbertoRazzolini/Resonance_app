@@ -18,10 +18,12 @@ public class UserService {
 
     private final UserRepository users;
     private final UserRoleRepository userRoles;
+    private final DisplayNamePolicy displayNames;
 
-    public UserService(UserRepository users, UserRoleRepository userRoles) {
+    public UserService(UserRepository users, UserRoleRepository userRoles, DisplayNamePolicy displayNames) {
         this.users = users;
         this.userRoles = userRoles;
+        this.displayNames = displayNames;
     }
 
     /**
@@ -46,12 +48,16 @@ public class UserService {
     /**
      * Modifica parziale del profilo (progettazione, sezioni 6.1 e 6.5): cambia solo i campi inviati. Null =
      * invariato; per i testi facoltativi la stringa vuota svuota il campo e lo salva come NULL. La richiesta
-     * e' gia' validata, quindi le coordinate sono entrambe presenti o entrambe assenti.
+     * e' gia' validata, quindi le coordinate sono entrambe presenti o entrambe assenti. Un nome nuovo deve essere
+     * disponibile: riservato 400, gia' preso 409 (decisione 96).
      */
     @Transactional
     public MeResponse updateProfile(UUID userId, UpdateProfileRequest request) {
         User user = findUser(userId);
-        if (request.displayName() != null) {
+        // Un nome identico a quello di adesso non si controlla: il frontend lo rimanda a ogni salvataggio, e un
+        // nome riservato gia' presente (il superadmin) non deve bloccare la modifica della bio (decisione 96).
+        if (request.displayName() != null && !request.displayName().equals(user.getDisplayName())) {
+            displayNames.requireAvailable(request.displayName(), userId);
             user.setDisplayName(request.displayName());
         }
         if (request.avatarUrl() != null) {
@@ -67,7 +73,9 @@ public class UserService {
             user.setLatitude(request.latitude());
             user.setLongitude(request.longitude());
         }
-        return meOf(users.save(user));
+        // saveAndFlush: con due modifiche insieme allo stesso nome l'indice unico scatta qui e diventa un 409,
+        // non un errore al commit dopo la fine del metodo.
+        return meOf(users.saveAndFlush(user));
     }
 
     /**

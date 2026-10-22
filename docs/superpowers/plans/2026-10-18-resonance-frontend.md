@@ -721,7 +721,7 @@ l'unicità della email: si fa **prima** di F7-06, perché la sua migrazione deve
 - nessuna colonna nuova e nessun rinominare: il campo resta `displayName` in DTO, JSON e Postman; nell'interfaccia diventa «Nome utente»
   (testi da proporre allo studente a inizio card).
 
-**Punti aperti da porre allo studente a inizio card (nessuno è deciso):**
+**Punti aperti posti allo studente a inizio card (decisi il 22 ottobre, decisione 96):**
 - elenco esatto dei nomi riservati e se vietarli anche con maiuscole e spazi diversi;
 - cosa fare se su Render esistono già nomi doppi (di solito si controlla con una `SELECT` di sola lettura prima della migrazione);
 - se i doppi spazi dentro il nome si riducono a uno solo nei nomi nuovi;
@@ -729,13 +729,17 @@ l'unicità della email: si fa **prima** di F7-06, perché la sua migrazione deve
 - testo dell'errore («Questo nome utente è già preso») e dell'etichetta nell'interfaccia.
 
 **Sotto-task (bozza, da dettagliare con lo studente a inizio card):**
-- [ ] **1. Regole e test.** Controllo dei doppioni esistenti, migrazione con indice unico su `lower(display_name)`, nomi riservati; test del
+- [x] **1. Regole e test.** Controllo dei doppioni esistenti, migrazione con indice unico su `lower(display_name)`, nomi riservati; test del
   service.
-- [ ] **2. Registrazione e modifica del profilo.** Nuovo errore 409 `DISPLAY_NAME_TAKEN`; due richieste insieme: la seconda ottiene il 409 per
+- [x] **2. Registrazione e modifica del profilo.** Nuovo errore 409 `DISPLAY_NAME_TAKEN`; due richieste insieme: la seconda ottiene il 409 per
   l'indice, non un 500; test d'integrazione.
-- [ ] **3. Frontend.** Messaggio sul campo nel form di registrazione e nel profilo, etichetta «Nome utente», test; tre larghezze con Playwright.
-- [ ] **4. Postman, documentazione e chiusura.** Collection (409 in registrazione e in modifica), §4.4, §6.2, §6.4, §6.5, `schema-db.md`,
+- [x] **3. Frontend.** Messaggio sul campo nel form di registrazione e nel profilo, etichetta «Nome utente», test; tre larghezze con Playwright.
+- [x] **4. Postman, documentazione e chiusura.** Collection (409 in registrazione e in modifica), §4.4, §6.2, §6.4, §6.5, `schema-db.md`,
   decisione nuova, questo piano; `./mvnw -q verify`, `npm run lint`, `npm test`, `npm run build`.
+
+**Esito (decisione 96):** nomi occupati anche dagli account non verificati, che un job orario elimina dopo 24 ore dall'ultimo invio del codice
+(aggiunta approvata a inizio card, parte del sotto-task 1); nomi riservati solo se il nome intero coincide con uno dell'elenco; spazi
+ripetuti ridotti a uno; errore 409 `DISPLAY_NAME_TAKEN` «Nome già utilizzato» solo sotto il campo.
 
 **Criterio:** due utenti non possono avere lo stesso nome, anche con maiuscole diverse; nomi riservati rifiutati; il frontend mostra l'errore
 sul campo; `./mvnw -q verify` e test del frontend verdi; Postman con il 409.

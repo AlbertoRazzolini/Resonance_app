@@ -10,6 +10,13 @@ describe('ErrorAlert', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Email non ancora verificata')
   })
 
+  it('DISPLAY_NAME_TAKEN non si mostra qui: è un errore del campo, lo scrive il form sotto il nome', () => {
+    const { container } = render(
+      <ErrorAlert error={{ status: 409, data: errorResponse(409, 'DISPLAY_NAME_TAKEN') }} />,
+    )
+    expect(container).toBeEmptyDOMElement()
+  })
+
   it('senza errore non disegna nulla', () => {
     const { container } = render(<ErrorAlert error={undefined} />)
     expect(container).toBeEmptyDOMElement()

@@ -335,7 +335,7 @@ class ModerationIntegrationTest extends IntegrationTest {
     }
 
     private User userWith(Role... extraRoles) {
-        User user = new User("utente-" + UUID.randomUUID() + "@example.com", "hash-non-usato", "Utente");
+        User user = new User("utente-" + UUID.randomUUID() + "@example.com", "hash-non-usato", "Utente " + UUID.randomUUID());
         user.setEmailVerified(true);
         users.save(user);
         roles.save(new UserRole(user.getId(), Role.FAN));

@@ -314,14 +314,14 @@ class RefreshTokenServiceTest extends IntegrationTest {
     }
 
     private User verifiedUser(String email) {
-        User created = new User(email, "hash-di-prova", "Utente");
+        User created = new User(email, "hash-di-prova", email.substring(0, email.indexOf('@')));
         created.setEmailVerified(true);
         return users.save(created);
     }
 
     private void suspend(User target, Instant until) {
         // La sospensione richiede un autore (ck_users_suspension e fk_users_suspended_by).
-        User moderator = users.save(new User("admin" + UUID.randomUUID() + "@example.com", "hash-di-prova", "Admin"));
+        User moderator = users.save(new User("admin" + UUID.randomUUID() + "@example.com", "hash-di-prova", "Admin " + UUID.randomUUID()));
         target.setStatus(UserStatus.SUSPENDED);
         target.setSuspendedAt(clock.instant());
         target.setSuspendedBy(moderator.getId());

@@ -64,7 +64,7 @@ describe('validateProfile', () => {
   })
 
   it('il nome segue le regole della registrazione: obbligatorio, 3-30 caratteri, niente emoji', () => {
-    expect(validateProfile({ ...saved, displayName: '' }).displayName).toBe('Scrivi il nome visibile.')
+    expect(validateProfile({ ...saved, displayName: '' }).displayName).toBe('Scrivi il nome utente.')
     expect(validateProfile({ ...saved, displayName: 'Ab' }).displayName).toMatch(/da 3 a 30/)
     expect(validateProfile({ ...saved, displayName: 'Mattia 🎸' }).displayName).toBe(
       'Le emoji non sono ammesse nel nome.',

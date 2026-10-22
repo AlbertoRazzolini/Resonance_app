@@ -68,7 +68,7 @@ class IndieEventIntegrationTest extends IntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.musician.id").value(musician.getId().toString()))
-                .andExpect(jsonPath("$.musician.displayName").value("Utente"))
+                .andExpect(jsonPath("$.musician.displayName").value("musicista"))
                 .andExpect(jsonPath("$.title").value("Serata di prova"))
                 .andExpect(jsonPath("$.latitude").value(StubGeocodingConfig.FLORENCE.latitude()))
                 .andExpect(jsonPath("$.longitude").value(StubGeocodingConfig.FLORENCE.longitude()))
@@ -283,7 +283,7 @@ class IndieEventIntegrationTest extends IntegrationTest {
         mockMvc.perform(get("/api/indie-events/{id}", event.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Serata"))
-                .andExpect(jsonPath("$.musician.displayName").value("Utente"))
+                .andExpect(jsonPath("$.musician.displayName").value("musicista"))
                 .andExpect(jsonPath("$.musician.email").doesNotExist());
     }
 
@@ -471,7 +471,7 @@ class IndieEventIntegrationTest extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[*].title", contains("Firenze", "Pistoia")))
                 .andExpect(jsonPath("$.totalElements").value(2))
-                .andExpect(jsonPath("$.content[0].musician.displayName").value("Utente"))
+                .andExpect(jsonPath("$.content[0].musician.displayName").value("musicista"))
                 .andExpect(jsonPath("$.content[0].musician.email").doesNotExist())
                 .andExpect(jsonPath("$.content[1].distanceKm").value(closeTo(
                         Haversine.km(FLORENCE_LAT, FLORENCE_LNG, PISTOIA_LAT, PISTOIA_LNG), 0.01)));
@@ -694,7 +694,7 @@ class IndieEventIntegrationTest extends IntegrationTest {
     }
 
     private User userWith(String email, Role... userRoles) {
-        User user = new User(email, "hash-di-prova", "Utente");
+        User user = new User(email, "hash-di-prova", email.substring(0, email.indexOf('@')));
         user.setEmailVerified(true);
         users.save(user);
         for (Role role : userRoles) {

@@ -52,7 +52,7 @@ describe('ProfileForm', () => {
   it('parte dai dati salvati, con «Salva» spento e «Annulla» che riporta al profilo', () => {
     renderForm()
 
-    expect(screen.getByLabelText('Nome visibile')).toHaveValue('Mattia')
+    expect(screen.getByLabelText('Nome utente')).toHaveValue('Mattia')
     expect(screen.getByLabelText('Bio')).toHaveValue('Suono la chitarra')
     expect(screen.getByLabelText('Città')).toHaveValue('Bologna')
     expect(screen.getByLabelText('Indirizzo della foto')).toHaveValue('https://x.it/a.png')
@@ -110,10 +110,10 @@ describe('ProfileForm', () => {
     server.use(profileUpdated(me, calls))
     const { user } = renderForm()
 
-    await user.clear(screen.getByLabelText('Nome visibile'))
+    await user.clear(screen.getByLabelText('Nome utente'))
     await user.click(saveButton())
 
-    expect(screen.getByText('Scrivi il nome visibile.')).toBeInTheDocument()
+    expect(screen.getByText('Scrivi il nome utente.')).toBeInTheDocument()
     expect(calls).toHaveLength(0)
   })
 
@@ -134,20 +134,34 @@ describe('ProfileForm', () => {
 
   it("il messaggio di un campo sparisce appena si corregge il valore", async () => {
     const { user } = renderForm()
-    await user.clear(screen.getByLabelText('Nome visibile'))
+    await user.clear(screen.getByLabelText('Nome utente'))
     await user.click(saveButton())
-    expect(screen.getByText('Scrivi il nome visibile.')).toBeInTheDocument()
+    expect(screen.getByText('Scrivi il nome utente.')).toBeInTheDocument()
 
-    await user.type(screen.getByLabelText('Nome visibile'), 'Mattia R')
+    await user.type(screen.getByLabelText('Nome utente'), 'Mattia R')
 
-    expect(screen.queryByText('Scrivi il nome visibile.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Scrivi il nome utente.')).not.toBeInTheDocument()
+  })
+
+  it('DISPLAY_NAME_TAKEN: «Nome già utilizzato.» solo sotto il nome, senza avviso in alto, e resta nel form', async () => {
+    server.use(profileRejected(409, 'DISPLAY_NAME_TAKEN'))
+    const { user, router } = renderForm()
+
+    await user.type(screen.getByLabelText('Nome utente'), 'x')
+    await user.click(saveButton())
+
+    expect(await screen.findByText('Nome già utilizzato.')).toBeInTheDocument()
+    expect(screen.getAllByText('Nome già utilizzato.')).toHaveLength(1)
+    // Un solo role=alert: quello del campo, non anche l'avviso rosso in alto
+    expect(screen.getAllByRole('alert')).toHaveLength(1)
+    expect(router.state.location.pathname).toBe(ROUTES.profileEdit)
   })
 
   it('mostra sotto il campo l\'errore VALIDATION_ERROR del backend e resta nel form', async () => {
     server.use(profileRejected(400, 'VALIDATION_ERROR', { displayName: 'Nome già usato' }))
     const { user, router } = renderForm()
 
-    await user.type(screen.getByLabelText('Nome visibile'), 'x')
+    await user.type(screen.getByLabelText('Nome utente'), 'x')
     await user.click(saveButton())
 
     expect(await screen.findByText('Nome già usato')).toBeInTheDocument()

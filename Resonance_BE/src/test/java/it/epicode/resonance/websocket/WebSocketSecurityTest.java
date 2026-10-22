@@ -294,7 +294,7 @@ class WebSocketSecurityTest extends IntegrationTest {
     }
 
     private User activeUser() {
-        User user = new User("utente-" + UUID.randomUUID() + "@example.com", "non-usata", "Utente");
+        User user = new User("utente-" + UUID.randomUUID() + "@example.com", "non-usata", "Utente " + UUID.randomUUID());
         user.setEmailVerified(true);
         users.save(user);
         roles.save(new UserRole(user.getId(), Role.FAN));

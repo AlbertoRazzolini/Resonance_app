@@ -14,6 +14,7 @@ import it.epicode.resonance.common.RateLimitService;
 import it.epicode.resonance.mail.PasswordChangedEmailEvent;
 import it.epicode.resonance.mail.PasswordResetCodeEmailEvent;
 import it.epicode.resonance.mail.VerificationCodeEmailEvent;
+import it.epicode.resonance.user.DisplayNamePolicy;
 import it.epicode.resonance.user.Role;
 import it.epicode.resonance.user.User;
 import it.epicode.resonance.user.UserRepository;
@@ -50,6 +51,7 @@ public class AuthService {
     private final RefreshTokenService refreshTokens;
     private final EmailCodeService emailCodes;
     private final ApplicationEventPublisher events;
+    private final DisplayNamePolicy displayNames;
 
     // Hash di una stringa casuale calcolato all'avvio con lo stesso encoder (stesso costo) dei veri: serve solo a
     // far durare allo stesso modo il login di un'email sconosciuta. Nessuna password reale lo corrisponde.
@@ -58,7 +60,8 @@ public class AuthService {
     public AuthService(UserRepository users, UserRoleRepository userRoles, UserAccessService userAccess,
                        PasswordEncoder passwordEncoder, RateLimitService rateLimits,
                        AccessTokenService accessTokens, RefreshTokenService refreshTokens,
-                       EmailCodeService emailCodes, ApplicationEventPublisher events) {
+                       EmailCodeService emailCodes, ApplicationEventPublisher events,
+                       DisplayNamePolicy displayNames) {
         this.users = users;
         this.userRoles = userRoles;
         this.userAccess = userAccess;
@@ -68,6 +71,7 @@ public class AuthService {
         this.refreshTokens = refreshTokens;
         this.emailCodes = emailCodes;
         this.events = events;
+        this.displayNames = displayNames;
         this.dummyHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
@@ -75,7 +79,8 @@ public class AuthService {
      * Registrazione (progettazione, sezione 4.4). Email gia' verificata o account sospeso: 409. Email non
      * verificata: dopo i limiti di invio i nuovi dati sovrascrivono quelli in sospeso (nessuno ha ancora
      * dimostrato di possederla). Utente nuovo: riga in users e ruolo FAN, automatico e non rimovibile.
-     * Niente noRollbackFor: se un limite di invio respinge la richiesta, i dati non devono cambiare.
+     * Niente noRollbackFor: se un limite di invio respinge la richiesta, i dati non devono cambiare. Il nome utente
+     * deve essere disponibile (riservato: 400, gia' preso: 409) e si controlla prima del codice (decisione 96).
      */
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
@@ -89,13 +94,19 @@ public class AuthService {
             if (user.isEmailVerified() || user.getStatus() != UserStatus.ACTIVE) {
                 throw new AppException(ErrorCode.EMAIL_ALREADY_REGISTERED, "Email già registrata");
             }
-            // Prima il codice, che applica i limiti e puo' lanciare 429: i dati si sovrascrivono solo dopo.
+            // Il nome prima del codice: un nome non disponibile non deve consumare un invio. Il nome che l'account
+            // tiene gia' non e' un conflitto (decisione 96).
+            displayNames.requireAvailable(request.displayName(), user.getId());
+            // Poi il codice, che applica i limiti e puo' lanciare 429: i dati si sovrascrivono solo dopo.
             code = emailCodes.issue(user.getId(), EmailCodePurpose.EMAIL_VERIFICATION);
             user.setPasswordHash(passwordHash);
             user.setDisplayName(request.displayName());
+            users.saveAndFlush(user);
         } else {
-            // saveAndFlush: con due registrazioni parallele sulla stessa email nuova scatta uq_users_email,
-            // che GlobalExceptionHandler traduce in 409 EMAIL_ALREADY_REGISTERED.
+            displayNames.requireAvailable(request.displayName(), null);
+            // saveAndFlush: con due registrazioni parallele sulla stessa email nuova scatta uq_users_email, sullo
+            // stesso nome uq_users_display_name_lower; GlobalExceptionHandler li traduce in 409
+            // EMAIL_ALREADY_REGISTERED e DISPLAY_NAME_TAKEN.
             user = users.saveAndFlush(new User(request.email(), passwordHash, request.displayName()));
             userRoles.save(new UserRole(user.getId(), Role.FAN));
             code = emailCodes.issue(user.getId(), EmailCodePurpose.EMAIL_VERIFICATION);
