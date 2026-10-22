@@ -671,9 +671,9 @@ in modo differito), `components/` (`SuspensionDialog`, `AdminRoleButton`, `HideC
 
 - [ ] **1. Elenco utenti (50 min).** `/admin/utenti` (solo ADMIN e SUPERADMIN nell'interfaccia): ricerca,
   filtro di stato, numeri di pagina; tabella da `lg`, schede su telefono e tablet.
-- [ ] **2. Sospensione e riattivazione (60 min).** Motivo 1–500; durata in giorni o data di fine (mai
-  entrambe) oppure indeterminata; `INSUFFICIENT_PLATFORM_LEVEL`, `LAST_SUPERADMIN`; riattivazione; la riga
-  si aggiorna.
+- [ ] **2. Sospensione e riattivazione (60 min).** Motivo 1–500; durata a pulsanti fra 1, 3, 7, 30, 90 giorni
+  e indeterminata (decisione 93: niente giorni liberi né data di fine); `INSUFFICIENT_PLATFORM_LEVEL`,
+  `LAST_SUPERADMIN`; riattivazione con conferma; la riga si aggiorna.
 - [ ] **3. Nomina ADMIN (30 min).** Solo per SUPERADMIN: nomina e revoca; `USER_NOT_VERIFIED`,
   `USER_NOT_ACTIVE`, `INSUFFICIENT_PLATFORM_LEVEL`.
 - [ ] **4. Moderazione dei contenuti (60 min).** "Nascondi" con motivo 3–500 nei dettagli e negli elenchi di
@@ -681,8 +681,8 @@ in modo differito), `components/` (`SuspensionDialog`, `AdminRoleButton`, `HideC
   (`hidden`) e "Ripristina"; per un contenuto cancellato dal proprietario il ripristino è disattivato con
   la spiegazione (`RESTORE_NOT_ALLOWED`); invalidazione degli elenchi pubblici.
 - [ ] **5. Test e responsive (40 min).** Menu admin nascosto a FAN e MUSICIAN; nomina visibile solo al
-  SUPERADMIN; il form di sospensione rifiuta durata e data insieme; ripristino disattivato per
-  `deletedByOwner`. Tre larghezze.
+  SUPERADMIN; nel form di sospensione vale solo l'ultima durata scelta (mai giorni e indeterminata insieme);
+  ripristino disattivato per `deletedByOwner`. Tre larghezze.
 
 **Criterio:** fase C chiusa: promemoria merge `develop → main`; su Render chat fra due account,
 sospensione dall'area admin che chiude la sessione WebSocket dell'altro, hide e restore.

@@ -9,7 +9,7 @@ import { sessionEnded, sessionStarted } from '@/features/auth/authSlice'
 import { makeLoginResponse, makeMe } from '@/test/fixtures/users'
 import { logoutSucceeds } from '@/test/handlers/auth'
 import { server } from '@/test/server'
-import type { MeResponse } from '@/types/users'
+import type { MeResponse, Role } from '@/types/users'
 import { UserMenu } from './UserMenu'
 
 // Menu utente della barra: Accedi e Registrati per l'anonimo; per chi ha la sessione il cerchio con la foto o l'iniziale
@@ -115,6 +115,33 @@ describe('UserMenu', () => {
     const items = [...document.querySelectorAll('.dropdown-item')].map((item) => item.textContent)
     expect(items).toEqual(['Amici', 'Pubblica concerto', 'Pubblica indie event', 'Esci'])
   })
+
+  it.each([[['FAN']], [['FAN', 'MUSICIAN', 'HOST']]] as [Role[]][])(
+    'a chi ha i ruoli %s non mostra le voci dell’area admin',
+    async (roles) => {
+      renderMenu('Mattia', { roles })
+
+      await userEvent.click(screen.getByRole('button', { name: /Menu dell'account/ }))
+
+      await screen.findByText('Esci')
+      expect(screen.queryByText('Utenti')).not.toBeInTheDocument()
+      expect(screen.queryByText('Contenuti nascosti')).not.toBeInTheDocument()
+    },
+  )
+
+  it.each([['ADMIN'], ['SUPERADMIN']] as [Role][])(
+    'a un %s mostra «Utenti» e «Contenuti nascosti», con i loro collegamenti, prima di Esci',
+    async (role) => {
+      renderMenu('Mattia', { roles: ['FAN', role] })
+
+      await userEvent.click(screen.getByRole('button', { name: /Menu dell'account/ }))
+
+      expect(await screen.findByRole('link', { name: 'Utenti' })).toHaveAttribute('href', ROUTES.adminUsers)
+      expect(screen.getByRole('link', { name: 'Contenuti nascosti' })).toHaveAttribute('href', ROUTES.adminContent)
+      const items = [...document.querySelectorAll('.dropdown-item')].map((item) => item.textContent)
+      expect(items).toEqual(['Amici', 'Utenti', 'Contenuti nascosti', 'Esci'])
+    },
+  )
 
   it('a tutti i ruoli mostra «Amici», che porta all’elenco degli amici', async () => {
     renderMenu('Mattia', { roles: ['FAN'] })

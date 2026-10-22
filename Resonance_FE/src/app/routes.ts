@@ -24,6 +24,9 @@ export const ROUTES = {
   indieEvent: '/indie/:id',
   /** Modello della rotta del dettaglio di un annuncio; per un collegamento si usa `collabPath(id)`. */
   collabPost: '/collab/:id',
+  /** Area di moderazione: solo ADMIN e SUPERADMIN nell'interfaccia (la protezione vera è nel backend). */
+  adminUsers: '/admin/utenti',
+  adminContent: '/admin/contenuti',
   privacy: '/informativa-privacy',
   cookies: '/informativa-cookie',
   login: '/accesso',

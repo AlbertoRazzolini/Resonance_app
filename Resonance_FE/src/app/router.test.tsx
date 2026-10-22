@@ -2,9 +2,11 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import { RouterProvider, createMemoryRouter } from 'react-router'
 import { sessionEnded, sessionStarted } from '@/features/auth/authSlice'
+import { makeAdminUser } from '@/test/fixtures/admin'
 import { makeCollabPost } from '@/test/fixtures/collab'
 import { makeConcert, makeIndieEvent, makePage } from '@/test/fixtures/events'
 import { makeLoginResponse, makeMe, makePublicUser } from '@/test/fixtures/users'
+import { adminUsersFound, hiddenContentFound } from '@/test/handlers/admin'
 import { collabFound, collabPostFound } from '@/test/handlers/collab'
 import { concertFound, indieEventFound, nearbyConcertsFound } from '@/test/handlers/events'
 import { feedFound } from '@/test/handlers/feed'
@@ -153,6 +155,44 @@ describe('router', () => {
   ])('%s mostra la pagina a chi ha il ruolo giusto', async (path, role, title) => {
     renderAt(path, { loggedIn: true, roles: ['FAN', role] })
     expect(await screen.findByRole('heading', { name: title })).toBeInTheDocument()
+  })
+
+  it("/admin/utenti manda l'anonimo all'accesso, ricordando la pagina richiesta", async () => {
+    const router = renderAt(ROUTES.adminUsers)
+    await waitFor(() => expect(router.state.location.pathname).toBe(ROUTES.login))
+    expect(router.state.location.state).toEqual({ from: ROUTES.adminUsers, loginRequired: true })
+  })
+
+  it.each([[['FAN'] as Role[]], [['FAN', 'MUSICIAN', 'HOST'] as Role[]]])(
+    '/admin/utenti mostra «Accesso negato» a chi ha i ruoli %s',
+    async (roles) => {
+      renderAt(ROUTES.adminUsers, { loggedIn: true, roles })
+      expect(await screen.findByRole('heading', { name: 'Accesso negato' })).toBeInTheDocument()
+    },
+  )
+
+  it.each([['ADMIN'], ['SUPERADMIN']] as [Role][])('/admin/utenti mostra l’elenco a un %s', async (role) => {
+    server.use(adminUsersFound([makePage([makeAdminUser()])]))
+    renderAt(ROUTES.adminUsers, { loggedIn: true, roles: ['FAN', role] })
+    expect(await screen.findByRole('heading', { level: 1, name: 'Utenti' })).toBeInTheDocument()
+    expect(await screen.findByText('Marco Rossi')).toBeInTheDocument()
+  })
+
+  it("/admin/contenuti manda l'anonimo all'accesso, ricordando la pagina richiesta", async () => {
+    const router = renderAt(ROUTES.adminContent)
+    await waitFor(() => expect(router.state.location.pathname).toBe(ROUTES.login))
+    expect(router.state.location.state).toEqual({ from: ROUTES.adminContent, loginRequired: true })
+  })
+
+  it('/admin/contenuti mostra «Accesso negato» a chi non è admin', async () => {
+    renderAt(ROUTES.adminContent, { loggedIn: true, roles: ['FAN', 'HOST'] })
+    expect(await screen.findByRole('heading', { name: 'Accesso negato' })).toBeInTheDocument()
+  })
+
+  it.each([['ADMIN'], ['SUPERADMIN']] as [Role][])('/admin/contenuti mostra i contenuti nascosti a un %s', async (role) => {
+    server.use(hiddenContentFound({}))
+    renderAt(ROUTES.adminContent, { loggedIn: true, roles: ['FAN', role] })
+    expect(await screen.findByRole('heading', { level: 1, name: 'Contenuti nascosti' })).toBeInTheDocument()
   })
 
   it('sul telefono mostra la barra di tab e nessun menu a scomparsa', async () => {

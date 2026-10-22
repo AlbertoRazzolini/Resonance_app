@@ -1,6 +1,7 @@
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { ROUTES, userPath } from '@/app/routes'
 import { UserText } from '@/components/ui/UserText'
+import { HideContentButton } from '@/features/admin/components/HideContentButton'
 import { selectCurrentUser } from '@/features/auth/authSlice'
 import { useAppSelector } from '@/hooks/redux'
 import { formatDate } from '@/lib/format/dates'
@@ -17,6 +18,7 @@ import { CollabOwnerActions } from './CollabOwnerActions'
 export function CollabDetail({ post }: { post: CollabPostResponse }) {
   const currentUser = useAppSelector(selectCurrentUser)
   const isOwner = currentUser?.id === post.musician.id
+  const navigate = useNavigate()
 
   return (
     <article className="rs-event-detail rs-collab-detail">
@@ -60,6 +62,14 @@ export function CollabDetail({ post }: { post: CollabPostResponse }) {
         <UserText text={post.description} />
       </div>
       {isOwner && <CollabOwnerActions post={post} />}
+      {/* Nascosto, il dettaglio diventerebbe «non trovato»: si torna alla bacheca, dove compare «Contenuto nascosto.» */}
+      <HideContentButton
+        type="collab-posts"
+        id={post.id}
+        authorId={post.musician.id}
+        name={post.title}
+        onHidden={() => navigate(ROUTES.collab)}
+      />
       {/* Non ci si candida al proprio annuncio né a uno chiuso (la protezione vera è nel backend: 400 e 409) */}
       {!isOwner && post.isOpen && <ApplyForm post={post} />}
       {!isOwner && !post.isOpen && <p>L'annuncio è chiuso e non accetta più candidature.</p>}

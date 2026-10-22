@@ -165,6 +165,26 @@ export const routes: RouteObject[] = [
         ],
       },
       {
+        // Area di moderazione: ADMIN e SUPERADMIN (che vale anche come ADMIN, sezione 5.1); la protezione vera è nel backend
+        element: (
+          <RequireRole roles={['ADMIN']}>
+            <Outlet />
+          </RequireRole>
+        ),
+        children: [
+          {
+            path: ROUTES.adminUsers,
+            handle: titled('Utenti'),
+            lazy: () => import('@/features/admin/pages/AdminUsersPage'),
+          },
+          {
+            path: ROUTES.adminContent,
+            handle: titled('Contenuti nascosti'),
+            lazy: () => import('@/features/admin/pages/HiddenContentPage'),
+          },
+        ],
+      },
+      {
         path: ROUTES.privacy,
         handle: titled('Informativa privacy'),
         lazy: () => import('@/features/legal/pages/PrivacyPolicyPage'),

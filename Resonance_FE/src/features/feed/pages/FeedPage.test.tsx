@@ -348,3 +348,49 @@ describe('FeedPage · like e cancellazione', () => {
     await waitFor(() => expect(screen.queryByText('Da cancellare')).not.toBeInTheDocument())
   })
 })
+
+// «Nascondi» dell'area admin (FE-10): sui post degli altri per ADMIN e SUPERADMIN; dopo il nascondimento il feed si rilegge.
+describe('FeedPage · «Nascondi» per gli admin', () => {
+  const ADMIN = makeMe({ id: 'admin-id', displayName: 'Admin', roles: ['FAN', 'ADMIN'] })
+
+  it('un admin nasconde il post di un altro con un motivo e il post sparisce dal feed', async () => {
+    let posts = [makeFeedPost({ id: 'p1', body: 'Post offensivo' })]
+    const calls: Request[] = []
+    server.use(
+      http.get('*/api/feed-posts', () => HttpResponse.json(makePage(posts))),
+      http.post('*/api/admin/moderation/feed-posts/:id/hide', ({ request }) => {
+        calls.push(request.clone())
+        posts = []
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+    const user = renderFeed({ user: ADMIN })
+    await screen.findByText('Post offensivo')
+
+    await user.click(screen.getByRole('button', { name: /^Nascondi/ }))
+    await user.type(screen.getByLabelText('Motivo'), 'Contenuto offensivo')
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Nascondi' }))
+
+    // L'avviso «Contenuto nascosto.» sta in `LiveNotifications`, non montato qui: lo prova il test di `HideContentButton`
+    await waitFor(() => expect(screen.queryByText('Post offensivo')).not.toBeInTheDocument())
+    expect(await calls[0].json()).toEqual({ reason: 'Contenuto offensivo' })
+  })
+
+  it('un utente senza ruolo admin non vede «Nascondi»', async () => {
+    server.use(feedFound([makePage([makeFeedPost({ body: 'Post di Anna' })])]))
+    renderFeed({ user: ME })
+    await screen.findByText('Post di Anna')
+
+    expect(screen.queryByRole('button', { name: /^Nascondi/ })).not.toBeInTheDocument()
+  })
+
+  it('un admin non vede «Nascondi» sui propri post', async () => {
+    server.use(
+      feedFound([makePage([makeFeedPost({ body: 'Il mio post', author: { id: ADMIN.id, displayName: 'Admin', avatarUrl: null } })])]),
+    )
+    renderFeed({ user: ADMIN })
+    await screen.findByText('Il mio post')
+
+    expect(screen.queryByRole('button', { name: /^Nascondi/ })).not.toBeInTheDocument()
+  })
+})

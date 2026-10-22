@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router'
 import { ROUTES, userPath } from '@/app/routes'
 import type { EventKind } from '@/components/map'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { HideContentButton } from '@/features/admin/components/HideContentButton'
 import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import { ExternalLink } from '@/components/ui/ExternalLink'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -110,6 +111,7 @@ export function EventDetail(props: EventDetailProps) {
   const { kind, event } = props
   const author = kind === 'official' ? props.event.host : props.event.musician
   const currentUser = useAppSelector(selectCurrentUser)
+  const navigate = useNavigate()
   // Il biglietto lo ha scritto un utente: senza un indirizzo http/https non si mostra niente
   const ticketUrl = kind === 'official' ? parseHttpUrl(props.event.externalTicketUrl)?.href : undefined
 
@@ -161,6 +163,14 @@ export function EventDetail(props: EventDetailProps) {
       )}
       <ContactOrganizer {...props} />
       {currentUser?.id === author.id && <OwnerActions {...props} />}
+      {/* Nascosto, il dettaglio diventerebbe «non trovato»: si torna all'elenco, dove compare «Contenuto nascosto.» */}
+      <HideContentButton
+        type={kind === 'official' ? 'official-concerts' : 'indie-events'}
+        id={event.id}
+        authorId={author.id}
+        name={event.title}
+        onHidden={() => navigate(ROUTES.events)}
+      />
     </article>
   )
 }

@@ -2034,6 +2034,11 @@ textarea {
   margin: 0;
 }
 
+/* Modulo di candidatura sotto il dettaglio di un annuncio: come il contatto, prende tutta la larghezza del dettaglio */
+.rs-apply {
+  align-self: stretch;
+}
+
 /* Sezione «Contatta l'organizzatore» sotto il dettaglio di un evento */
 .rs-contact {
   /* Il dettaglio allinea i figli a sinistra e li stringe al contenuto: il modulo prende tutta la larghezza */
@@ -2046,4 +2051,246 @@ textarea {
 .rs-contact h2 {
   margin-bottom: var(--rs-space-3);
   font-size: var(--rs-text-lg);
+}
+
+/* Area di moderazione (FE-10): filtri, elenco utenti e numeri di pagina */
+.rs-admin-filters {
+  display: grid;
+  gap: var(--rs-space-3);
+  margin: var(--rs-space-4) 0;
+}
+
+@media (min-width: 768px) {
+  .rs-admin-filters {
+    grid-template-columns: 1fr 14rem;
+  }
+}
+
+/* Sotto lg ogni riga è una scheda: la tabella perde la forma e le etichette vengono da data-label */
+.rs-admin-table-wrap {
+  min-width: 0;
+}
+
+.rs-admin-table-wrap--busy {
+  opacity: 0.6;
+}
+
+.rs-admin-table {
+  display: block;
+  width: 100%;
+}
+
+.rs-admin-table thead {
+  display: none;
+}
+
+.rs-admin-table tbody {
+  display: grid;
+  gap: var(--rs-space-3);
+}
+
+.rs-admin-row {
+  display: grid;
+  gap: var(--rs-space-2);
+  padding: var(--rs-space-3);
+  border: 1px solid var(--rs-color-border);
+  border-radius: var(--rs-radius-lg);
+  background: var(--rs-color-surface);
+}
+
+.rs-admin-row > td {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rs-space-2);
+  min-width: 0;
+}
+
+.rs-admin-row > td[data-label]::before {
+  content: attr(data-label);
+  flex: 0 0 7rem;
+  color: var(--rs-color-text-muted);
+  font-size: var(--rs-text-sm);
+}
+
+.rs-admin-row > .rs-admin-row__who {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.rs-admin-row__name {
+  color: var(--rs-color-text);
+  font-weight: var(--rs-weight-strong);
+  overflow-wrap: anywhere;
+}
+
+.rs-admin-row__email {
+  color: var(--rs-color-text-muted);
+  font-size: var(--rs-text-sm);
+  overflow-wrap: anywhere;
+}
+
+.rs-admin-row__roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rs-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rs-role-badge {
+  padding: 0 var(--rs-space-2);
+  border: 1px solid var(--rs-color-border-strong);
+  border-radius: var(--rs-radius-pill);
+  font-size: var(--rs-text-xs);
+  letter-spacing: var(--rs-tracking-label);
+  text-transform: uppercase;
+}
+
+.rs-status {
+  font-weight: var(--rs-weight-strong);
+}
+
+.rs-status--active {
+  color: var(--rs-color-success);
+}
+
+.rs-status--suspended {
+  color: var(--rs-color-danger);
+}
+
+.rs-admin-row__unverified {
+  color: var(--rs-color-warning);
+  font-size: var(--rs-text-sm);
+}
+
+.rs-admin-row__actions {
+  justify-content: flex-start;
+}
+
+@media (min-width: 992px) {
+  .rs-admin-table {
+    display: table;
+    border-collapse: separate;
+    border-spacing: 0 var(--rs-space-2);
+  }
+
+  .rs-admin-table thead {
+    display: table-header-group;
+  }
+
+  .rs-admin-table thead th {
+    padding: 0 var(--rs-space-3);
+    color: var(--rs-color-text-muted);
+    font-size: var(--rs-text-sm);
+    font-weight: var(--rs-weight-regular);
+    text-align: left;
+  }
+
+  .rs-admin-table tbody {
+    display: table-row-group;
+  }
+
+  .rs-admin-row {
+    display: table-row;
+    padding: 0;
+    border: 0;
+  }
+
+  .rs-admin-row > td {
+    display: table-cell;
+    padding: var(--rs-space-3);
+    border-block: 1px solid var(--rs-color-border);
+    background: var(--rs-color-surface);
+    vertical-align: middle;
+  }
+
+  .rs-admin-row > td:first-child {
+    border-inline-start: 1px solid var(--rs-color-border);
+    border-start-start-radius: var(--rs-radius-lg);
+    border-end-start-radius: var(--rs-radius-lg);
+  }
+
+  .rs-admin-row > td:last-child {
+    border-inline-end: 1px solid var(--rs-color-border);
+    border-start-end-radius: var(--rs-radius-lg);
+    border-end-end-radius: var(--rs-radius-lg);
+  }
+
+  .rs-admin-row > td[data-label]::before {
+    content: none;
+  }
+
+  .rs-admin-row > .rs-admin-row__who {
+    flex-direction: initial;
+  }
+
+  .rs-admin-row__actions {
+    text-align: right;
+  }
+}
+
+.rs-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rs-space-2);
+  margin: var(--rs-space-4) 0;
+}
+
+.rs-pagination__pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rs-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rs-pagination__gap {
+  padding: 0 var(--rs-space-1);
+  color: var(--rs-color-text-muted);
+}
+
+/* Sospensione in corso sulla riga, spiegazione del pulsante spento e scelta della durata (FE-10) */
+.rs-admin-row__suspension {
+  display: flex;
+  flex-direction: column;
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--rs-color-text-muted);
+  font-size: var(--rs-text-sm);
+  overflow-wrap: anywhere;
+}
+
+.rs-admin-row__hint {
+  flex-basis: 100%;
+  color: var(--rs-color-text-muted);
+  font-size: var(--rs-text-xs);
+}
+
+.rs-duration {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: var(--rs-space-1) var(--rs-space-3);
+  margin: 0 0 var(--rs-space-3);
+  padding: 0;
+  border: 0;
+}
+
+.rs-duration legend {
+  grid-column: 1 / -1;
+  margin-bottom: var(--rs-space-1);
+  font-size: var(--rs-text-base);
+}
+
+/* «Nascondi» accanto al link «Dettagli» / «Candidati» delle card (FE-10) */
+.rs-event-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rs-space-2);
 }

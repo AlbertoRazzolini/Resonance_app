@@ -8,13 +8,15 @@ import { useAppSelector } from '@/hooks/redux'
 
 /**
  * Menu utente della barra (decisione 83): per l'anonimo i pulsanti Accedi e Registrati; per chi ha la sessione il
- * cerchio giallo con la foto o l'iniziale e un menu con «Amici», le voci «Pubblica» secondo i ruoli (solo per mostrare o
- * nascondere: la protezione vera è nel backend) e "Esci". Le card successive aggiungono qui le loro voci.
+ * cerchio giallo con la foto o l'iniziale e un menu con «Amici», le voci «Pubblica» secondo i ruoli, le voci dell'area di
+ * moderazione per ADMIN e SUPERADMIN (solo per mostrare o nascondere: la protezione vera è nel backend) e "Esci".
  */
 export function UserMenu() {
   const user = useAppSelector(selectCurrentUser)
   const isHost = useAppSelector(selectHasRole('HOST'))
   const isMusician = useAppSelector(selectHasRole('MUSICIAN'))
+  // Il SUPERADMIN vale anche come ADMIN (selectHasRole): la voce dell'area di moderazione serve a entrambi
+  const isAdmin = useAppSelector(selectHasRole('ADMIN'))
   const [logout] = useLogoutMutation()
 
   if (!user) {
@@ -61,6 +63,17 @@ export function UserMenu() {
             </Dropdown.Item>
           )}
           {(isHost || isMusician) && <Dropdown.Divider />}
+          {isAdmin && (
+            <>
+              <Dropdown.Item as={Link} to={ROUTES.adminUsers}>
+                Utenti
+              </Dropdown.Item>
+              <Dropdown.Item as={Link} to={ROUTES.adminContent}>
+                Contenuti nascosti
+              </Dropdown.Item>
+              <Dropdown.Divider />
+            </>
+          )}
           <Dropdown.Item as="button" type="button" onClick={() => void logout()}>
             Esci
           </Dropdown.Item>

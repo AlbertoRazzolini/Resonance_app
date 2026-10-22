@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import { concertPath, indieEventPath } from '@/app/routes'
 import type { EventKind } from '@/components/map'
 import { formatEventDate } from '@/lib/format/dates'
+import { HideContentButton } from '@/features/admin/components/HideContentButton'
 import { formatDistance } from '@/lib/format/distance'
 import type { IndieEventResponse, OfficialConcertResponse } from '@/types/events'
 
@@ -14,8 +15,8 @@ const KIND_LABELS: Record<EventKind, string> = { official: 'Ufficiale', indie: '
 
 /**
  * Card di un evento nell'elenco: data in ora locale, tipo, distanza dal centro cercato, titolo, locale, generi e link al
- * dettaglio. Con `highlighted` è la card del marker aperto sulla mappa. Nessun testo qui è scritto da altri utenti
- * come HTML: React ne fa l'escape.
+ * dettaglio, più «Nascondi» per gli admin (progettazione, sezione 5.7). Con `highlighted` è la card del marker aperto sulla
+ * mappa. Nessun testo qui è scritto da altri utenti come HTML: React ne fa l'escape.
  */
 export function EventCard(props: EventCardProps) {
   const { event, kind, highlighted = false } = props
@@ -44,9 +45,17 @@ export function EventCard(props: EventCardProps) {
             <li key={tag}>{tag}</li>
           ))}
         </ul>
-        <Link className="btn btn-outline-light btn-sm" to={detailPath}>
-          Dettagli<span className="visually-hidden">: {event.title}</span>
-        </Link>
+        <div className="rs-event-card__actions">
+          <HideContentButton
+            type={kind === 'official' ? 'official-concerts' : 'indie-events'}
+            id={event.id}
+            authorId={kind === 'official' ? props.event.host.id : props.event.musician.id}
+            name={event.title}
+          />
+          <Link className="btn btn-outline-light btn-sm" to={detailPath}>
+            Dettagli<span className="visually-hidden">: {event.title}</span>
+          </Link>
+        </div>
       </div>
     </article>
   )

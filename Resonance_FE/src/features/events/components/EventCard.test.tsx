@@ -1,11 +1,19 @@
 import { render, screen } from '@testing-library/react'
+import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it } from 'vitest'
+import { makeStore } from '@/app/store'
 import { makeConcert, makeIndieEvent } from '@/test/fixtures/events'
 import { EventCard } from './EventCard'
 
 // Card di un evento nell'elenco: titolo, locale, data in ora locale, distanza, generi, tipo e link al dettaglio.
-const renderCard = (ui: React.ReactElement) => render(<MemoryRouter>{ui}</MemoryRouter>)
+// Serve lo store: «Nascondi» (solo admin) legge la sessione; «Nascondi» stesso lo prova `HideOnContent.test`.
+const renderCard = (ui: React.ReactElement) =>
+  render(
+    <Provider store={makeStore()}>
+      <MemoryRouter>{ui}</MemoryRouter>
+    </Provider>,
+  )
 
 // Un istante costruito dall'ora locale: l'ora scritta resta la stessa in qualunque fuso orario (23 ottobre 2026 è un venerdì)
 const FRIDAY_21_30 = new Date(2026, 9, 23, 21, 30).toISOString()

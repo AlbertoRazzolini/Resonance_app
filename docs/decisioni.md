@@ -3067,3 +3067,58 @@ più spento e la campanella non mostra più solo le richieste (testo del pannell
 - **`Toast` di react-bootstrap:** forza `role="alert"`, che interrompe i lettori di schermo per notifiche non urgenti.
 - **Striscia di conferma in cima alla pagina (decisione 91):** sposta gli elenchi sotto quando compare e quando sparisce.
 - **Etichette «Nome • ora» di gruppo (NoseY):** logica e test in più in una card già grande.
+
+## Decisione 93: area di moderazione nel frontend (card FE-10, progettazione, sezioni 5.4–5.7 e 6.10)
+
+### Scelta
+
+- **Ingresso:** le voci «Utenti» (`/admin/utenti`) e «Contenuti nascosti» (`/admin/contenuti`) stanno nel menu utente, solo per
+  ADMIN e SUPERADMIN (`selectHasRole('ADMIN')` vale anche per il SUPERADMIN). Le rotte sono dietro `RequireRole` e le pagine
+  sono caricate in modo differito. È solo interfaccia: la protezione vera resta nel backend.
+- **Elenco utenti:** ricerca su email e nome con attesa di 400 ms (come la ricerca persone), filtro «Tutti gli stati / Attivi /
+  Sospesi», numeri di pagina con un componente nuovo (`Pagination`, adattato da `Paginazione` di NoseY) usato anche per i
+  nascosti. Tabella da `lg`, schede sotto (solo CSS). La pagina scelta vale solo per i filtri con cui è stata scelta.
+- **Sospensione:** motivo 1–500 e durata scelta a pulsanti fra **1, 3, 7, 30, 90 giorni** e **Indeterminata**, senza durata
+  preselezionata («Sospendi» resta spento finché mancano motivo o durata). Niente giorni liberi e niente data di fine: il test
+  del piano «rifiuta durata e data insieme» diventa «cambiando durata vale solo l'ultima scelta», perché giorni e indeterminata
+  non possono coesistere. Il limite di 90 giorni è solo dell'interfaccia: il backend accetta fino a 3650 giorni (sezione 5.5).
+  Dopo la sospensione compare «Account sospeso.» e la riga mostra scadenza e motivo.
+- **Riattivazione** con finestra di conferma. **Livelli (sezione 5.6)** applicati dall'interfaccia con `canActOn`: sul bersaglio
+  vietato (se stessi, ruolo pari o superiore) il pulsante è spento e una frase spiega perché; il 403 del backend resta gestito.
+- **Nomina e revoca ADMIN:** solo per il SUPERADMIN, mai su un altro SUPERADMIN né su se stessi, sempre con conferma.
+  «Rendi admin» è spento con la spiegazione se l'utente non è verificato o è sospeso (una sospensione già scaduta conta come
+  attiva, decisione 54); «Togli admin» è sempre attivo.
+- **«Nascondi»** per gli admin su card e dettagli di concerti, indie event, annunci e post (i post non hanno dettaglio), mai sui
+  propri contenuti. `ConfirmDialog` è esteso con `reasonMin` (motivo obbligatorio, conferma spenta sotto il minimo: qui 3) e
+  `error` (il rifiuto del backend resta nella finestra); senza queste props non cambia. L'interfaccia non conosce i ruoli
+  dell'autore: se è un altro admin il 403 `INSUFFICIENT_PLATFORM_LEVEL` compare nella finestra. Dopo «Nascondi» la card sparisce
+  dall'elenco; dal dettaglio si torna all'elenco della sezione.
+- **Contenuti nascosti:** una scheda per tipo (Concerti, Indie, Post, Annunci) nell'indirizzo (`?scheda=`, valore sconosciuto =
+  Concerti). Ogni riga mostra titolo, autore, data, motivo e chi ha nascosto: per un contenuto eliminato dal proprietario
+  «Eliminato dall'utente» (nessuna chiamata), per gli altri «Nascosto da {nome}» con il nome preso dal profilo pubblico
+  dell'admin, una chiamata per riga («un admin» finché non arriva o se fallisce). «Ripristina» chiede conferma ed è spento, con
+  la spiegazione, per ciò che ha eliminato il proprietario (`RESTORE_NOT_ALLOWED`).
+- **Cache:** «Nascondi» e «Ripristina» invalidano il contenuto, l'elenco pubblico, «i miei» e l'elenco dei nascosti di quel tipo
+  (`contentTags`).
+
+### Motivazione
+
+- Le voci nel menu non cambiano il layout approvato (decisione 83) e seguono lo schema delle voci «Pubblica».
+- Oltre tre mesi una sospensione a tempo non si distingue da quella indeterminata, che l'admin chiude comunque con «Riattiva»:
+  poche durate fisse rendono il form veloce, senza validazioni di giorni e data.
+- Mostrare il pulsante spento con la frase spiega all'admin perché non può agire, invece di nasconderlo.
+- Estendere `ConfirmDialog` evita di duplicare contatore, spazi ai bordi, attesa e riapertura da vuoto.
+- Il profilo pubblico di un admin esiste sempre (non si nomina chi non ha verificato l'email), quindi il nome si può leggere
+  senza modifiche al backend; per i contenuti eliminati dal proprietario `hiddenBy` è il proprietario e la chiamata sarebbe inutile.
+
+### Alternative scartate
+
+- **Voce «Admin» nella navigazione principale:** una sesta voce stringe la barra del telefono e cambia il layout approvato.
+- **Pagina `/admin` con due link:** un clic in più e una pagina quasi vuota.
+- **Giorni liberi o data di fine nel form:** più campi e validazioni per un'azione rara; il tetto di un anno proposto in alternativa
+  è stato superato dalle durate fisse.
+- **Dialogo proprio per «Nascondi»:** duplica il codice di `ConfirmDialog`.
+- **Nascondere i pulsanti vietati dai livelli:** l'admin non capirebbe perché mancano.
+- **«Nascosto da un admin» fisso o senza chi ha nascosto:** meno informazione per l'admin; scelto l'ibrido con il nome per i
+  contenuti moderati e «Eliminato dall'utente» per gli altri.
+- **«Ripristina» e riattivazione senza conferma:** un clic per sbaglio rende di nuovo pubblico un contenuto o riapre un account.

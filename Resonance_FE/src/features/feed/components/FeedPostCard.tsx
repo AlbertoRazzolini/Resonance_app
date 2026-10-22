@@ -7,6 +7,7 @@ import { Avatar } from '@/components/ui/Avatar'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import { UserText } from '@/components/ui/UserText'
+import { HideContentButton } from '@/features/admin/components/HideContentButton'
 import { selectCurrentUser } from '@/features/auth/authSlice'
 import { useAppSelector } from '@/hooks/redux'
 import { formatDate } from '@/lib/format/dates'
@@ -42,8 +43,8 @@ function PostImage({ imageUrl }: { imageUrl: string | null }) {
 
 /**
  * Un post del feed (progettazione, sezione 6.8), uguale nel feed e nella scheda «Post»: autore con il link al profilo,
- * data breve, distanza se il feed è filtrato, testo da `UserText`, immagine, «Mi piace» e, solo sui propri post,
- * «Cancella» con conferma senza motivo. Un anonimo che clicca «Mi piace» va all'accesso e poi torna qui. Il like è
+ * data breve, distanza se il feed è filtrato, testo da `UserText`, immagine, «Mi piace», «Nascondi» per gli admin (sezione
+ * 5.7) e, solo sui propri post, «Cancella» con conferma senza motivo. Un anonimo che clicca «Mi piace» va all'accesso e poi torna qui. Il like è
  * ottimistico (lo stato sta nella cache di RTK Query, vedi `likePost`); con un errore l'avviso resta sotto il post.
  */
 export function FeedPostCard({ post, onDeleted }: FeedPostCardProps) {
@@ -117,6 +118,7 @@ export function FeedPostCard({ post, onDeleted }: FeedPostCardProps) {
             Cancella<span className="visually-hidden"> il post</span>
           </Button>
         )}
+        <HideContentButton type="feed-posts" id={post.id} authorId={post.author.id} name={`post di ${post.author.displayName}`} />
       </div>
       <ErrorAlert error={actionError} />
 

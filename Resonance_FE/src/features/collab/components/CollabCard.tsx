@@ -2,12 +2,14 @@ import { Link } from 'react-router'
 import { collabPath, userPath } from '@/app/routes'
 import { Avatar } from '@/components/ui/Avatar'
 import { UserText } from '@/components/ui/UserText'
+import { HideContentButton } from '@/features/admin/components/HideContentButton'
 import { formatDate } from '@/lib/format/dates'
 import type { CollabPostResponse } from '@/types/collab'
 
 /**
  * Annuncio nella bacheca (progettazione, sezione 6.7): autore con il link al profilo, luogo e data, ruolo cercato,
- * titolo, descrizione troncata con CSS, generi e «Candidati / Scrivi» verso il dettaglio, dove sta il modulo. La
+ * titolo, descrizione troncata con CSS, generi, «Nascondi» per gli admin (sezione 5.7) e «Candidati / Scrivi» verso il
+ * dettaglio, dove sta il modulo. La
  * bacheca elenca solo annunci aperti, quindi qui non c'è un caso «chiuso». Il testo degli utenti passa dall'escape di React.
  */
 export function CollabCard({ post }: { post: CollabPostResponse }) {
@@ -42,9 +44,12 @@ export function CollabCard({ post }: { post: CollabPostResponse }) {
             <li key={tag}>{tag}</li>
           ))}
         </ul>
-        <Link className="btn btn-primary btn-sm" to={collabPath(post.id)}>
-          Candidati / Scrivi<span className="visually-hidden">: {post.title}</span>
-        </Link>
+        <div className="rs-event-card__actions">
+          <HideContentButton type="collab-posts" id={post.id} authorId={post.musician.id} name={post.title} />
+          <Link className="btn btn-primary btn-sm" to={collabPath(post.id)}>
+            Candidati / Scrivi<span className="visually-hidden">: {post.title}</span>
+          </Link>
+        </div>
       </div>
     </article>
   )
