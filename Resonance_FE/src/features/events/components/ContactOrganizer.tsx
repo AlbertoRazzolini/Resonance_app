@@ -89,7 +89,7 @@ export function ContactOrganizer(props: ContactOrganizerProps) {
             <Form.Label htmlFor="contact-message">Messaggio per l'organizzatore</Form.Label>
             <Form.Control
               as="textarea"
-              rows={4}
+              rows={6}
               id="contact-message"
               value={message}
               isInvalid={Boolean(fieldError)}

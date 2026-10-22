@@ -2036,6 +2036,8 @@ textarea {
 
 /* Sezione «Contatta l'organizzatore» sotto il dettaglio di un evento */
 .rs-contact {
+  /* Il dettaglio allinea i figli a sinistra e li stringe al contenuto: il modulo prende tutta la larghezza */
+  align-self: stretch;
   margin-top: var(--rs-space-5);
   padding-top: var(--rs-space-4);
   border-top: 1px solid var(--rs-color-border);
