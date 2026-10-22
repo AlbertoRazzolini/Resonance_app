@@ -373,3 +373,41 @@ describe('NotificationBell · notifiche della sessione', () => {
     expect(within(panel).getByRole('link', { name: 'Vedi tutte' })).toHaveAttribute('href', friendsPath('ricevute'))
   })
 })
+
+// Animazione della campanella (come le altre icone della navigazione): oscilla al passaggio del mouse e al tocco, anche se il
+// mouse è sul pulsante e non sull'icona di 22 px.
+describe('NotificationBell · animazione', () => {
+  const iconStyles = () => [...bell().querySelectorAll('svg *')].map((node) => node.getAttribute('style') ?? '').join('|')
+
+  it("l'animazione parte con il mouse sul pulsante, non solo sull'icona", async () => {
+    server.use(friendshipsFound({ INCOMING: [pending([])] }))
+    const { user } = renderBell()
+    const before = iconStyles()
+
+    await user.hover(bell())
+
+    await waitFor(() => expect(iconStyles()).not.toBe(before))
+  })
+
+  it("l'animazione parte toccando il pulsante", async () => {
+    server.use(friendshipsFound({ INCOMING: [pending([])] }))
+    const { user } = renderBell()
+    const before = iconStyles()
+
+    // Si preme senza rilasciare, per non aprire il pannello: l'icona deve già animarsi
+    await user.pointer({ keys: '[MouseLeft>]', target: bell() })
+
+    await waitFor(() => expect(iconStyles()).not.toBe(before))
+  })
+
+  it('con il pulsante intatto: il nome accessibile e l’apertura del pannello non cambiano', async () => {
+    server.use(friendshipsFound({ INCOMING: [pending(requests(2))] }))
+    const { user } = renderBell()
+    await screen.findByTestId('bell-count')
+
+    await user.click(bell())
+
+    expect(await screen.findByRole('region', { name: 'Notifiche' })).toBeInTheDocument()
+    expect(bell()).toHaveAttribute('aria-expanded', 'true')
+  })
+})

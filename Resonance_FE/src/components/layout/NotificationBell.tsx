@@ -1,3 +1,4 @@
+import { AnimateIcon } from '@animate-ui/react/icons'
 import { useState } from 'react'
 import { Button, Dropdown } from 'react-bootstrap'
 import { Link } from 'react-router'
@@ -36,6 +37,7 @@ type Row =
  * finché non si gestiscono. Le richieste vengono da una sola chiamata che dà numero e righe e si ricarica ad apertura
  * dell'app, all'apertura del pannello, al ritorno sulla scheda e dopo ogni azione sulle amicizie; mai a intervalli: le
  * notifiche live delle amicizie sono fuori dall'MVP (decisione 59, Post-V1) e un aggiornamento periodico le imiterebbe.
+ * L'icona oscilla al passaggio del mouse e al tocco, come le altre della navigazione (decisione 83).
  */
 export function NotificationBell() {
   const dispatch = useAppDispatch()
@@ -74,14 +76,17 @@ export function NotificationBell() {
         if (next) void refetch()
       }}
     >
-      <Dropdown.Toggle as="button" type="button" className="rs-bell" aria-label={label}>
-        <Bell size={22} />
-        {count > 0 && (
-          <span className="rs-bell__count" data-testid="bell-count" aria-hidden="true">
-            {count > BADGE_MAX ? `${BADGE_MAX}+` : count}
-          </span>
-        )}
-      </Dropdown.Toggle>
+      {/* Come le altre icone della navigazione: l'animazione sta sul pulsante intero, così parte anche con il mouse sul numero */}
+      <AnimateIcon animateOnHover animateOnTap asChild>
+        <Dropdown.Toggle as="button" type="button" className="rs-bell" aria-label={label}>
+          <Bell size={22} />
+          {count > 0 && (
+            <span className="rs-bell__count" data-testid="bell-count" aria-hidden="true">
+              {count > BADGE_MAX ? `${BADGE_MAX}+` : count}
+            </span>
+          )}
+        </Dropdown.Toggle>
+      </AnimateIcon>
 
       <Dropdown.Menu
         className="rs-bell__panel"
