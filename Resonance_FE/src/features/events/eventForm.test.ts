@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildConcertRequest,
+  CONTACT_MESSAGE_MAX,
   buildIndieEventRequest,
   EMPTY_EVENT_VALUES,
   eventDateToIso,
+  validateContactMessage,
   validateEvent,
   wasEventDeleted,
   type EventFormValues,
@@ -143,5 +145,25 @@ describe('wasEventDeleted', () => {
     expect(wasEventDeleted({ eventDeleted: 'sì' })).toBe(false)
     expect(wasEventDeleted(null)).toBe(false)
     expect(wasEventDeleted(undefined)).toBe(false)
+  })
+})
+
+// Messaggio all'organizzatore (progettazione, sezione 6.6 e decisione 69): 1–1800 caratteri dopo il trim, 1800 e non 2000
+// perché in chat porta davanti il prefisso con il titolo.
+describe('validateContactMessage', () => {
+  it('un messaggio vuoto o di soli spazi chiede di scriverlo', () => {
+    expect(validateContactMessage('')).toBe('Scrivi il messaggio.')
+    expect(validateContactMessage('   ')).toBe('Scrivi il messaggio.')
+  })
+
+  it('il limite è 1800 caratteri dopo il trim: 1800 passa, 1801 no', () => {
+    expect(CONTACT_MESSAGE_MAX).toBe(1800)
+    expect(validateContactMessage('a'.repeat(1800))).toBeUndefined()
+    expect(validateContactMessage('a'.repeat(1801))).toBe('Il messaggio può avere al massimo 1800 caratteri.')
+    expect(validateContactMessage('  ' + 'a'.repeat(1800) + '  ')).toBeUndefined()
+  })
+
+  it('un messaggio normale è valido', () => {
+    expect(validateContactMessage('Posso suonare prima di voi?')).toBeUndefined()
   })
 })

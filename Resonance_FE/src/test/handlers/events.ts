@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import type { PageResponse } from '@/types/common'
-import type { IndieEventResponse, OfficialConcertResponse } from '@/types/events'
+import type { ContactResponse, IndieEventResponse, OfficialConcertResponse } from '@/types/events'
 import { errorResponse } from './auth'
 
 // Handler MSW degli endpoint degli eventi, condivisi dai test: ogni test li registra con server.use(...).
@@ -171,4 +171,25 @@ export function indieDeleted(calls: Request[] = []) {
 /** `DELETE /api/official-concerts/{id}` rifiutato (es. 403 `NOT_OWNER`). */
 export function concertDeleteRejected(status: number, code: string) {
   return http.delete(`${CONCERTS}/:id`, () => HttpResponse.json(errorResponse(status, code), { status }))
+}
+
+/** Tipo di evento da contattare: decide quale `POST .../{id}/contact` risponde. */
+export type ContactKind = 'official' | 'indie'
+
+const contactUrl = (kind: ContactKind) => (kind === 'official' ? CONCERTS : INDIE) + '/:id/contact'
+
+/** `POST .../{id}/contact` riuscito (201): risponde con la conversazione indicata e registra le richieste. */
+export function contactSent(kind: ContactKind, result: ContactResponse, calls: Request[] = []) {
+  return http.post(contactUrl(kind), ({ request }) => {
+    calls.push(request.clone())
+    return HttpResponse.json(result, { status: 201 })
+  })
+}
+
+/** `POST .../{id}/contact` rifiutato (409 `EVENT_CLOSED`, 400 `CANNOT_CONTACT_OWN_EVENT`, 429…). */
+export function contactRejected(kind: ContactKind, status: number, code: string, calls: Request[] = []) {
+  return http.post(contactUrl(kind), ({ request }) => {
+    calls.push(request.clone())
+    return HttpResponse.json(errorResponse(status, code), { status })
+  })
 }

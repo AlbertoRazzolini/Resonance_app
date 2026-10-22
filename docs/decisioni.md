@@ -2939,3 +2939,131 @@ Scelte dello studente, una per una, a inizio card:
 - **Messaggio di esito scritto nella riga:** la riga esce dalla lista dopo accettazione, rifiuto o rimozione e il messaggio
   sparirebbe con lei.
 - **Caricamento automatico allo scorrimento:** codice nuovo, diverso dalle altre liste.
+
+## Decisione 92: chat in tempo reale, notifiche e contatto degli eventi nel frontend (card FE-09b, progettazione, sezioni 6.9 e 7)
+
+### Scelta
+
+Scelte dello studente, una per una, a inizio card e durante il lavoro. Sostituisce in parte la decisione 91: «Scrivi» non è
+più spento e la campanella non mostra più solo le richieste (testo del pannello vuoto, lista unica).
+
+**Connessione STOMP**
+
+- **Firma `startStomp(store)`:** il client riceve lo store (la tabella delle interfacce del piano diceva `startStomp()`).
+  Serve a leggere il token corrente, chiudere la sessione per `ACCOUNT_SUSPENDED` e chiamare il refresh. I test usano uno
+  store per prova, come per `useTokenRenewal`.
+- **Una connessione finché la sessione è attiva:** la apre e la chiude `LiveNotifications`, montato in `AppShell`. Il token si
+  legge a ogni tentativo (`beforeConnect`); riconnessione automatica ogni 5 secondi; a ogni connessione una sola SUBSCRIBE per
+  ciascuna delle tre code, e più ascoltatori possono usare la stessa coda (`subscribe`).
+- **Dopo ogni refresh la connessione si riapre** (`forceDisconnect`, poi stompjs si ricollega con il token nuovo): così dopo
+  15 minuti di inattività il SEND non trova `TOKEN_INVALID` (Review Focus 7).
+- **`TOKEN_INVALID`** (frame ERROR o coda errori): refresh; se riesce la connessione si riapre, se è rifiutato la sessione si
+  chiude e il client si ferma.
+- **`ACCOUNT_SUSPENDED`:** si chiama il refresh, che risponde 403 con motivo e data di fine; il codice di `doRefresh` chiude
+  la sessione con l'avviso completo. Se il refresh non risponde la sessione si chiude comunque, senza motivo.
+- **Dopo una riconnessione** (non la prima connessione) si ricaricano elenco delle conversazioni e storico aperto (`Chat` e
+  `Messages`): i messaggi arrivati a connessione caduta non passano dal WebSocket (sezione 7.6, notifiche non salvate).
+- **Indicatore dello stato** sopra la casella di scrittura («Connesso», «Connessione…», «Riconnessione…») e «Invia» spento se
+  non si è connessi; fuori dalla chat non c'è un indicatore.
+
+**Elenco delle conversazioni e badge**
+
+- **Una sola chiamata `GET /api/chats?size=100`** (il massimo del backend) alimenta elenco, badge e ricerca; i messaggi in
+  arrivo ne aggiornano la cache a mano, senza richiamare il server. Una conversazione che non è nell'elenco lo fa ricaricare.
+- **Righe:** foto, nome (il collegamento, steso su tutta la riga), ora, ultimo messaggio da `UserText` con «Tu: » davanti se
+  l'ha scritto chi guarda, numero dei non letti con accento giallo, lucchetto con «Chat bloccata» se `canSend` è falso (testo
+  neutro, decisione 66). Senza messaggi «Nessun messaggio ancora». Niente pallino online, ruolo, filtro né «nuova chat» del
+  mock-up Stitch: il backend non li ha.
+- **Ricerca nell'elenco:** per nome sulle conversazioni già caricate, senza distinguere maiuscole e accenti, senza attesa e
+  senza chiamate al server.
+- **Badge dei messaggi** sull'icona Messaggi: somma degli `unreadCount`, da 1 a «9+» (come la campanella), nascosto a zero e
+  per chi non ha la sessione; ai lettori di schermo dice il numero vero.
+
+**Conversazione**
+
+- **Impaginazione:** da 1200 px elenco e conversazione affiancati («Scegli una conversazione» se non ce n'è una aperta); su
+  telefono e tablet un pannello alla volta. Una sola rotta `/chat/:id?` (`ROUTES.chatPage`), così il passaggio dall'elenco a
+  una conversazione non rimonta la pagina.
+- **Tab e footer nascosti dentro una conversazione** (`/chat/:id`, a ogni larghezza): il footer a comparsa salirebbe sopra la
+  casella di scrittura, la conversazione prende tutta l'altezza sotto la barra in alto.
+- **Intestazione:** freccia «Torna alle conversazioni» (solo dove c'è un pannello alla volta), foto e nome con il collegamento
+  al profilo pubblico, «Chat bloccata» se non si può scrivere.
+- **Storico a cursore:** 30 messaggi per volta, «Messaggi precedenti» in cima (`before` = id del più vecchio caricato). Le
+  pagine si uniscono per id, dal più recente, senza doppioni; se dopo una lunga assenza la pagina nuova non tocca lo storico, si
+  riparte dalla pagina nuova (nessun buco). Un messaggio ricevuto due volte compare una volta sola e non segna letto due volte
+  (Review Focus 8).
+- **Separatori di giorno** («Oggi», «Ieri», «sabato 18 ottobre») e ora sotto ogni messaggio; niente etichette «Nome • ora» di
+  gruppo. I propri messaggi si riconoscono da `senderId`.
+- **Spunte sui propri messaggi:** singola per «inviato» (salvato dal server), doppia colorata per «letto» (`readAt`),
+  aggiornata solo quando i messaggi si ricaricano (apertura, riconnessione): il backend non avvisa quando l'altro legge. Il
+  colore della doppia spunta è provvisorio (verde di successo), lo sceglie lo studente. Lo stato «recapitato» e la lettura in
+  diretta sono nel Post-V1 (progettazione, sezione 15).
+- **Lettura:** `PATCH .../read` all'apertura se ci sono non letti e a ogni messaggio dell'altro arrivato a conversazione aperta.
+- **Casella di scrittura:** Invio manda, Maiusc+Invio va a capo, contatore «n / 2000», casella spenta con la nota «Al momento
+  non puoi inviare messaggi a questa persona. Puoi rileggere la conversazione.» se `canSend` è falso (testo neutro).
+
+**Invio**
+
+- **Si aspetta l'eco del server:** il messaggio compare quando torna su `/user/queue/messages`, la stessa via del dedupe.
+- **Segnaposto «Invio…»** (bolla con il testo sfumato) solo se l'eco non arriva entro 300 ms, così non lampeggia.
+- **Se la connessione cade o passano 10 secondi senza eco** il segnaposto sparisce, il testo torna nella casella e compare
+  «Messaggio non inviato: controlla la connessione e riprova.». Gli errori della coda (`VALIDATION_ERROR`,
+  `TOO_MANY_REQUESTS`, `CHAT_LOCKED`) riportano il testo con il testo del loro codice; `CHAT_LOCKED` ricarica l'elenco e la
+  casella si spegne. `TOKEN_INVALID` e `ACCOUNT_SUSPENDED` li gestisce il client e la chat non li mostra.
+
+**Notifiche live**
+
+- **Toast** in alto a destra con le classi del toast di Bootstrap (non il suo componente, che forza `role="alert"`; qui
+  `role="status"`, letto senza interrompere): al massimo 3, 6 secondi, con la X; il clic apre il bersaglio (conversazione,
+  annuncio; per un like il feed, perché non esiste una pagina del singolo post) e segna letta la notifica. Per una conversazione
+  resta un solo toast. Un nuovo messaggio nella conversazione già aperta non crea né toast né voce.
+- **Testi:** «NOME ha messo mi piace al tuo post», «NOME si è candidato al tuo annuncio», «Nuovo messaggio da NOME» con
+  l'anteprima da `UserText`.
+- **Campanella con una lista sola**, dalla più recente, di qualsiasi tipo: richieste di amicizia (data `updatedAt`) e
+  notifiche della sessione (data `createdAt`). Righe: 5 sotto i 768 px, 10 da tablet in su, sulla lista unica; «Vedi tutte»
+  compare se restano richieste fuori vista. Il numero somma le richieste in attesa e le notifiche non lette, da 1 a «9+».
+  «Segna come lette» le segna tutte (solo le notifiche: le richieste restano finché non si accettano o si rifiutano), il clic su
+  una voce segna solo quella. Vuota: «Nessuna notifica.».
+- **Notifiche della sessione** (`notificationsSlice`): al massimo 20, solo in memoria, svuotate alla chiusura della sessione.
+- **Conferme delle azioni in sovrimpressione** (cambia la decisione 91): la conferma di «Richiesta inviata» e simili non sta più
+  in una striscia in cima alla pagina, che spostava gli elenchi sotto. È un riquadro in alto a destra, nella stessa zona dei toast
+  (`ConfirmationBar` dentro `LiveNotifications`), largo quanto il testo; resta 4 secondi e si chiude con la X, come prima. Gli
+  stessi testi.
+
+**Contatto dell'organizzatore e «Scrivi»**
+
+- **Modulo nella pagina** (`ContactOrganizer`), sotto il dettaglio di concerti e indie event, come la candidatura: titolo
+  «Contatta l'organizzatore», campo «Messaggio per l'organizzatore» da 1 a 1800 con contatore, «Invia messaggio»; riuscito:
+  «Messaggio inviato. Puoi continuare la conversazione in chat.» con «Apri la chat». Errori con i testi dei loro codici. Non
+  compare per il proprio evento né per uno già iniziato (l'istante si prende al montaggio della pagina); un anonimo che invia
+  passa dall'accesso e torna.
+- **«Scrivi»** (stato `FRIENDS`): `POST /api/chats`, poi apre la chat; un rifiuto (`NOT_FRIENDS`) resta scritto nella riga.
+
+### Motivazione
+
+- Con lo store passato al client i test possono usare lo stesso meccanismo di rinnovo dell'app, e non c'è un globale che
+  dipende da `app/store.ts`.
+- I messaggi su STOMP arrivano dopo il commit (sezione 7.6): un messaggio che compare è già salvato, quindi l'attesa dell'eco è
+  sicura; ma il server non conserva i push, quindi dopo una caduta si rilegge dal database.
+- Una sola chiamata da 100 conversazioni dà elenco, badge e ricerca senza chiamate in più, e oltre 100 conversazioni (impossibile
+  nella demo) sarebbero parziali.
+- Il segnaposto ritardato evita il lampeggio col server veloce, e il limite di 10 secondi evita una bolla sospesa per sempre se la
+  connessione cade dopo l'invio.
+- Una lista unica nella campanella è più semplice da leggere e da provare delle due sezioni.
+- Tab e footer nascosti dentro una conversazione lasciano posto ai messaggi e alla casella.
+
+### Alternative scartate
+
+- **`startStomp()` senza parametri con lo store importato:** i test avrebbero dovuto simulare il modulo dello store.
+- **Spunta «recapitato» (doppia grigia):** il backend non ha lo stato; un evento di lettura in diretta richiede una modifica al
+  backend, fuori dalla card.
+- **Bolla ottimistica subito in grigio:** serve abbinare bolla ed eco senza un id del client, più casi e rischio di doppioni.
+- **Pagine da 20 con «Carica altri» per l'elenco:** badge e ricerca sarebbero parziali.
+- **Indicatore di connessione sempre nella barra:** elemento nuovo in ogni pagina, spazio stretto sul telefono.
+- **Footer sempre visibile con lo spazio riservato:** sul telefono toglie troppo spazio ai messaggi.
+- **Due sezioni separate nella campanella** e **numero solo per le amicizie:** una notifica non letta non si vedrebbe
+  dall'icona, o il pannello avrebbe due elenchi da tenere allineati.
+- **Contatto in una finestra:** gestione del fuoco e componente nuovi, diverso dalla candidatura.
+- **`Toast` di react-bootstrap:** forza `role="alert"`, che interrompe i lettori di schermo per notifiche non urgenti.
+- **Striscia di conferma in cima alla pagina (decisione 91):** sposta gli elenchi sotto quando compare e quando sparisce.
+- **Etichette «Nome • ora» di gruppo (NoseY):** logica e test in più in una card già grande.

@@ -1,6 +1,7 @@
 import { configureStore, createListenerMiddleware } from '@reduxjs/toolkit'
 import { setupListeners } from '@reduxjs/toolkit/query'
 import { authReducer, sessionEnded } from '@/features/auth/authSlice'
+import { notificationsReducer } from '@/features/notifications/notificationsSlice'
 import { api } from '@/lib/api/apiSlice'
 import { confirmationReducer } from '@/lib/notices/confirmationSlice'
 import { noticeReducer } from '@/lib/notices/noticeSlice'
@@ -22,6 +23,7 @@ export function makeStore() {
       auth: authReducer,
       notice: noticeReducer,
       confirmation: confirmationReducer,
+      notifications: notificationsReducer,
       [api.reducerPath]: api.reducer,
     },
     middleware: (getDefault) => getDefault().prepend(listener.middleware).concat(api.middleware),

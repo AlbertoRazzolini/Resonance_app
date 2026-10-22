@@ -2,6 +2,7 @@ import { api } from '@/lib/api/apiSlice'
 import { errorCode } from '@/lib/api/baseQuery'
 import type { PageResponse } from '@/types/common'
 import type {
+  ContactResponse,
   CreateConcertRequest,
   CreateIndieEventRequest,
   IndieEventResponse,
@@ -29,6 +30,9 @@ function mergePages<T>(current: PageResponse<T>, incoming: PageResponse<T>) {
 /** Si richiede la pagina solo quando cambia: stessi parametri e stessa pagina restano in cache. */
 const pageChanged = ({ currentArg, previousArg }: { currentArg?: NearbyParams; previousArg?: NearbyParams }) =>
   currentArg?.page !== previousArg?.page
+
+/** Argomenti del contatto dell'organizzatore: l'evento e il messaggio (1–1800 caratteri). */
+export type ContactArgs = { id: string; message: string }
 
 /** Argomenti di una cancellazione: l'evento e il motivo facoltativo (massimo 500 caratteri). */
 export type DeleteEventArgs = { id: string; reason?: string }
@@ -144,6 +148,29 @@ export const eventsApi = api.injectEndpoints({
       ],
     }),
 
+    /**
+     * `POST /api/official-concerts/{id}/contact` (201): il messaggio diventa un messaggio in chat con l'organizzatore e
+     * sblocca la conversazione fino all'inizio del concerto (decisione 69). 409 `EVENT_CLOSED`, 400 `CANNOT_CONTACT_OWN_EVENT`.
+     */
+    contactConcertHost: build.mutation<ContactResponse, ContactArgs>({
+      query: ({ id, message }) => ({
+        url: `/api/official-concerts/${encodeURIComponent(id)}/contact`,
+        method: 'POST',
+        body: { message },
+      }),
+      invalidatesTags: ['Chat'],
+    }),
+
+    /** `POST /api/indie-events/{id}/contact` (201): come per i concerti, verso il musicista che ha pubblicato l'evento. */
+    contactIndieEventMusician: build.mutation<ContactResponse, ContactArgs>({
+      query: ({ id, message }) => ({
+        url: `/api/indie-events/${encodeURIComponent(id)}/contact`,
+        method: 'POST',
+        body: { message },
+      }),
+      invalidatesTags: ['Chat'],
+    }),
+
     /** `DELETE /api/official-concerts/{id}` (204): cancellazione del proprietario, con motivo facoltativo. */
     deleteConcert: build.mutation<void, DeleteEventArgs>({
       query: deleteQuery('/api/official-concerts'),
@@ -167,6 +194,8 @@ export const eventsApi = api.injectEndpoints({
 })
 
 export const {
+  useContactConcertHostMutation,
+  useContactIndieEventMusicianMutation,
   useCreateConcertMutation,
   useCreateIndieEventMutation,
   useDeleteConcertMutation,

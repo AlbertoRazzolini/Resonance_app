@@ -1510,11 +1510,13 @@ textarea {
   margin: 0;
 }
 
-/* Conferma in cima alla pagina: resta visibile mentre si scorre l'elenco */
+/* Conferma in sovrimpressione nel riquadro dei toast: larga quanto il testo, allineata a destra, non sposta la pagina */
 .rs-confirmation {
-  position: sticky;
-  top: var(--rs-space-3);
-  z-index: 1020;
+  width: fit-content;
+  max-width: 20rem;
+  margin: 0 0 var(--rs-space-2) auto;
+  box-shadow: var(--rs-shadow-raised);
+  pointer-events: auto;
 }
 
 /* Numero delle richieste in attesa sopra la campanella (da 1 a «9+») */
@@ -1558,4 +1560,488 @@ textarea {
   display: block;
   margin-top: var(--rs-space-3);
   text-align: center;
+}
+
+/* Numero dei messaggi non letti sopra la voce Messaggi (da 1 a «9+»): vicino all'icona su tab e colonna stretta, a destra nella colonna larga */
+.rs-tab,
+.rs-side-item {
+  position: relative;
+}
+
+.rs-nav-badge {
+  position: absolute;
+  top: 0.3rem;
+  left: calc(50% + 0.5rem);
+  min-width: 1.15rem;
+  padding: 0 0.3rem;
+  border-radius: var(--rs-radius-pill);
+  background: var(--rs-color-accent);
+  color: var(--rs-color-accent-ink);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.15rem;
+  text-align: center;
+  letter-spacing: 0;
+}
+
+@media (min-width: 1200px) {
+  .rs-side-item .rs-nav-badge {
+    position: static;
+    margin-left: auto;
+  }
+}
+
+/* Messaggi: elenco e conversazione; da 1200 px affiancati, sotto un pannello alla volta */
+.rs-chat {
+  display: grid;
+  gap: var(--rs-space-4);
+}
+
+@media (min-width: 1200px) {
+  .rs-chat {
+    grid-template-columns: 22rem minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.rs-chat__panel {
+  min-width: 0;
+}
+
+.rs-conversations {
+  display: grid;
+  gap: var(--rs-space-3);
+  align-content: start;
+}
+
+.rs-conversations__title {
+  margin: 0;
+  font-size: var(--rs-text-2xl);
+}
+
+.rs-conversation-list {
+  display: grid;
+  gap: var(--rs-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Riga: il collegamento del nome si stende su tutta la riga (stretched-link); l'accento giallo a sinistra segna i non letti */
+.rs-conversation {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--rs-space-3);
+  padding: var(--rs-space-3);
+  border: 1px solid var(--rs-color-border);
+  border-left-width: 3px;
+  border-radius: var(--rs-radius-lg);
+  background: var(--rs-color-surface);
+}
+
+.rs-conversation:hover {
+  border-color: var(--rs-color-border-strong);
+}
+
+.rs-conversation--unread {
+  border-left-color: var(--rs-color-accent);
+}
+
+.rs-conversation--locked {
+  opacity: 0.8;
+}
+
+.rs-conversation__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.rs-conversation__head,
+.rs-conversation__preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rs-space-2);
+}
+
+.rs-conversation__name {
+  overflow: hidden;
+  color: var(--rs-color-text);
+  font-weight: var(--rs-weight-heading);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rs-conversation__name[aria-current='page'] {
+  color: var(--rs-color-accent);
+}
+
+.rs-conversation__time {
+  flex-shrink: 0;
+  color: var(--rs-color-text-muted);
+  font-size: var(--rs-text-xs);
+}
+
+.rs-conversation--unread .rs-conversation__time {
+  color: var(--rs-color-accent);
+}
+
+.rs-conversation__text {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--rs-color-text-muted);
+  font-size: var(--rs-text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rs-conversation--unread .rs-conversation__text {
+  color: var(--rs-color-text);
+}
+
+.rs-conversation__text .rs-user-text {
+  white-space: nowrap;
+}
+
+/* Un indirizzo nell'anteprima è un pulsante: sta sopra il collegamento steso sulla riga, così resta cliccabile */
+.rs-conversation__text button {
+  position: relative;
+  z-index: 2;
+}
+
+.rs-conversation__unread {
+  flex-shrink: 0;
+  min-width: 1.35rem;
+  padding: 0 0.4rem;
+  border-radius: var(--rs-radius-pill);
+  background: var(--rs-color-accent);
+  color: var(--rs-color-accent-ink);
+  font-size: var(--rs-text-xs);
+  font-weight: 700;
+  line-height: 1.35rem;
+  text-align: center;
+}
+
+.rs-conversation__locked {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rs-space-1);
+  margin-top: var(--rs-space-1);
+  color: var(--rs-color-warning);
+  font-size: var(--rs-text-xs);
+}
+
+/* Conversazione: tutta l'altezza sotto la barra in alto, storico che scorre e casella fissa in fondo; senza tab né footer */
+.rs-app--conversation .rs-main {
+  padding-bottom: 0;
+}
+
+.rs-conversation-view {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - var(--rs-topbar-height) - 3rem);
+  min-height: 22rem;
+  overflow: hidden;
+  border: 1px solid var(--rs-color-border);
+  border-radius: var(--rs-radius-lg);
+  background: var(--rs-color-surface);
+}
+
+.rs-conversation-view__header {
+  display: flex;
+  align-items: center;
+  gap: var(--rs-space-3);
+  padding: var(--rs-space-3);
+  border-bottom: 1px solid var(--rs-color-border);
+}
+
+/* La freccia serve solo dove c'è un pannello alla volta: da 1200 px l'elenco è accanto */
+.rs-conversation-view__back {
+  display: inline-flex;
+  color: var(--rs-color-text-muted);
+}
+
+@media (min-width: 1200px) {
+  .rs-conversation-view__back {
+    display: none;
+  }
+}
+
+.rs-conversation-view__who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rs-conversation-view__name {
+  overflow: hidden;
+  color: var(--rs-color-text);
+  font-weight: var(--rs-weight-heading);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rs-conversation-view__messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--rs-space-3);
+}
+
+.rs-conversation-view__older {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--rs-space-3);
+}
+
+.rs-message-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rs-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Separatore di giorno («Oggi», «Ieri», «sabato 18 ottobre») */
+.rs-chat-day {
+  display: flex;
+  justify-content: center;
+  margin: var(--rs-space-2) 0;
+}
+
+.rs-chat-day span {
+  padding: 0 var(--rs-space-3);
+  border-radius: var(--rs-radius-pill);
+  background: var(--rs-color-field);
+  color: var(--rs-color-text-muted);
+  font-size: var(--rs-text-xs);
+}
+
+.rs-message {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 82%;
+}
+
+.rs-message--own {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.rs-message--other {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.rs-message__bubble {
+  padding: var(--rs-space-2) var(--rs-space-3);
+  border: 1px solid var(--rs-color-border);
+  border-radius: var(--rs-radius-lg);
+  background: var(--rs-color-field);
+  overflow-wrap: anywhere;
+}
+
+.rs-message--own .rs-message__bubble {
+  border-color: rgba(var(--rs-color-accent-rgb), 0.35);
+  background: rgba(var(--rs-color-accent-rgb), 0.14);
+}
+
+/* Segnaposto «Invio…»: il messaggio non è ancora tornato dal server */
+.rs-message--pending {
+  opacity: 0.6;
+}
+
+.rs-message__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--rs-space-1);
+  color: var(--rs-color-text-muted);
+  font-size: var(--rs-text-xs);
+}
+
+/* Spunte dei messaggi miei: singola «inviato», doppia «letto» (colore provvisorio, da scegliere) */
+.rs-message__ticks {
+  display: inline-flex;
+}
+
+.rs-message__ticks--sent {
+  color: var(--rs-color-text-muted);
+}
+
+.rs-message__ticks--read {
+  color: var(--rs-color-success);
+}
+
+.rs-composer {
+  display: grid;
+  gap: var(--rs-space-2);
+  padding: var(--rs-space-3);
+  border-top: 1px solid var(--rs-color-border);
+}
+
+.rs-composer__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--rs-color-text-muted);
+  font-size: var(--rs-text-xs);
+  letter-spacing: var(--rs-tracking-label);
+  text-transform: uppercase;
+}
+
+/* Pallino dello stato della connessione: verde connesso, ambra mentre si collega */
+.rs-composer__status::before {
+  content: '';
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-right: 0.4rem;
+  border-radius: var(--rs-radius-pill);
+  background: var(--rs-color-warning);
+}
+
+.rs-composer__status--connected::before {
+  background: var(--rs-color-success);
+}
+
+.rs-composer__row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--rs-space-2);
+}
+
+.rs-composer__row textarea {
+  resize: none;
+}
+
+.rs-composer__error {
+  margin: 0;
+}
+
+.rs-composer__note {
+  margin: 0;
+  color: var(--rs-color-text-muted);
+  font-size: var(--rs-text-sm);
+}
+
+/* Toast delle notifiche live: in alto a destra, sopra tutto; il collegamento si stende sul toast (stretched-link) e la X sta sopra */
+.rs-toasts {
+  z-index: 1090;
+  max-width: 100%;
+  padding: var(--rs-space-3);
+}
+
+.rs-toast {
+  position: relative;
+  width: 20rem;
+  max-width: 100%;
+  margin-bottom: var(--rs-space-2);
+  border: 1px solid var(--rs-color-border-strong);
+  border-left: 3px solid var(--rs-color-accent);
+  border-radius: var(--rs-radius-lg);
+  background: var(--rs-color-surface);
+  box-shadow: var(--rs-shadow-raised);
+}
+
+.rs-toast__body {
+  position: relative;
+  padding-right: 2.5rem;
+}
+
+.rs-toast__title {
+  color: var(--rs-color-text);
+  font-weight: var(--rs-weight-heading);
+  text-decoration: none;
+}
+
+.rs-toast__preview {
+  margin-top: var(--rs-space-1);
+  color: var(--rs-color-text-muted);
+  font-size: var(--rs-text-sm);
+  overflow-wrap: anywhere;
+}
+
+/* Un indirizzo nell'anteprima è un pulsante: sta sopra il collegamento steso sul toast, così resta cliccabile */
+.rs-toast__preview button,
+.rs-notification__preview button {
+  position: relative;
+  z-index: 2;
+}
+
+.rs-toast__close {
+  position: absolute;
+  top: var(--rs-space-2);
+  right: var(--rs-space-2);
+  z-index: 2;
+}
+
+/* Notifica della sessione nella campanella: foto, testo (collegamento steso sulla riga), anteprima e ora */
+.rs-notification {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--rs-space-3);
+  padding: var(--rs-space-3);
+  border: 1px solid var(--rs-color-border);
+  border-radius: var(--rs-radius-lg);
+  background: var(--rs-color-surface);
+}
+
+.rs-notification--unread {
+  border-left: 3px solid var(--rs-color-accent);
+}
+
+.rs-notification__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.rs-notification__text {
+  color: var(--rs-color-text);
+  font-weight: var(--rs-weight-heading);
+  text-decoration: none;
+}
+
+.rs-notification__preview {
+  margin-top: var(--rs-space-1);
+  color: var(--rs-color-text-muted);
+  font-size: var(--rs-text-sm);
+  overflow-wrap: anywhere;
+}
+
+.rs-notification__time {
+  display: block;
+  margin-top: var(--rs-space-1);
+  color: var(--rs-color-text-muted);
+  font-size: var(--rs-text-xs);
+}
+
+/* Titolo del pannello della campanella con «Segna come lette» a destra */
+.rs-bell__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rs-space-2);
+  margin-bottom: var(--rs-space-3);
+}
+
+.rs-bell__head .rs-bell__title {
+  margin: 0;
+}
+
+/* Sezione «Contatta l'organizzatore» sotto il dettaglio di un evento */
+.rs-contact {
+  margin-top: var(--rs-space-5);
+  padding-top: var(--rs-space-4);
+  border-top: 1px solid var(--rs-color-border);
+}
+
+.rs-contact h2 {
+  margin-bottom: var(--rs-space-3);
+  font-size: var(--rs-text-lg);
 }

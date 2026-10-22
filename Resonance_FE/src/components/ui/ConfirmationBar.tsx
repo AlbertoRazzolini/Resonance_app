@@ -10,9 +10,10 @@ import {
 const VISIBLE_MS = 4000
 
 /**
- * Striscia di conferma in cima alla pagina: dice che un'azione è andata a buon fine, sparisce dopo 4 secondi e si può
- * chiudere. È una regione `status`, così i lettori di schermo la leggono senza togliere il fuoco. Gli avvisi di sistema
- * restano a `NoticeBar`.
+ * Conferma in sovrimpressione, in alto a destra (la mostra `LiveNotifications` nel riquadro dei toast): dice che
+ * un'azione è andata a buon fine, è larga quanto il testo e non sposta la pagina, sparisce dopo 4 secondi e si può
+ * chiudere. È una regione `status`, così i lettori di schermo la leggono senza togliere il fuoco. Gli avvisi di
+ * sistema restano a `NoticeBar`.
  */
 export function ConfirmationBar() {
   const { text, seq } = useAppSelector(selectConfirmation)

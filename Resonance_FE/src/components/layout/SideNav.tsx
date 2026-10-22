@@ -17,12 +17,13 @@ export function SideNav({ showLogo }: { showLogo: boolean }) {
         </Link>
       )}
       <nav aria-label="Navigazione principale" className="rs-sidenav__list">
-        {NAV_ITEMS.map(({ label, to, Icon }) => (
+        {NAV_ITEMS.map(({ label, to, Icon, Badge }) => (
           // L'animazione sta sulla voce intera, non sull'icona di 22 px: parte appena il mouse entra, anche sulla scritta
           <AnimateIcon key={to} animateOnHover asChild>
             <NavLink to={to} className="rs-side-item">
               <Icon size={22} />
               <span>{label}</span>
+              {Badge && <Badge />}
             </NavLink>
           </AnimateIcon>
         ))}

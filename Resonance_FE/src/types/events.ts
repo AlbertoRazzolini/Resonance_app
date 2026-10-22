@@ -62,3 +62,9 @@ export type NearbyParams = {
   radiusKm: number
   page: number
 }
+
+/** Risposta del contatto dell'organizzatore (201): la conversazione che si apre e il messaggio inviato (progettazione, sezione 6.6). */
+export type ContactResponse = {
+  conversationId: string
+  messageId: string
+}

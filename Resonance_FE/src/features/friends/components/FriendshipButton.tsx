@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import { Button } from 'react-bootstrap'
+import { useNavigate } from 'react-router'
+import { chatPath } from '@/app/routes'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import { useAppDispatch } from '@/hooks/redux'
+import { useOpenConversationMutation } from '@/features/chat/api/chatApi'
 import { errorCode } from '@/lib/api/baseQuery'
 import { confirmationShown } from '@/lib/notices/confirmationSlice'
 import type { FriendshipView } from '@/types/friends'
@@ -41,12 +44,14 @@ const isStale = (error: unknown) =>
 /**
  * Pulsante dell'amicizia per i cinque stati visti da chi guarda (progettazione, sezione 6.14): `NONE` Aggiungi,
  * `OUTGOING` Annulla, `INCOMING` Accetta e Rifiuta, `FRIENDS` Rimuovi (con conferma) e Scrivi, `UNAVAILABLE` spento.
- * Scrivi resta spento fino a FE-09b, che porta la pagina della chat. Una riuscita si conferma in cima alla pagina; un
- * errore resta scritto nella riga. `FRIEND_REQUEST_ALREADY_RECEIVED` non è un errore: la ricerca si ricarica e mostra
+ * «Scrivi» trova o crea la conversazione (`POST /api/chats`) e apre la chat; un rifiuto (`NOT_FRIENDS`) resta scritto
+ * nella riga. Una riuscita si conferma in cima alla pagina; un errore resta scritto nella riga. `FRIEND_REQUEST_ALREADY_RECEIVED` non è un errore: la ricerca si ricarica e mostra
  * «Accetta». Il componente non decide lo stato: arriva dal genitore e cambia quando gli elenchi si ricaricano.
  */
 export function FriendshipButton({ userId, displayName, status, friendshipId }: FriendshipButtonProps) {
   const dispatch = useAppDispatch()
+  const navigate = useNavigate()
+  const [openConversation] = useOpenConversationMutation()
   const [request] = useRequestFriendshipMutation()
   const [accept] = useAcceptFriendshipMutation()
   const [decline] = useDeclineFriendshipMutation()
@@ -71,6 +76,20 @@ export function FriendshipButton({ userId, displayName, status, friendshipId }: 
         setError(failure)
       }
       if (isStale(failure)) dispatch(friendsApi.util.invalidateTags([...FRIENDSHIP_TAGS]))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /** «Scrivi»: apre la conversazione con la persona e porta alla chat; l'errore resta nella riga. */
+  async function writeTo() {
+    setBusy(true)
+    setError(null)
+    try {
+      const conversation = await openConversation(userId).unwrap()
+      navigate(chatPath(conversation.id))
+    } catch (failure) {
+      setError(failure)
     } finally {
       setBusy(false)
     }
@@ -125,11 +144,9 @@ export function FriendshipButton({ userId, displayName, status, friendshipId }: 
         {status === 'FRIENDS' && (
           <>
             <span className="rs-person__state">Amici</span>
-            {/* Spento fino a FE-09b: la pagina della chat non c'è ancora (decisione 78) */}
-            <Button size="sm" variant="outline-light" disabled>
+            <Button size="sm" variant="outline-light" disabled={busy} onClick={() => void writeTo()}>
               <Label text="Scrivi" name={displayName} />
             </Button>
-            <span className="rs-person__note">Disponibile a breve</span>
             <Button
               size="sm"
               variant="outline-light"

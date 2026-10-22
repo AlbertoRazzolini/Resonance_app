@@ -8,6 +8,8 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { friendsPath } from '@/app/routes'
 import { makeStore } from '@/app/store'
 import { sessionStarted } from '@/features/auth/authSlice'
+import { markAllRead, received, selectUnreadNotificationCount } from '@/features/notifications/notificationsSlice'
+import type { LiveNotification } from '@/types/chat'
 import { makePage } from '@/test/fixtures/events'
 import { makeFriendship } from '@/test/fixtures/friends'
 import { makeLoginResponse } from '@/test/fixtures/users'
@@ -169,14 +171,14 @@ describe('NotificationBell · pannello', () => {
     expect(within(panel).getByRole('button', { name: 'Rifiuta: Persona 2' })).toBeInTheDocument()
   })
 
-  it('senza richieste dice «Nessuna richiesta in attesa.»', async () => {
+  it('senza richieste né notifiche dice «Nessuna notifica.»', async () => {
     server.use(friendshipsFound({ INCOMING: [pending([])] }))
     const { user } = renderBell()
     await waitFor(() => expect(bell()).toBeEnabled())
 
     await user.click(bell())
 
-    expect(await screen.findByText('Nessuna richiesta in attesa.')).toBeInTheDocument()
+    expect(await screen.findByText('Nessuna notifica.')).toBeInTheDocument()
   })
 
   it('da tablet in su mostra fino a 10 righe e «Vedi tutte» se ce ne sono di più', async () => {
@@ -219,5 +221,155 @@ describe('NotificationBell · pannello', () => {
     const panel = await screen.findByRole('region', { name: 'Notifiche' })
     expect(within(panel).getAllByRole('listitem')).toHaveLength(5)
     expect(within(panel).queryByRole('link', { name: 'Vedi tutte' })).not.toBeInTheDocument()
+  })
+})
+
+// Lista unica (scelta dello studente, FE-09b): richieste di amicizia e notifiche della sessione mescolate, dalla più
+// recente. Il numero conta le richieste in attesa più le notifiche non lette; «Segna come lette» tocca solo le
+// notifiche (le richieste restano finché non si accettano o si rifiutano).
+function liveNotification(n: number, overrides: Partial<LiveNotification> = {}): LiveNotification {
+  return {
+    type: 'NEW_LIKE',
+    createdAt: '2026-10-22T10:00:00Z',
+    actor: { id: 'a' + n, displayName: 'Autore ' + n, avatarUrl: null },
+    targetId: 'post-' + n,
+    preview: null,
+    ...overrides,
+  }
+}
+
+describe('NotificationBell · notifiche della sessione', () => {
+  /** Richieste con data `updatedAt` e notifiche già ricevute (la più vecchia per prima: si accodano in cima). */
+  function renderMixed(friendRows: FriendshipResponse[], live: LiveNotification[], total = friendRows.length) {
+    server.use(friendshipsFound({ INCOMING: [pending(friendRows, total)] }))
+    const view = renderBell()
+    live.forEach((notification) => view.store.dispatch(received(notification)))
+    return view
+  }
+
+  const dated = (n: number, updatedAt: string) => ({ ...request(n), updatedAt })
+
+  it('il numero somma le richieste in attesa e le notifiche non lette', async () => {
+    renderMixed(requests(2), [liveNotification(1), liveNotification(2), liveNotification(3)])
+
+    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('5'))
+    expect(bell()).toHaveAccessibleName('Notifiche: 2 richieste di amicizia in attesa e 3 notifiche non lette')
+  })
+
+  it('con sole notifiche non lette il numero e il nome accessibile le contano', async () => {
+    renderMixed([], [liveNotification(1)])
+
+    expect(await screen.findByTestId('bell-count')).toHaveTextContent('1')
+    expect(bell()).toHaveAccessibleName('Notifiche: 1 notifiche non lette')
+  })
+
+  it('oltre 9 in tutto scrive «9+»', async () => {
+    renderMixed(requests(6), Array.from({ length: 5 }, (_, i) => liveNotification(i)))
+
+    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('9+'))
+  })
+
+  it("nel pannello richieste e notifiche stanno in un’unica lista, dalla più recente", async () => {
+    const { user } = renderMixed(
+      [dated(1, '2026-10-22T09:00:00Z'), dated(2, '2026-10-22T11:00:00Z')],
+      [liveNotification(1, { createdAt: '2026-10-22T10:00:00Z' }), liveNotification(2, { createdAt: '2026-10-22T12:00:00Z' })],
+    )
+    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('4'))
+
+    await user.click(bell())
+
+    const panel = await screen.findByRole('region', { name: 'Notifiche' })
+    const order = within(panel)
+      .getAllByRole('listitem')
+      .map((item) => item.textContent?.match(/Autore \d|Persona \d/)?.[0])
+    // 12:00 notifica 2, 11:00 richiesta 2, 10:00 notifica 1, 09:00 richiesta 1
+    expect(order).toEqual(['Autore 2', 'Persona 2', 'Autore 1', 'Persona 1'])
+  })
+
+  it('«Segna come lette» azzera le notifiche, non le richieste, e poi sparisce', async () => {
+    const { user, store } = renderMixed(requests(1), [liveNotification(1), liveNotification(2)])
+    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('3'))
+    await user.click(bell())
+
+    await user.click(await screen.findByRole('button', { name: 'Segna come lette' }))
+
+    expect(selectUnreadNotificationCount(store.getState())).toBe(0)
+    expect(screen.getByTestId('bell-count')).toHaveTextContent('1')
+    expect(screen.queryByRole('button', { name: 'Segna come lette' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Accetta: Persona 1' })).toBeInTheDocument()
+  })
+
+  it("senza notifiche non lette «Segna come lette» non c’è", async () => {
+    const { user, store } = renderMixed(requests(1), [liveNotification(1)])
+    store.dispatch(markAllRead())
+    await user.click(bell())
+
+    await screen.findByRole('region', { name: 'Notifiche' })
+    expect(screen.queryByRole('button', { name: 'Segna come lette' })).not.toBeInTheDocument()
+  })
+
+  it('il clic su una notifica la segna letta e chiude il pannello', async () => {
+    const { user, store } = renderMixed([], [liveNotification(1), liveNotification(2)])
+    await user.click(bell())
+
+    await user.click(await screen.findByRole('link', { name: 'Autore 2 ha messo mi piace al tuo post' }))
+
+    expect(selectUnreadNotificationCount(store.getState())).toBe(1)
+    await waitFor(() => expect(bell()).toHaveAttribute('aria-expanded', 'false'))
+  })
+
+  it('da tablet in su la lista unica mostra al massimo 10 righe e «Vedi tutte» se restano richieste fuori', async () => {
+    setViewportWidth(1280)
+    const { user } = renderMixed(requests(10), Array.from({ length: 4 }, (_, i) => liveNotification(i)), 12)
+    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('9+'))
+
+    await user.click(bell())
+
+    const panel = await screen.findByRole('region', { name: 'Notifiche' })
+    expect(within(panel).getAllByRole('listitem')).toHaveLength(10)
+    expect(within(panel).getByRole('link', { name: 'Vedi tutte' })).toBeInTheDocument()
+  })
+
+  it('sotto i 768 px mostra al massimo 5 righe', async () => {
+    setViewportWidth(375)
+    const { user } = renderMixed(requests(3), Array.from({ length: 4 }, (_, i) => liveNotification(i)))
+    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('7'))
+
+    await user.click(bell())
+
+    const panel = await screen.findByRole('region', { name: 'Notifiche' })
+    expect(within(panel).getAllByRole('listitem')).toHaveLength(5)
+  })
+
+  it('se tutte le richieste sono in vista non mostra «Vedi tutte», anche se le notifiche restano fuori', async () => {
+    setViewportWidth(375)
+    // Le richieste sono più recenti delle notifiche: le due righe in cima, poi tre notifiche
+    const { user } = renderMixed(
+      [dated(1, '2026-10-23T10:00:00Z'), dated(2, '2026-10-23T09:00:00Z')],
+      Array.from({ length: 8 }, (_, i) => liveNotification(i)),
+    )
+    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('9+'))
+
+    await user.click(bell())
+
+    const panel = await screen.findByRole('region', { name: 'Notifiche' })
+    expect(within(panel).getByRole('button', { name: 'Accetta: Persona 2' })).toBeInTheDocument()
+    expect(within(panel).queryByRole('link', { name: 'Vedi tutte' })).not.toBeInTheDocument()
+  })
+
+  it('se troppe notifiche recenti spingono fuori vista una richiesta compare «Vedi tutte»', async () => {
+    setViewportWidth(375)
+    // Le notifiche sono più recenti delle richieste: cinque righe di notifiche e le richieste restano fuori
+    const { user } = renderMixed(
+      [dated(1, '2026-10-20T10:00:00Z'), dated(2, '2026-10-20T09:00:00Z')],
+      Array.from({ length: 6 }, (_, i) => liveNotification(i)),
+    )
+    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('8'))
+
+    await user.click(bell())
+
+    const panel = await screen.findByRole('region', { name: 'Notifiche' })
+    expect(within(panel).queryByRole('button', { name: /^Accetta/ })).not.toBeInTheDocument()
+    expect(within(panel).getByRole('link', { name: 'Vedi tutte' })).toHaveAttribute('href', friendsPath('ricevute'))
   })
 })

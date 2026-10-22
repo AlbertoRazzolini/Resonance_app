@@ -1,13 +1,15 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
-import { MemoryRouter } from 'react-router'
+import { MemoryRouter, useLocation } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { makeStore } from '@/app/store'
 import { ConfirmationBar } from '@/components/ui/ConfirmationBar'
 import { sessionStarted } from '@/features/auth/authSlice'
+import { makeConversation } from '@/test/fixtures/chat'
 import { makeFriendship } from '@/test/fixtures/friends'
 import { makeLoginResponse } from '@/test/fixtures/users'
+import { conversationOpened, conversationOpenRejected } from '@/test/handlers/chat'
 import {
   friendshipActionRejected,
   friendshipActionSucceeds,
@@ -21,7 +23,12 @@ import type { FriendshipView } from '@/types/friends'
 import { FriendshipButton } from './FriendshipButton'
 
 // Pulsante dell'amicizia: azioni giuste per ognuno dei cinque stati, chiamata al backend, conferma scritta in cima
-// alla pagina (4 secondi), «Rimuovi» con conferma, «Scrivi» spento fino a FE-09b, errori nella riga.
+// alla pagina (4 secondi), «Rimuovi» con conferma, «Scrivi» che apre la chat, errori nella riga.
+
+/** Scrive il percorso attuale: i test controllano dove porta un clic. */
+function LocationProbe() {
+  return <p data-testid="location">{useLocation().pathname}</p>
+}
 function renderButton(status: FriendshipView, friendshipId: string | null = null) {
   const store = makeStore()
   store.dispatch(sessionStarted(makeLoginResponse()))
@@ -29,6 +36,7 @@ function renderButton(status: FriendshipView, friendshipId: string | null = null
     <Provider store={store}>
       <MemoryRouter>
         <ConfirmationBar />
+        <LocationProbe />
         <FriendshipButton userId="u-mario" displayName="Mario Rossi" status={status} friendshipId={friendshipId} />
       </MemoryRouter>
     </Provider>,
@@ -60,13 +68,13 @@ describe('FriendshipButton · un’azione per stato', () => {
     expect(screen.getByRole('button', { name: /^Rifiuta/ })).toBeEnabled()
   })
 
-  it('FRIENDS: «Amici», «Rimuovi» e «Scrivi» spento con la nota «Disponibile a breve»', () => {
+  it('FRIENDS: «Amici», «Rimuovi» e «Scrivi» attivi, senza note di attesa', () => {
     renderButton('FRIENDS', 'f1')
 
     expect(screen.getByText('Amici')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^Rimuovi/ })).toBeEnabled()
-    expect(screen.getByRole('button', { name: /^Scrivi/ })).toBeDisabled()
-    expect(screen.getByText('Disponibile a breve')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Scrivi/ })).toBeEnabled()
+    expect(screen.queryByText('Disponibile a breve')).not.toBeInTheDocument()
   })
 
   it('UNAVAILABLE: «Non disponibile» spento, nessuna azione', () => {
@@ -221,5 +229,29 @@ describe('FriendshipButton · errori', () => {
     await user.click(screen.getByRole('button', { name: /^Accetta/ }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('La richiesta non è più in attesa.')
+  })
+})
+
+describe('FriendshipButton · Scrivi', () => {
+  it('«Scrivi» apre la conversazione con la persona (POST /api/chats) e porta alla chat', async () => {
+    const calls: Request[] = []
+    server.use(conversationOpened(makeConversation({ id: 'conv-77' }), calls))
+    const user = renderButton('FRIENDS', 'f1')
+
+    await user.click(screen.getByRole('button', { name: /^Scrivi/ }))
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/chat/conv-77'))
+    expect(await calls[0].json()).toEqual({ recipientId: 'u-mario' })
+  })
+
+  it('se il server rifiuta (NOT_FRIENDS) resta nella riga con l’errore e non cambia pagina', async () => {
+    server.use(conversationOpenRejected(403, 'NOT_FRIENDS'))
+    const user = renderButton('FRIENDS', 'f1')
+
+    await user.click(screen.getByRole('button', { name: /^Scrivi/ }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent("Non c'è un'amicizia accettata con questa persona.")
+    expect(screen.getByTestId('location')).toHaveTextContent('/')
+    expect(screen.queryByTestId('location')).not.toHaveTextContent('/chat')
   })
 })

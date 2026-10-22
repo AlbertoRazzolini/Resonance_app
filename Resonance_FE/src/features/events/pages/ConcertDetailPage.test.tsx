@@ -239,3 +239,23 @@ describe('ConcertDetailPage · cancellazione del proprietario', () => {
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
   })
 })
+
+describe('ConcertDetailPage · contatto dell’organizzatore', () => {
+  const host = { id: 'h1', displayName: 'Teatro Puccini srl', avatarUrl: null }
+  const future = new Date(Date.now() + 30 * 86_400_000).toISOString()
+
+  it('un altro utente vede «Contatta l’organizzatore» sotto il dettaglio', async () => {
+    server.use(concertFound(makeConcert({ host, eventDate: future })))
+    renderPage('c1', makeMe({ id: 'altro' }))
+
+    expect(await screen.findByRole('heading', { name: "Contatta l'organizzatore" })).toBeInTheDocument()
+  })
+
+  it('il proprietario non lo vede: non può contattare se stesso', async () => {
+    server.use(concertFound(makeConcert({ host, eventDate: future })))
+    renderPage('c1', makeMe({ id: 'h1', roles: ['FAN', 'HOST'] }))
+    await screen.findByRole('heading', { level: 1 })
+
+    expect(screen.queryByRole('heading', { name: "Contatta l'organizzatore" })).not.toBeInTheDocument()
+  })
+})

@@ -6,7 +6,7 @@ import { makeStore } from '@/app/store'
 import { confirmationShown } from '@/lib/notices/confirmationSlice'
 import { ConfirmationBar } from './ConfirmationBar'
 
-// Striscia di conferma in cima alla pagina: mostra il testo, sparisce da sola dopo 4 secondi e si può chiudere.
+// Conferma in sovrimpressione: mostra il testo, sparisce da sola dopo 4 secondi e si può chiudere.
 function renderBar() {
   const store = makeStore()
   render(

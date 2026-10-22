@@ -1,7 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
 /**
- * Conferma breve di un'azione riuscita (es. «Amicizia accettata»), mostrata in cima alla pagina da `ConfirmationBar`.
+ * Conferma breve di un'azione riuscita (es. «Amicizia accettata»), mostrata in sovrimpressione in alto a destra da `ConfirmationBar`.
  * `seq` cresce a ogni conferma: una uguale alla precedente fa ripartire i 4 secondi invece di essere ignorata.
  */
 type ConfirmationState = { text: string | null; seq: number }

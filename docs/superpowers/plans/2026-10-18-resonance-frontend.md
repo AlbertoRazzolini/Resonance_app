@@ -160,8 +160,8 @@ Regole della struttura (decisione 78):
 | `LoadMore` | `<LoadMore hasMore loading onClick />` per gli elenchi a pagine | FE-05 |
 | `ConfirmDialog` | `<ConfirmDialog show title body confirmLabel onConfirm onCancel withReason? />` | FE-06 |
 | `UserText` | `<UserText text />`: testo con l'escape di React, a capo con CSS, URL `http`/`https` come `ExternalLink` | FE-07 |
-| `stomp` | `startStomp()`, `stopStomp()`, `subscribe<T>(destination, callback) => unsubscribe`, `send(destination, body): boolean`, `useStompStatus()` | FE-09b |
-| `notificationsSlice` | notifiche della sessione `{id, type, createdAt, actor, targetId, preview, read}`; azioni `received`, `markAllRead`; solo in memoria | FE-09b |
+| `stomp` | `startStomp(store)`, `stopStomp()`, `subscribe<T>(queue, callback) => unsubscribe`, `send(destination, body): boolean`, `onStompReconnected(listener)`, `useStompStatus()` (decisione 92: lo store è un parametro) | FE-09b |
+| `notificationsSlice` | notifiche della sessione `{id, type, createdAt, actor, targetId, preview, read}`; azioni `received`, `markRead`, `markAllRead`, `toastDismissed`; solo in memoria, al massimo 20 | FE-09b |
 
 ---
 

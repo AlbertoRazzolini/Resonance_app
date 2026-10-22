@@ -120,3 +120,23 @@ describe('IndieEventDetailPage · cancellazione del proprietario', () => {
     expect(screen.queryByRole('button', { name: 'Cancella' })).not.toBeInTheDocument()
   })
 })
+
+describe('IndieEventDetailPage · contatto dell’organizzatore', () => {
+  const musician = { id: 'm1', displayName: 'Gazebo Penguins', avatarUrl: null }
+  const future = new Date(Date.now() + 30 * 86_400_000).toISOString()
+
+  it('un altro utente vede «Contatta l’organizzatore» sotto il dettaglio', async () => {
+    server.use(indieEventFound(makeIndieEvent({ musician, eventDate: future })))
+    renderPage('e1', makeMe({ id: 'altro' }))
+
+    expect(await screen.findByRole('heading', { name: "Contatta l'organizzatore" })).toBeInTheDocument()
+  })
+
+  it('il proprietario non lo vede: non può contattare se stesso', async () => {
+    server.use(indieEventFound(makeIndieEvent({ musician, eventDate: future })))
+    renderPage('e1', makeMe({ id: 'm1', roles: ['FAN', 'MUSICIAN'] }))
+    await screen.findByRole('heading', { level: 1 })
+
+    expect(screen.queryByRole('heading', { name: "Contatta l'organizzatore" })).not.toBeInTheDocument()
+  })
+})

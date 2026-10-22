@@ -6,6 +6,10 @@ export const ROUTES = {
   collab: '/collab',
   feed: '/feed',
   chat: '/chat',
+  /** Modello della rotta di Messaggi: con o senza conversazione aperta; per un collegamento si usa `chatPath(id)`. */
+  chatPage: '/chat/:id?',
+  /** Modello di una conversazione aperta (con `:id`): serve a chi deve sapere se se ne sta guardando una. */
+  chatConversation: '/chat/:id',
   friends: '/amici',
   userSearch: '/amici/cerca',
   profile: '/profilo',
@@ -44,5 +48,5 @@ export const collabPath = (id: string) => `/collab/${encodeURIComponent(id)}`
 /** Percorso dell'elenco degli amici: la scheda sta nell'indirizzo, così la campanella apre «Ricevute» (decisione 78). */
 export const friendsPath = (tab?: 'ricevute' | 'inviate') => (tab ? `/amici?scheda=${tab}` : '/amici')
 
-/** Percorso di una conversazione: la pagina nasce in FE-09b, il collegamento della candidatura la usa già. */
+/** Percorso di una conversazione aperta (`ROUTES.chatPage` con l'id), per i collegamenti da candidature, contatti e notifiche. */
 export const chatPath = (conversationId: string) => `/chat/${encodeURIComponent(conversationId)}`

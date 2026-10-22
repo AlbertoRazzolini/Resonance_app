@@ -123,6 +123,19 @@ export function buildIndieEventRequest(values: EventFormValues, status: IndieEve
   return { ...commonFields(values), isFree: values.isFree, status }
 }
 
+/** Messaggio all'organizzatore: 1800 e non 2000, perché in chat porta davanti il prefisso con il titolo (decisione 69). */
+export const CONTACT_MESSAGE_MAX = 1800
+
+/** Errore del messaggio all'organizzatore (1–1800 caratteri dopo il trim), o `undefined` se va bene. */
+export function validateContactMessage(message: string): string | undefined {
+  const text = message.trim()
+  if (!text) return 'Scrivi il messaggio.'
+  if (text.length > CONTACT_MESSAGE_MAX) {
+    return `Il messaggio può avere al massimo ${CONTACT_MESSAGE_MAX} caratteri.`
+  }
+  return undefined
+}
+
 /** Stato di navigazione verso `/profilo` dopo una cancellazione dal dettaglio: serve all'avviso «Evento cancellato.». */
 export type EventLocationState = { eventDeleted?: true }
 

@@ -14,6 +14,7 @@ import { formatEventDateLong } from '@/lib/format/dates'
 import { parseHttpUrl } from '@/lib/urls'
 import type { IndieEventResponse, OfficialConcertResponse } from '@/types/events'
 import { useDeleteConcertMutation, useDeleteIndieEventMutation } from '../api/eventsApi'
+import { ContactOrganizer } from './ContactOrganizer'
 import type { EventLocationState } from '../eventForm'
 
 type EventDetailProps =
@@ -158,6 +159,7 @@ export function EventDetail(props: EventDetailProps) {
           <UserText text={event.description} />
         </div>
       )}
+      <ContactOrganizer {...props} />
       {currentUser?.id === author.id && <OwnerActions {...props} />}
     </article>
   )

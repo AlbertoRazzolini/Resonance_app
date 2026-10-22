@@ -83,7 +83,8 @@ export const routes: RouteObject[] = [
         ),
         children: [
           {
-            path: ROUTES.chat,
+            // Una sola rotta con `:id` facoltativo: passando dall'elenco a una conversazione la pagina non si rimonta
+            path: ROUTES.chatPage,
             handle: titled('Messaggi'),
             lazy: () => import('@/features/chat/pages/ChatPage'),
           },
