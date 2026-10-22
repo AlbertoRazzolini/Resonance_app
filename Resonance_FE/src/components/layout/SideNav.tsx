@@ -4,16 +4,29 @@ import { ROUTES } from '@/app/routes'
 import { Logo } from '@/components/ui/Logo'
 import { selectHasRole } from '@/features/auth/authSlice'
 import { useAppSelector } from '@/hooks/redux'
-import { ADMIN_NAV_ITEMS, NAV_ITEMS } from './navItems'
+import { ADMIN_NAV_ITEMS, NAV_ITEMS, type NavItem } from './navItems'
+
+/** Una voce della colonna: l'animazione sta sulla voce intera, non sull'icona di 22 px, così parte appena il mouse entra, anche sulla scritta. */
+function SideItem({ label, to, Icon, Badge }: NavItem) {
+  return (
+    <AnimateIcon animateOnHover asChild>
+      <NavLink to={to} className="rs-side-item">
+        <Icon size={22} />
+        <span>{label}</span>
+        {Badge && <Badge />}
+      </NavLink>
+    </AnimateIcon>
+  )
+}
 
 /**
  * Colonna di navigazione a sinistra, da 768 px (decisione 83): stretta con la scritta sotto l'icona a tablet, larga
  * con icona e scritta affiancate da 1200 px, dove ospita anche il logo (`showLogo`). La forma la decide il CSS. Per ADMIN
- * e SUPERADMIN, dopo le cinque voci, ci sono «Utenti» e «Nascosti» (solo interfaccia: la protezione vera è nel backend).
+ * e SUPERADMIN, dopo le cinque voci, c'è una schedina «ADMIN» (riquadro dal bordo giallo tenue) con «Utenti» e «Nascosti»:
+ * dice a colpo d'occhio che è un'area a sé (solo interfaccia: la protezione vera è nel backend).
  */
 export function SideNav({ showLogo }: { showLogo: boolean }) {
   const isAdmin = useAppSelector(selectHasRole('ADMIN'))
-  const items = isAdmin ? [...NAV_ITEMS, ...ADMIN_NAV_ITEMS] : NAV_ITEMS
 
   return (
     <aside className="rs-sidenav">
@@ -23,16 +36,19 @@ export function SideNav({ showLogo }: { showLogo: boolean }) {
         </Link>
       )}
       <nav aria-label="Navigazione principale" className="rs-sidenav__list">
-        {items.map(({ label, to, Icon, Badge }) => (
-          // L'animazione sta sulla voce intera, non sull'icona di 22 px: parte appena il mouse entra, anche sulla scritta
-          <AnimateIcon key={to} animateOnHover asChild>
-            <NavLink to={to} className="rs-side-item">
-              <Icon size={22} />
-              <span>{label}</span>
-              {Badge && <Badge />}
-            </NavLink>
-          </AnimateIcon>
+        {NAV_ITEMS.map((item) => (
+          <SideItem key={item.to} {...item} />
         ))}
+        {isAdmin && (
+          <div role="group" aria-label="Area admin" className="rs-side-admin">
+            <span className="rs-side-admin__label" aria-hidden="true">
+              ADMIN
+            </span>
+            {ADMIN_NAV_ITEMS.map((item) => (
+              <SideItem key={item.to} {...item} />
+            ))}
+          </div>
+        )}
       </nav>
     </aside>
   )

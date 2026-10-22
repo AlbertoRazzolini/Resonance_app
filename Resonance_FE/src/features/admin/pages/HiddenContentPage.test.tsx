@@ -147,6 +147,19 @@ describe('HiddenContentPage · elenco', () => {
     expect(profileCalls).toHaveLength(0)
   })
 
+  // Come nelle altre celle, il contenuto sta in un contenitore flex: in modalità scheda (sotto 992 px) l'etichetta «Dettagli»
+  // gli resta accanto invece di rimanere sola sopra il paragrafo, che occupa tutta la riga.
+  it('i dettagli stanno nel contenitore flex della cella, come le altre celle', async () => {
+    server.use(hiddenContentFound({ 'official-concerts': [makePage([concert])] }), publicUserFound(makePublicUser()))
+    renderHidden()
+
+    await screen.findByText('Serata contestata')
+    const cell = screen.getByText('Motivo: Contenuto offensivo').closest('td') as HTMLElement
+    expect(cell).toHaveAttribute('data-label', 'Dettagli')
+    expect(cell.firstElementChild).toHaveClass('rs-admin-row__cell')
+    expect(cell.firstElementChild).toContainElement(screen.getByText('Motivo: Contenuto offensivo'))
+  })
+
   it('passa alla pagina scelta', async () => {
     const calls: Request[] = []
     server.use(

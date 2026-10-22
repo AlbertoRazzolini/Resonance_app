@@ -60,14 +60,16 @@ export function HiddenContentRow({ type, item }: { type: ModeratedType; item: Hi
         <time dateTime={item.hiddenAt}>{formatDate(item.hiddenAt)}</time>
       </td>
       <td data-label="Dettagli">
-        <p className="rs-admin-row__suspension">
-          {item.deletedByOwner ? <span>Eliminato dall'utente</span> : <HiddenBy userId={item.hiddenBy} />}
-          {item.hiddenReason && (
-            <span>
-              <UserText text={`Motivo: ${item.hiddenReason}`} />
-            </span>
-          )}
-        </p>
+        <div className="rs-admin-row__cell">
+          <p className="rs-admin-row__suspension">
+            {item.deletedByOwner ? <span>Eliminato dall'utente</span> : <HiddenBy userId={item.hiddenBy} />}
+            {item.hiddenReason && (
+              <span>
+                <UserText text={`Motivo: ${item.hiddenReason}`} />
+              </span>
+            )}
+          </p>
+        </div>
       </td>
       <td className="rs-admin-row__actions">
         <div className="rs-admin-row__cell">

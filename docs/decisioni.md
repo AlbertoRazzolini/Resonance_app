@@ -3072,7 +3072,8 @@ più spento e la campanella non mostra più solo le richieste (testo del pannell
 
 ### Scelta
 
-- **Ingresso:** da 768 px la colonna di navigazione a sinistra ha, dopo Profilo, «Utenti» (icona `user-cog`) e «Nascosti» (icona
+- **Ingresso:** da 768 px la colonna di navigazione a sinistra ha, dopo Profilo, una schedina «ADMIN» (riquadro dal bordo giallo
+  tenue, idea dello studente, per dire che è un'area a sé) con «Utenti» (icona `user-cog`) e «Nascosti» (icona
   `eye-off`), animate come le altre (Animate UI), solo per ADMIN e SUPERADMIN; sul telefono le tab restano cinque (aggiunta dello
   studente dopo aver visto che il menu utente passava inosservato). Sul telefono, dove la colonna non c'è, le voci «Utenti» (`/admin/utenti`) e «Contenuti
   nascosti» (`/admin/contenuti`) stanno nel menu utente (da 768 px sarebbero ridondanti e non ci sono), solo per

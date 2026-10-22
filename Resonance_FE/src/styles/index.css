@@ -262,6 +262,28 @@ textarea {
   color: var(--rs-color-text);
 }
 
+/* Schedina «ADMIN» con «Utenti» e «Nascosti»: un riquadro dal bordo giallo tenue, per dire che è un'area a sé (FE-10) */
+.rs-side-admin {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rs-space-1);
+  margin-top: var(--rs-space-2);
+  padding: var(--rs-space-2);
+  border: 1px solid rgba(var(--rs-color-accent-rgb), 0.35);
+  border-radius: var(--rs-radius-lg);
+  background: rgba(var(--rs-color-accent-rgb), 0.04);
+}
+
+.rs-side-admin__label {
+  padding: 0 var(--rs-space-1);
+  color: rgba(var(--rs-color-accent-rgb), 0.8);
+  font-size: var(--rs-text-xs);
+  font-weight: var(--rs-weight-heading);
+  letter-spacing: var(--rs-tracking-label);
+  text-align: center;
+  text-transform: uppercase;
+}
+
 .rs-side-item.active {
   color: var(--rs-color-accent);
   background: rgba(var(--rs-color-accent-rgb), 0.1);

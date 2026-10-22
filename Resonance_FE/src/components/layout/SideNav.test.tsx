@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router'
@@ -64,6 +64,29 @@ describe('SideNav', () => {
         ROUTES.adminUsers,
         ROUTES.adminContent,
       ])
+    },
+  )
+
+  it.each([['ADMIN'], ['SUPERADMIN']] as [Role][])(
+    'a un %s racchiude «Utenti» e «Nascosti» in una schedina «ADMIN», senza le cinque voci principali',
+    (role) => {
+      renderSideNav(ROUTES.events, false, ['FAN', role])
+
+      const group = screen.getByRole('group', { name: 'Area admin' })
+      expect(within(group).getAllByRole('link').map((link) => link.textContent)).toEqual(['Utenti', 'Nascosti'])
+      expect(within(group).getByText('ADMIN')).toBeInTheDocument()
+      expect(within(group).queryByRole('link', { name: 'Eventi' })).not.toBeInTheDocument()
+      expect(within(group).queryByRole('link', { name: 'Profilo' })).not.toBeInTheDocument()
+    },
+  )
+
+  it.each([[['FAN']], [['FAN', 'MUSICIAN', 'HOST']]] as [Role[]][])(
+    'a chi ha i ruoli %s non mostra la schedina admin',
+    (roles) => {
+      renderSideNav(ROUTES.events, false, roles)
+
+      expect(screen.queryByRole('group', { name: 'Area admin' })).not.toBeInTheDocument()
+      expect(screen.queryByText('ADMIN')).not.toBeInTheDocument()
     },
   )
 
