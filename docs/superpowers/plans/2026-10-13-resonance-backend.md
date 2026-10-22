@@ -673,6 +673,15 @@ esistente usa nomi oltre i 30 caratteri, ci si ferma e si avvisa.
 **Criterio:** `./mvnw -q verify` verde; Postman con le due richieste nuove; §4.4, §6.4, §6.5 e decisione 84 aggiornate.
 **Commit proposto:** `feat(validation): limita il nome a 30 caratteri e vieta le emoji nel nome e nella password`
 
+### Card F7-06 · Notifiche persistenti (backend) — stima 3,5 h (provvisoria)
+
+Card nata il 22 ottobre dal frontend (richiesta dello studente: campanella con notifiche salvate che restano finché non sono lette, come
+quella di Facebook). Descrizione, punti aperti da porre allo studente a inizio card e sotto-task nel piano del frontend
+(`docs/superpowers/plans/2026-10-18-resonance-frontend.md`, sezione «Notifiche persistenti»), dove sta anche la card FE-13. Sostituisce la parte
+della decisione 59 che metteva le notifiche delle amicizie in Post-V1; la nuova decisione si scrive a inizio card. Ciclo del backend: TDD,
+`./mvnw -q verify`, Postman, `schema-db.md`.
+**Commit proposto:** `feat(notifications): aggiunge le notifiche persistenti con stato di lettura`
+
 ---
 
 # Card FE (lista "FE in attesa")

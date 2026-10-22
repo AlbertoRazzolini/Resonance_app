@@ -45,7 +45,8 @@ specchio. Prima card: **F7-04** (backend), da chiudere prima di FE-01.
 - Mobile-first; a fine card controllo a 375, 768 e 1280 px (telefono, tablet, desktop).
 - Riuso di NoseY: si copia e si adatta in Resonance (nomi in inglese, stili con Bootstrap e custom
   properties); NoseY non si modifica mai.
-- Nessuna modifica al backend salvo F7-04 e la CSP di FE-11; collection Postman aggiornata solo in F7-04.
+- Nessuna modifica al backend salvo F7-04, F7-06 (notifiche persistenti, 22 ottobre) e la CSP di FE-11; collection Postman aggiornata
+  solo in F7-04 e F7-06.
 - Verifiche a fine card, da `Resonance_FE`: `npm run lint`, `npm test`, `npm run build`. In FE-01 e
   FE-11 anche `docker build -f Resonance_BE/Dockerfile -t resonance .` dalla radice e, da
   `Resonance_BE`, `./mvnw -q verify`. Prerequisito della prova manuale: `docker compose up -d` e
@@ -188,6 +189,10 @@ tutto, da applicare **appena** un giorno sfora, senza aspettare il 23.
 ricalcolata. Lo studente stima di finire il frontend entro tre giorni e ha scelto di non tagliare per ora: l'ordine dei tagli sotto
 resta la riserva e si applica se un giorno sfora.
 
+**Aggiunta del 22 ottobre:** F7-06 e FE-13 (notifiche persistenti, circa 7 h in tutto, stime provvisorie) si inseriscono prima di FE-12
+e FE-11 e si sommano al totale; la tabella non è ricalcolata e il rischio del 23 ottobre resta **alto**. Scelta dello studente: nessun
+taglio e, se serve, lavoro anche di sera e di notte. L'ordine dei tagli sotto resta la riserva.
+
 ### Ordine dei tagli (se una card o un giorno sfora, avvisare subito)
 
 1. **ReactBits** in FE-12 (−1 h).
@@ -212,7 +217,8 @@ F7-04 → FE-01 → FE-02 → FE-03 → FE-03b (fase A; FE-03b è nata il 20 ott
 FE-05 crea `Map`, `ExternalLink` e `LoadMore`; FE-06 crea `ConfirmDialog`; FE-07 crea `UserText`, che
 da lì si applica a ogni testo. FE-09a precede FE-09b (la chat nuova si apre solo fra amici); il pulsante
 "Scrivi" (FE-09a) e "Apri la chat" della candidatura (FE-08) funzionano dopo FE-09b. FE-10 usa i dettagli
-dei contenuti di FE-05–FE-08. FE-12 dopo tutte le schermate, FE-11 per ultima.
+dei contenuti di FE-05–FE-08. F7-06 → FE-13 (notifiche persistenti: il frontend usa gli endpoint del backend; FE-13 riprende la campanella di
+FE-09a e FE-09b). FE-12 dopo tutte le schermate, FE-11 per ultima (le sue prove su Render includono le notifiche).
 
 ## Rischi e incompatibilità dichiarati
 
@@ -687,6 +693,83 @@ in modo differito), `components/` (`SuspensionDialog`, `AdminRoleButton`, `HideC
 **Criterio:** fase C chiusa: promemoria merge `develop → main`; su Render chat fra due account,
 sospensione dall'area admin che chiude la sessione WebSocket dell'altro, hide e restore.
 **Commit proposto:** `feat(fe-admin): aggiunge l'area di moderazione`
+
+---
+
+# Notifiche persistenti (22 ottobre, prima di FE-12)
+
+Aggiunta dello studente il 22 ottobre, dopo FE-10: la campanella resta vuota quando una richiesta di amicizia è accettata (nessuna
+notifica a chi l'ha mandata) e le notifiche non si ritrovano dopo un ricarico. Lo studente vuole il comportamento di una campanella
+come quella di Facebook: notifiche salvate, che restano finché non sono lette. Oggi sono solo in memoria (progettazione §6.13) e le
+notifiche delle amicizie sono Post-V1 (decisione 59): la richiesta **sostituisce** quella parte della decisione 59 (nuova decisione
+da scrivere a inizio di F7-06). Nessun taglio: lo studente ha scelto di non tagliare e di lavorare anche di sera se serve.
+
+Due card, come F7-04: F7-06 nel backend (ciclo del backend: TDD, `./mvnw -q verify`, Postman, schema) e FE-13 nel frontend (ciclo del
+frontend: `npm run lint`, `npm test`, `npm run build`, tre larghezze con Playwright). **Eccezione ai Vincoli globali:** il backend si
+tocca in F7-06, con la collection Postman. **Le stime sono provvisorie** e l'ambito **non è deciso**: i punti sotto si pongono allo
+studente a inizio card, uno per uno, prima di scrivere test o codice.
+
+### Card F7-06 · Notifiche persistenti (backend) — stima 3,5 h (provvisoria)
+
+**Riferimenti:** decisione 59 (da sostituire nella parte sulle notifiche delle amicizie), decisione 92 (notifiche live e campanella);
+§6.13, §6.14, §7 (notifiche live), `docs/schema-db.md`. Riuso NoseY: `notification/Notifica*` e `NotificheService*` sono nella lista «non
+portato» di `riuso-nosey.md`: si guardano solo come riferimento e la decisione sul riuso la prende lo studente.
+**Sicurezza: sì** (ogni utente legge e segna lette solo le proprie notifiche).
+**File (da confermare a inizio card):** package `notification` (entity, repository, service, controller, DTO), migrazione Flyway,
+`config/SecurityConfig`, i service che creano le notifiche; test d'integrazione; Postman (nuova cartella o in Friends); `docs/schema-db.md`
+(erDiagram e flowchart), `docs/progettazione.md`, `docs/decisioni.md`, `package-info.java`, questo piano.
+
+**Punti aperti da porre allo studente a inizio card (nessuno è deciso):**
+- **Quali eventi generano una notifica salvata:** richiesta di amicizia ricevuta e richiesta accettata (il caso che ha dato origine alla
+  card); e inoltre like, candidature, nuovi messaggi, contatto di un evento? Chi riceve cosa (la richiesta rifiutata resta silenziosa?).
+- **Stato di lettura:** solo letta/non letta, oppure anche «vista» (il numero sull'icona si azzera all'apertura del pannello, la singola
+  notifica resta non letta finché non si apre)?
+- **Che cosa diventa la notifica di una richiesta già gestita:** resta nell'elenco con l'esito, o sparisce.
+- **Elenco:** ordine, pagine, durata di conservazione (cancellazione dopo un certo tempo), tetto massimo per utente.
+- **Notifiche live (STOMP):** restano, e a cosa corrispondono nel nuovo modello; cosa succede alle notifiche solo in memoria di oggi.
+- **Endpoint:** elenco a pagine, conteggio delle non lette, segna letta, segna tutte lette; codici d'errore.
+- **Dati esistenti:** le richieste di amicizia in attesa diventano notifiche con una migrazione, o si parte da zero.
+- **Utenti sospesi e privacy:** cosa si salva e per quanto, mai testo di messaggi più lungo dell'anteprima attuale.
+
+**Sotto-task (bozza, da dettagliare con lo studente a inizio card):**
+- [ ] **1. Schema e migrazione.** Tabella delle notifiche con stato di lettura e indici; `schema-db.md` (erDiagram di dettaglio e completo,
+  flowchart di panoramica).
+- [ ] **2. Creazione delle notifiche.** Dagli eventi scelti (richiesta, accettazione, …), nella stessa transazione e senza rompere le
+  notifiche live esistenti.
+- [ ] **3. Endpoint.** Elenco, conteggio non lette, segna letta, segna tutte lette; solo le proprie notifiche; test d'integrazione.
+- [ ] **4. Notifica live e compatibilità.** Cosa arriva sul WebSocket e come il frontend di FE-13 la unisce all'elenco salvato.
+- [ ] **5. Postman, documentazione e chiusura.** Collection (successo e almeno un errore per endpoint), `progettazione.md`,
+  `decisioni.md` (sostituzione di parte della 59), questo piano; `./mvnw -q verify`.
+
+**Criterio:** `./mvnw -q verify` verde; Postman con gli endpoint nuovi; notifiche salvate e lette provate in locale con due account.
+**Commit proposto:** `feat(notifications): aggiunge le notifiche persistenti con stato di lettura`
+
+### Card FE-13 · Notifiche persistenti (frontend) — stima 3,5 h (provvisoria)
+
+**Riferimenti:** F7-06 (endpoint e modello), decisione 92 (campanella e toast), decisione 91 (richieste di amicizia nella campanella),
+decisione 78; **Playwright** (decisione 94) per il controllo a tre larghezze.
+**File (da confermare a inizio card):** `features/notifications/` (api, componenti, slice), `components/layout/NotificationBell.tsx`,
+test accanto ai file, handler e dati finti in `test/`, `types/`.
+
+**Punti aperti da porre allo studente a inizio card (nessuno è deciso):**
+- **Aspetto del pannello:** non lette evidenziate (con quale segno), schede «Tutte / Non lette» oppure un solo elenco; separazione fra recenti e
+  precedenti; pagine o «Carica altri».
+- **Il numero sull'icona:** conta le non lette, oppure si azzera all'apertura (distinzione «vista» e «letta»).
+- **Il clic su una notifica:** la segna letta e porta al bersaglio (profilo, annuncio, chat, richieste).
+- **Richieste di amicizia in attesa:** restano con «Accetta» e «Rifiuta» dentro la campanella come oggi, o diventano notifiche come le altre.
+- **Notifiche solo in memoria di oggi:** vengono sostituite dall'elenco salvato; i toast restano o cambiano.
+- **«Segna tutte come lette»** e vuoto del pannello; testi di ogni tipo di notifica.
+
+**Sotto-task (bozza, da dettagliare con lo studente a inizio card):**
+- [ ] **1. Tipi e API.** Endpoint di F7-06 con RTK Query, tag di cache, dati finti e handler MSW.
+- [ ] **2. Campanella.** Elenco salvato nel pannello, non lette evidenziate, numero, «Segna come lette», vuoto ed errore.
+- [ ] **3. Notifiche live.** Una notifica in arrivo si unisce all'elenco e al numero; riconnessione.
+- [ ] **4. Test, responsive e chiusura.** Test mirati; tre larghezze con Playwright; `npm run lint`, `npm test`, `npm run build`;
+  decisioni e questo piano.
+
+**Criterio:** campanella con notifiche che restano finché non sono lette, anche dopo il ricarico e fra due account (richiesta mandata,
+accettata, notifica a chi l'ha mandata); test verdi; tre larghezze.
+**Commit proposto:** `feat(fe-notifications): mostra le notifiche persistenti nella campanella`
 
 ---
 

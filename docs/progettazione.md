@@ -1865,6 +1865,10 @@ Calendario: 19 ottobre F7-04, FE-01, FE-02; 20 FE-03, FE-04, FE-05; 21 FE-06, FE
 FE-10, FE-12, FE-11; demo il 24, con la mattina come unico margine. Merge `develop → main` a fine di F7-04 e di ogni
 fase del frontend.
 
+Aggiunta del 22 ottobre (richiesta dello studente, nessun taglio): F7-06 Notifiche persistenti (backend, circa 3,5 h) e FE-13 Notifiche
+persistenti (frontend, circa 3,5 h), stime provvisorie, prima di FE-12 e FE-11. L'ambito si decide a inizio card; sostituiscono la parte
+della decisione 59 che metteva le notifiche delle amicizie in Post-V1. Dettagli nel piano del frontend.
+
 Ordine dei tagli del frontend: ReactBits (in FE-12) → notifiche live → contatto degli eventi → bacheca collab →
 revisione con impeccable (in FE-12). Mai tagliati, oltre a quelli del backend: registrazione e verifica, password
 dimenticata, profilo, ruoli e area personale, pubblicazione degli eventi, responsive sui tre breakpoint, test mirati.
