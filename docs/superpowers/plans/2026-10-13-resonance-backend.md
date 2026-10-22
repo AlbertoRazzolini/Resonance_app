@@ -682,6 +682,14 @@ della decisione 59 che metteva le notifiche delle amicizie in Post-V1; la nuova 
 `./mvnw -q verify`, Postman, `schema-db.md`.
 **Commit proposto:** `feat(notifications): aggiunge le notifiche persistenti con stato di lettura`
 
+### Card F7-07 · Prova di sicurezza dinamica con Strix — stima 3 h (provvisoria)
+
+Card nata il 22 ottobre dal frontend (richiesta dello studente): prova di sicurezza con Strix, strumento esterno open source che attacca
+l'applicazione in funzione, su uno stack **locale isolato**, mai su Render né sul database vero; correzioni dei problemi trovati con test prima.
+Descrizione, punti aperti da porre allo studente a inizio card e sotto-task nel piano del frontend (sezione «Notifiche persistenti», dopo
+FE-13). Ciclo del backend: TDD, `./mvnw -q verify`, Postman se cambia un endpoint. **Sicurezza: sì.**
+**Commit proposto:** `fix(security): corregge le falle trovate dalla prova dinamica`
+
 ---
 
 # Card FE (lista "FE in attesa")

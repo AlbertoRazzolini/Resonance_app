@@ -45,8 +45,8 @@ specchio. Prima card: **F7-04** (backend), da chiudere prima di FE-01.
 - Mobile-first; a fine card controllo a 375, 768 e 1280 px (telefono, tablet, desktop).
 - Riuso di NoseY: si copia e si adatta in Resonance (nomi in inglese, stili con Bootstrap e custom
   properties); NoseY non si modifica mai.
-- Nessuna modifica al backend salvo F7-04, F7-06 (notifiche persistenti, 22 ottobre) e la CSP di FE-11; collection Postman aggiornata
-  solo in F7-04 e F7-06.
+- Nessuna modifica al backend salvo F7-04, F7-06 (notifiche persistenti, 22 ottobre), F7-07 (correzioni dalla prova di sicurezza con
+  Strix, 22 ottobre) e la CSP di FE-11; collection Postman aggiornata solo in F7-04, F7-06 e, se cambia un endpoint, F7-07.
 - Verifiche a fine card, da `Resonance_FE`: `npm run lint`, `npm test`, `npm run build`. In FE-01 e
   FE-11 anche `docker build -f Resonance_BE/Dockerfile -t resonance .` dalla radice e, da
   `Resonance_BE`, `./mvnw -q verify`. Prerequisito della prova manuale: `docker compose up -d` e
@@ -189,8 +189,8 @@ tutto, da applicare **appena** un giorno sfora, senza aspettare il 23.
 ricalcolata. Lo studente stima di finire il frontend entro tre giorni e ha scelto di non tagliare per ora: l'ordine dei tagli sotto
 resta la riserva e si applica se un giorno sfora.
 
-**Aggiunta del 22 ottobre:** F7-06 e FE-13 (notifiche persistenti, circa 7 h in tutto, stime provvisorie) si inseriscono prima di FE-12
-e FE-11 e si sommano al totale; la tabella non è ricalcolata e il rischio del 23 ottobre resta **alto**. Scelta dello studente: nessun
+**Aggiunta del 22 ottobre:** F7-06 e FE-13 (notifiche persistenti, circa 7 h in tutto, stime provvisorie) e F7-07 (prova di sicurezza
+con Strix, circa 3 h, dipende dalle segnalazioni) si inseriscono, in questo ordine, prima di FE-12 e FE-11 e si sommano al totale; la tabella non è ricalcolata e il rischio del 23 ottobre resta **alto**. Scelta dello studente: nessun
 taglio e, se serve, lavoro anche di sera e di notte. L'ordine dei tagli sotto resta la riserva.
 
 ### Ordine dei tagli (se una card o un giorno sfora, avvisare subito)
@@ -218,7 +218,8 @@ FE-05 crea `Map`, `ExternalLink` e `LoadMore`; FE-06 crea `ConfirmDialog`; FE-07
 da lì si applica a ogni testo. FE-09a precede FE-09b (la chat nuova si apre solo fra amici); il pulsante
 "Scrivi" (FE-09a) e "Apri la chat" della candidatura (FE-08) funzionano dopo FE-09b. FE-10 usa i dettagli
 dei contenuti di FE-05–FE-08. F7-06 → FE-13 (notifiche persistenti: il frontend usa gli endpoint del backend; FE-13 riprende la campanella di
-FE-09a e FE-09b). FE-12 dopo tutte le schermate, FE-11 per ultima (le sue prove su Render includono le notifiche).
+FE-09a e FE-09b). F7-07 dopo FE-13 (la prova di sicurezza copre anche le notifiche nuove). FE-12 dopo tutte le schermate, FE-11 per
+ultima (le sue prove su Render includono le notifiche).
 
 ## Rischi e incompatibilità dichiarati
 
@@ -770,6 +771,46 @@ test accanto ai file, handler e dati finti in `test/`, `types/`.
 **Criterio:** campanella con notifiche che restano finché non sono lette, anche dopo il ricarico e fra due account (richiesta mandata,
 accettata, notifica a chi l'ha mandata); test verdi; tre larghezze.
 **Commit proposto:** `feat(fe-notifications): mostra le notifiche persistenti nella campanella`
+
+### Card F7-07 · Prova di sicurezza dinamica con Strix — stima 3 h (provvisoria, dipende dalle segnalazioni)
+
+Card aggiunta dallo studente il 22 ottobre, dopo FE-13 e prima di FE-12. **Strix** (`usestrix/strix`, open source, licenza Apache-2.0) è un
+agente AI che attacca un'applicazione web in funzione e prova le falle con proof-of-concept; serve a cercare falle di sicurezza, in
+aggiunta al report di F6-02 e alle correzioni di F7-03. **Playwright** (decisione 94) resta quello previsto: prove visive a tre
+larghezze, non sicurezza. Scartata ponytail (skill che riduce il codice scritto: non serve a testare e va contro le regole sui commenti e sui
+test). È una card del backend (le correzioni toccano soprattutto `Resonance_BE`), descritta qui come F7-04 e F7-06.
+
+**Riferimenti:** decisione 76 (CSP, rinforzo di sicurezza), `docs/report-sicurezza.md` (F6-02), decisione 94; §4 (autenticazione), §6.2
+(codici d'errore), §8 (sicurezza). Strumento esterno: si legge la fonte e si fissa una versione prima di installarlo; non entra nelle
+dipendenze del progetto e non si committa nulla di suo.
+**Sicurezza: sì.**
+**Eccezione ai Vincoli globali:** le correzioni toccano il backend (e il frontend dove serve), come F7-04, F7-06 e la CSP di FE-11.
+
+**Punti aperti da porre allo studente a inizio card (nessuno è deciso):**
+- **Modello AI e chiave:** quale provider e modello fa girare Strix, quanto si è disposti a spendere, dove sta la chiave (mai nel
+  repository, in un documento o in un messaggio di commit). Che cosa lascia il PC: codice, richieste e risposte di prova vanno al provider.
+- **Dove gira:** solo su uno stack locale isolato (backend e database di prova separati dal database vero, SUPERADMIN di prova, email
+  finte nel log, nessuna chiamata a Brevo). **Mai** contro Render né contro il database con l'account vero dello studente. Che cosa fare
+  con la geocodifica (Nominatim reale, con il suo limite) e con i limiti di frequenza che possono bloccare il login durante la prova.
+- **Modalità e confini:** prova senza credenziali e/o con account FAN, MUSICIAN, HOST, ADMIN e SUPERADMIN; aree incluse (autenticazione,
+  controlli d'accesso, contenuti, chat, notifiche, moderazione, WebSocket, Swagger) e aree escluse; durata e numero di giri.
+- **Come si trattano i risultati:** ogni segnalazione si verifica a mano prima di correggere (falsi positivi); gravità; che cosa si corregge
+  subito (con un test che fallisce prima, come ogni correzione), che cosa si rimanda o si accetta con una decisione.
+- **Dove sta il report:** aggiornare `docs/report-sicurezza.md` (è in `.gitignore` ma già tracciato) oppure un documento nuovo; mai
+  segreti, dettagli di exploit completi o credenziali nel documento (regola del progetto).
+
+**Sotto-task (bozza, da dettagliare con lo studente a inizio card):**
+- [ ] **1. Strumento e ambiente.** Lettura della fonte e versione fissata; stack locale isolato e dati di prova; prova a vuoto.
+- [ ] **2. Scansione.** Senza credenziali e con gli account scelti; raccolta delle segnalazioni.
+- [ ] **3. Verifica a mano e classificazione.** Per ogni segnalazione: riproducibile o falso positivo, gravità, area.
+- [ ] **4. Correzioni.** Una alla volta, con test prima, Postman se cambia un endpoint; `./mvnw -q verify` e, se tocca il frontend, lint,
+  test e build.
+- [ ] **5. Report e decisione.** Esito nel report, decisione nuova con le scelte dello studente, questo piano; nessuna credenziale
+  scritta; stack di prova spento e database di prova eliminato.
+
+**Criterio:** nessuna segnalazione valida di gravità alta o media lasciata aperta senza una decisione dello studente; test verdi dopo le
+correzioni; report aggiornato; nessun dato o chiave nel repository.
+**Commit proposto:** `fix(security): corregge le falle trovate dalla prova dinamica`
 
 ---
 
