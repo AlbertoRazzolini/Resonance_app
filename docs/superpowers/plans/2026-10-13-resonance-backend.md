@@ -673,6 +673,15 @@ esistente usa nomi oltre i 30 caratteri, ci si ferma e si avvisa.
 **Criterio:** `./mvnw -q verify` verde; Postman con le due richieste nuove; §4.4, §6.4, §6.5 e decisione 84 aggiornate.
 **Commit proposto:** `feat(validation): limita il nome a 30 caratteri e vieta le emoji nel nome e nella password`
 
+### Card F7-08 · Nome utente unico — stima 2,5 h (provvisoria)
+
+Card nata il 22 ottobre dal frontend (richiesta dello studente): il nome visibile (`displayName`) diventa unico senza distinguere le
+maiuscole, con nomi riservati (admin, superadmin, resonance); nessuna colonna nuova. Soluzione A scelta fra tre; nome e cognome sono tra le
+funzioni future (§15). Descrizione, scelte approvate, punti aperti da porre allo studente a inizio card e sotto-task nel piano del frontend
+(`docs/superpowers/plans/2026-10-18-resonance-frontend.md`, sezione «Nome utente unico»). Si fa **prima** di F7-06 (la sua migrazione precede
+quella delle notifiche). Ciclo del backend: TDD, `./mvnw -q verify`, Postman (409), `schema-db.md`. **Sicurezza: sì.**
+**Commit proposto:** `feat(users): rende unico il nome utente`
+
 ### Card F7-06 · Notifiche persistenti (backend) — stima 3,5 h (provvisoria)
 
 Card nata il 22 ottobre dal frontend (richiesta dello studente: campanella con notifiche salvate che restano finché non sono lette, come

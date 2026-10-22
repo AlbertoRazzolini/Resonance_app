@@ -1865,7 +1865,7 @@ Calendario: 19 ottobre F7-04, FE-01, FE-02; 20 FE-03, FE-04, FE-05; 21 FE-06, FE
 FE-10, FE-12, FE-11; demo il 24, con la mattina come unico margine. Merge `develop → main` a fine di F7-04 e di ogni
 fase del frontend.
 
-Aggiunta del 22 ottobre (richiesta dello studente, nessun taglio): F7-06 Notifiche persistenti (backend, circa 3,5 h) e FE-13 Notifiche
+Aggiunta del 22 ottobre (richiesta dello studente, nessun taglio): F7-08 Nome utente unico (backend e frontend, circa 2,5 h, prima di F7-06), F7-06 Notifiche persistenti (backend, circa 3,5 h) e FE-13 Notifiche
 persistenti (frontend, circa 3,5 h) e F7-07 Prova di sicurezza dinamica con Strix (circa 3 h, dipende dalle segnalazioni), stime
 provvisorie, in quest'ordine prima di FE-12 e FE-11. L'ambito si decide a inizio card; F7-06 e FE-13 sostituiscono la parte della
 decisione 59 che metteva le notifiche delle amicizie in Post-V1. Dettagli nel piano del frontend.
@@ -1908,7 +1908,7 @@ modifiche distruttive.
 | Appeal delle sospensioni | i campi di sospensione esistono già |
 | Upload immagini | oggi solo URL |
 | Centratura delle immagini scelta dall'utente | oggi le immagini dei post sono ritagliate al centro (`object-fit: cover`); servirebbe un punto di interesse scelto dall'utente per ogni immagine (salvato col post) e `object-position` nella card, anche per foto profilo e copertine |
-| Partecipazione agli eventi ("parteciperò") ed elenco degli eventi a cui si partecipa | tabella con chiave composta (utente, evento) per concerti e indie event, base per i `tickets`; gli elenchi dei contenuti creati sono già nell'MVP (decisione 77) |
+| Partecipazione agli eventi ("parteciperò") ed elenco degli eventi a cui si partecipa | tabella con chiave composta (utente, evento) per concerti e indie event, base per i `tickets`; gli elenchi dei contenuti creati sono già nell'MVP (decisione 77). Richiesta dello studente il 22 ottobre: il pulsante «parteciperò» nella card e nel dettaglio dell'evento, e l'elenco dei partecipanti, con la richiesta di amicizia da lì per poi scriversi |
 | Testo ricco nei contenuti (grassetto, menzioni, markdown) | `UserText` è l'unico punto di visualizzazione: DOMPurify rientra lì con una lista di tag ammessi (decisione 79) |
 | Profilo pubblico visibile a un anonimo solo se l'utente ha contenuti pubblicati | oggi `GET /api/users/{id}` è pubblico per ogni utente verificato (sezione 6.5); la regola richiede un controllo nel backend (404 per l'anonimo senza concerti, indie event, annunci o post pubblici) e cambia il design (decisione 86) |
 | Carosello degli eventi principali | un carosello animato (Motion o ReactBits) che mette in evidenza gli eventi principali, per esempio i più partecipati; oggi manca il dato: la partecipazione agli eventi è essa stessa Post-V1 (riga «Partecipazione agli eventi»), quindi i criteri possibili sono due, da scegliere allora: prossimi eventi per data o per vicinanza (nessun cambiamento al backend) oppure più partecipati (dopo la tabella delle partecipazioni); da verificare il peso del bundle e la CSP, come per i componenti di FE-12 (decisione 78) |
@@ -1919,7 +1919,8 @@ modifiche distruttive.
 | Candidature con accettazione o rifiuto da parte dell'autore | oggi la candidatura è solo un messaggio in chat (decisione 24) e l'autore chiude l'annuncio quando vuole; servirebbero una tabella delle candidature con lo stato, endpoint per accettare e rifiutare, notifiche e una migrazione; l'accettazione potrebbe tenere lo sblocco della chat anche dopo la chiusura (sezione 6.9, decisione 90) |
 | Modifica dei propri contenuti (concerti, indie event, annunci, post) | oggi il proprietario può solo creare, pubblicare una bozza e cancellare (sezioni 5.7 e 6.6); servono endpoint `PATCH` riservati al proprietario, con le stesse regole di validazione della creazione e, per gli eventi, una nuova geocodifica se cambia l'indirizzo |
 | Stato «recapitato» dei messaggi e lettura in diretta | oggi un messaggio ha solo `readAt` (sezione 6.9) e il backend non avvisa chi ha scritto quando l'altro legge (sezione 7.4: nessun evento di lettura); servirebbero una colonna di recapito (per esempio `delivered_at`) con una migrazione e un evento STOMP per recapito e lettura sulla coda dei messaggi di chi ha scritto; il frontend (card FE-09b) mostra già la spunta singola per «inviato» e la doppia colorata per «letto», aggiornata solo al caricamento dei messaggi; la doppia spunta di «recapitato» si aggiungerebbe allora |
-
+| Cancellazione dei messaggi di chat (come WhatsApp) | richiesta dello studente il 22 ottobre. Oggi un messaggio non si può togliere (sezione 6.9). Da decidere quando si fa: «elimina per me» e/o «elimina per tutti», limite di tempo, cosa vede l'altro («Questo messaggio è stato eliminato»), campo `deleted_at` o simile sul messaggio, anteprima della conversazione, aggiornamento in diretta sul WebSocket |
+| Nome e cognome degli utenti | richiesta dello studente il 22 ottobre, dopo la scelta del nome utente unico (F7-08): due colonne `first_name` e `last_name` nella tabella `users`, facoltative o obbligatorie solo per i nuovi account (gli esistenti non li hanno), con le regole su emoji e caratteri invisibili (decisione 84). Da decidere: visibilità (pubblica o solo agli amici), ricerca, profilo pubblico; dati personali, quindi legati al GDPR (Post-V2) |
 ### Post-V2
 
 Notifiche push per browser e mobile; integrazione Spotify; acquisto dei biglietti dei concerti

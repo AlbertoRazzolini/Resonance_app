@@ -45,8 +45,8 @@ specchio. Prima card: **F7-04** (backend), da chiudere prima di FE-01.
 - Mobile-first; a fine card controllo a 375, 768 e 1280 px (telefono, tablet, desktop).
 - Riuso di NoseY: si copia e si adatta in Resonance (nomi in inglese, stili con Bootstrap e custom
   properties); NoseY non si modifica mai.
-- Nessuna modifica al backend salvo F7-04, F7-06 (notifiche persistenti, 22 ottobre), F7-07 (correzioni dalla prova di sicurezza con
-  Strix, 22 ottobre) e la CSP di FE-11; collection Postman aggiornata solo in F7-04, F7-06 e, se cambia un endpoint, F7-07.
+- Nessuna modifica al backend salvo F7-04, F7-08 (nome utente unico, 22 ottobre), F7-06 (notifiche persistenti, 22 ottobre), F7-07 (correzioni dalla prova di sicurezza con
+  Strix, 22 ottobre) e la CSP di FE-11; collection Postman aggiornata solo in F7-04, F7-08, F7-06 e, se cambia un endpoint, F7-07.
 - Verifiche a fine card, da `Resonance_FE`: `npm run lint`, `npm test`, `npm run build`. In FE-01 e
   FE-11 anche `docker build -f Resonance_BE/Dockerfile -t resonance .` dalla radice e, da
   `Resonance_BE`, `./mvnw -q verify`. Prerequisito della prova manuale: `docker compose up -d` e
@@ -189,8 +189,9 @@ tutto, da applicare **appena** un giorno sfora, senza aspettare il 23.
 ricalcolata. Lo studente stima di finire il frontend entro tre giorni e ha scelto di non tagliare per ora: l'ordine dei tagli sotto
 resta la riserva e si applica se un giorno sfora.
 
-**Aggiunta del 22 ottobre:** F7-06 e FE-13 (notifiche persistenti, circa 7 h in tutto, stime provvisorie) e F7-07 (prova di sicurezza
-con Strix, circa 3 h, dipende dalle segnalazioni) si inseriscono, in questo ordine, prima di FE-12 e FE-11 e si sommano al totale; la tabella non è ricalcolata e il rischio del 23 ottobre resta **alto**. Scelta dello studente: nessun
+**Aggiunta del 22 ottobre:** F7-08 (nome utente unico, circa 2,5 h), F7-06 e FE-13 (notifiche persistenti, circa 7 h in tutto) e F7-07 (prova
+di sicurezza con Strix, circa 3 h, dipende dalle segnalazioni), stime provvisorie, si inseriscono, in questo ordine, prima di FE-12 e FE-11 e
+si sommano al totale; la tabella non è ricalcolata e il rischio del 23 ottobre resta **alto**. Scelta dello studente: nessun
 taglio e, se serve, lavoro anche di sera e di notte. L'ordine dei tagli sotto resta la riserva.
 
 ### Ordine dei tagli (se una card o un giorno sfora, avvisare subito)
@@ -217,7 +218,7 @@ F7-04 → FE-01 → FE-02 → FE-03 → FE-03b (fase A; FE-03b è nata il 20 ott
 FE-05 crea `Map`, `ExternalLink` e `LoadMore`; FE-06 crea `ConfirmDialog`; FE-07 crea `UserText`, che
 da lì si applica a ogni testo. FE-09a precede FE-09b (la chat nuova si apre solo fra amici); il pulsante
 "Scrivi" (FE-09a) e "Apri la chat" della candidatura (FE-08) funzionano dopo FE-09b. FE-10 usa i dettagli
-dei contenuti di FE-05–FE-08. F7-06 → FE-13 (notifiche persistenti: il frontend usa gli endpoint del backend; FE-13 riprende la campanella di
+dei contenuti di FE-05–FE-08. F7-08 (nome utente unico) prima di F7-06, perché la sua migrazione precede quella delle notifiche. F7-06 → FE-13 (notifiche persistenti: il frontend usa gli endpoint del backend; FE-13 riprende la campanella di
 FE-09a e FE-09b). F7-07 dopo FE-13 (la prova di sicurezza copre anche le notifiche nuove). FE-12 dopo tutte le schermate, FE-11 per
 ultima (le sue prove su Render includono le notifiche).
 
@@ -694,6 +695,51 @@ in modo differito), `components/` (`SuspensionDialog`, `AdminRoleButton`, `HideC
 **Criterio:** fase C chiusa: promemoria merge `develop → main`; su Render chat fra due account,
 sospensione dall'area admin che chiude la sessione WebSocket dell'altro, hide e restore.
 **Commit proposto:** `feat(fe-admin): aggiunge l'area di moderazione`
+
+---
+
+# Nome utente unico (22 ottobre, prima di F7-06)
+
+Richiesta dello studente il 22 ottobre: gli utenti non hanno nome e cognome, quindi il nome visibile (`displayName`) deve essere unico,
+come un nome utente nei videogiochi. Oggi nel database è unica solo l'email (`uq_users_email`): due utenti possono chiamarsi allo stesso
+modo (nel database locale non ce ne sono). Scelta dello studente fra tre soluzioni: **A, nome unico e basta**; aggiungere nome e
+cognome (facoltativi o obbligatori) è rimandato alle funzioni future (progettazione §15). Una card sola, backend e frontend, come
+l'unicità della email: si fa **prima** di F7-06, perché la sua migrazione deve precedere quella delle notifiche.
+
+### Card F7-08 · Nome utente unico — stima 2,5 h (provvisoria)
+
+**Riferimenti:** decisione 84 (regole su nome e password), `docs/schema-db.md`; §4.4, §6.4, §6.5; decisione 41 e 43 (entity).
+**Sicurezza: sì** (impersonificazione: stessi nomi, nomi che imitano l'amministrazione).
+**Eccezione ai Vincoli globali:** il backend si tocca qui (migrazione, errore, test, Postman), insieme a un piccolo intervento nel frontend.
+
+**Scelte già approvate dallo studente (soluzione A «come proponi»):**
+- il nome è unico **senza distinguere maiuscole** («Marco» e «marco» sono lo stesso nome);
+- gli spazi nel nome restano ammessi (come oggi: 3 degli 8 nomi del database locale ne hanno);
+- **nomi riservati**: admin, superadmin e resonance non si possono scegliere (elenco esatto da confermare a inizio card); l'account SUPERADMIN
+  creato dalle variabili d'ambiente (`SuperadminBootstrap`) non cambia, come in F7-05;
+- un nome lasciato da chi lo cambia torna disponibile;
+- nessuna colonna nuova e nessun rinominare: il campo resta `displayName` in DTO, JSON e Postman; nell'interfaccia diventa «Nome utente»
+  (testi da proporre allo studente a inizio card).
+
+**Punti aperti da porre allo studente a inizio card (nessuno è deciso):**
+- elenco esatto dei nomi riservati e se vietarli anche con maiuscole e spazi diversi;
+- cosa fare se su Render esistono già nomi doppi (di solito si controlla con una `SELECT` di sola lettura prima della migrazione);
+- se i doppi spazi dentro il nome si riducono a uno solo nei nomi nuovi;
+- nome «quasi uguale» (per esempio con lettere simili): si accetta il rischio o si aggiunge una regola;
+- testo dell'errore («Questo nome utente è già preso») e dell'etichetta nell'interfaccia.
+
+**Sotto-task (bozza, da dettagliare con lo studente a inizio card):**
+- [ ] **1. Regole e test.** Controllo dei doppioni esistenti, migrazione con indice unico su `lower(display_name)`, nomi riservati; test del
+  service.
+- [ ] **2. Registrazione e modifica del profilo.** Nuovo errore 409 `DISPLAY_NAME_TAKEN`; due richieste insieme: la seconda ottiene il 409 per
+  l'indice, non un 500; test d'integrazione.
+- [ ] **3. Frontend.** Messaggio sul campo nel form di registrazione e nel profilo, etichetta «Nome utente», test; tre larghezze con Playwright.
+- [ ] **4. Postman, documentazione e chiusura.** Collection (409 in registrazione e in modifica), §4.4, §6.2, §6.4, §6.5, `schema-db.md`,
+  decisione nuova, questo piano; `./mvnw -q verify`, `npm run lint`, `npm test`, `npm run build`.
+
+**Criterio:** due utenti non possono avere lo stesso nome, anche con maiuscole diverse; nomi riservati rifiutati; il frontend mostra l'errore
+sul campo; `./mvnw -q verify` e test del frontend verdi; Postman con il 409.
+**Commit proposto:** `feat(users): rende unico il nome utente`
 
 ---
 
