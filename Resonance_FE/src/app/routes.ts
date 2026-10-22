@@ -6,6 +6,8 @@ export const ROUTES = {
   collab: '/collab',
   feed: '/feed',
   chat: '/chat',
+  friends: '/amici',
+  userSearch: '/amici/cerca',
   profile: '/profilo',
   profileEdit: '/profilo/modifica',
   /** Modello della rotta; per un collegamento si usa `userPath(id)`. */
@@ -38,6 +40,9 @@ export const indieEventPath = (id: string) => `/indie/${encodeURIComponent(id)}`
 
 /** Percorso del dettaglio di un annuncio collab. */
 export const collabPath = (id: string) => `/collab/${encodeURIComponent(id)}`
+
+/** Percorso dell'elenco degli amici: la scheda sta nell'indirizzo, così la campanella apre «Ricevute» (decisione 78). */
+export const friendsPath = (tab?: 'ricevute' | 'inviate') => (tab ? `/amici?scheda=${tab}` : '/amici')
 
 /** Percorso di una conversazione: la pagina nasce in FE-09b, il collegamento della candidatura la usa già. */
 export const chatPath = (conversationId: string) => `/chat/${encodeURIComponent(conversationId)}`

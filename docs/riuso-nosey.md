@@ -143,8 +143,14 @@ Bootstrap e le custom properties `--rs-*` (decisione 78).
 | `components/mappa/mappa.css` | `components/map/map.css` | A | FE-05 | Controlli, attribuzione e fumetto riscritti con i token `--rs-*`; senza il filtro «fiord». |
 | `features/eventi/FormEvento.tsx` | `features/events/eventForm.ts`, `features/events/components/ConcertForm.tsx`, `IndieEventForm.tsx`, `EventFormFields.tsx` | A | FE-06 | Si tiene l'idea: controlli del client come quelli del backend prima dell'invio, errore sotto ogni campo che sparisce quando lo si cambia, errori del server sui campi. Non si portano la mappa, `CercaIndirizzo` e le coordinate (l'indirizzo lo geocodifica il backend), la data di fine e l'AI. Campi di Resonance (titolo, descrizione, locale, indirizzo, data, generi a chip, copertina, biglietto o «Ingresso gratuito»). |
 | `components/ui/DateTimeField.tsx` | `components/ui/DateTimeField.tsx` | A | FE-06 | Si tiene `datetime-local` con il minimo e la conversione di una `Date` nel formato del campo. Senza `Campo`, `soloData` e Tailwind; stili con Bootstrap e `--rs-*`. La data in istante con offset la fa `eventDateToIso`. |
+| `features/social/PulsanteAmicizia.tsx` | `features/friends/components/FriendshipButton.tsx` | A | FE-09a | Si tiene la logica per stato (aggiungi, in attesa e annulla, accetta e rifiuta, amici) e il comportamento su `RICHIESTA_GIA_RICEVUTA` (qui `FRIEND_REQUEST_ALREADY_RECEIVED`: la ricerca si ricarica e compare «Accetta»). Si toglie l'evento come prerequisito (la richiesta parte da `userId`), il `chatId` e l'avviso a toast (qui la striscia `ConfirmationBar`); si aggiungono `UNAVAILABLE` e «Rimuovi» con conferma; «Scrivi» spento fino a FE-09b. |
+| `features/social/RigaAmicizia.tsx` | `features/friends/components/PersonRow.tsx`, `FriendshipPages.tsx` | A | FE-09a | Si tiene la riga con foto, nome e azioni. Si toglie «Conosciuti a ...» (nessun evento nelle amicizie di Resonance, decisione 59); la riga è condivisa da ricerca, elenchi e campanella. |
+| `hooks/useValoreRitardato.ts` | `hooks/useDebouncedValue.ts` | R | FE-09a | Nome in inglese; l'attesa non ha un valore di base (la ricerca usa 400 ms, decisione 64). |
 
 **Non consultati in FE-05:** `features/eventi/ListaEventiMappa` e `components/eventi/CardEvento`: l'elenco e la card di Resonance sono nuovi, disegnati dal mock-up Stitch (NoseY ha stati e POI degli eventi, Resonance no).
+
+**Non portato in FE-09a:** `features/social/AvatarAmico.tsx`: il pallino «online» richiede la presenza degli utenti, che
+Resonance non ha; si usa `components/ui/Avatar.tsx`.
 
 **Non portato nel frontend:** stili e configurazione Tailwind, MSW nel browser (`mocks/`,
 `public/mockServiceWorker.js`: in Resonance MSW serve solo ai test), `qrcode.react` e le schermate dei

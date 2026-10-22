@@ -1,6 +1,8 @@
 import { configureStore, createListenerMiddleware } from '@reduxjs/toolkit'
+import { setupListeners } from '@reduxjs/toolkit/query'
 import { authReducer, sessionEnded } from '@/features/auth/authSlice'
 import { api } from '@/lib/api/apiSlice'
+import { confirmationReducer } from '@/lib/notices/confirmationSlice'
 import { noticeReducer } from '@/lib/notices/noticeSlice'
 
 /**
@@ -16,12 +18,21 @@ export function makeStore() {
     },
   })
   return configureStore({
-    reducer: { auth: authReducer, notice: noticeReducer, [api.reducerPath]: api.reducer },
+    reducer: {
+      auth: authReducer,
+      notice: noticeReducer,
+      confirmation: confirmationReducer,
+      [api.reducerPath]: api.reducer,
+    },
     middleware: (getDefault) => getDefault().prepend(listener.middleware).concat(api.middleware),
   })
 }
 
 export const store = makeStore()
+
+// Ascolta il ritorno sulla scheda del browser: serve a chi chiede `refetchOnFocus` (la campanella, decisione 78). Solo lo
+// store dell'app: i test ne creano uno per prova e attivano gli ascoltatori dove servono.
+setupListeners(store.dispatch)
 
 export type AppStore = ReturnType<typeof makeStore>
 export type RootState = ReturnType<AppStore['getState']>

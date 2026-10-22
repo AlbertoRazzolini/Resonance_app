@@ -2877,3 +2877,65 @@ Ogni punto è stato proposto allo studente con alternative, pro, contro e raccom
 - **Chip dei generi che compaiono solo con il primo genere:** sposterebbero i pulsanti e il clic su «Pubblica» andrebbe a vuoto.
 - **Lasciare ai moduli lo scorrimento del browser:** non arriva al campo in cima quando si preme «Pubblica» in fondo.
 - **Date numeriche anche negli eventi:** nel dettaglio il giorno della settimana a parole si legge meglio.
+
+## Decisione 91: amicizie, ricerca utenti e campanella nel frontend (card FE-09a, progettazione, sezioni 6.5 e 6.14)
+
+### Scelta
+
+Scelte dello studente, una per una, a inizio card:
+
+- **Accesso:** la campanella e una voce «Amici» nel menu utente. La barra resta a 5 voci (decisione 83). Percorsi
+  `/amici` (elenchi) e `/amici/cerca` (ricerca), in `routes.ts` come `ROUTES.friends`, `ROUTES.userSearch` e
+  `friendsPath('ricevute' | 'inviate')`.
+- **Schede nell'indirizzo:** `/amici?scheda=ricevute` o `?scheda=inviate`; senza parametro si apre «Amici». Serve a «Vedi
+  tutte» della campanella e al ricarico. Un valore sconosciuto apre «Amici».
+- **Ricerca nell'indirizzo:** il testo cercato sta in `?q=`, così «Indietro» dal profilo ritrova la ricerca. La chiamata
+  parte 400 ms dopo l'ultimo tasto e con almeno 2 caratteri (spazi ai bordi esclusi); il campo accetta al massimo 50.
+- **Campanella come pannello:** il clic apre un pannello con titolo «Notifiche» e una riga per richiesta ricevuta
+  (Accetta e Rifiuta), non un semplice link. Il numero sopra l'icona va da 1 a «9+». Il pannello è pensato per ospitare in
+  futuro altri tipi di notifica (notifiche live di FE-09b e oltre).
+- **Una sola chiamata per numero e righe:** `GET /api/friendships?type=INCOMING&size=10`; il numero è `totalElements`. Il piano
+  diceva `size=1` solo per il numero; con il pannello serve anche l'elenco.
+- **Righe del pannello:** le 5 più recenti sotto i 768 px, le 10 più recenti da tablet in su; «Vedi tutte» (verso
+  `/amici?scheda=ricevute`) solo se ci sono più richieste di quelle mostrate. Vuoto: «Nessuna richiesta in attesa.»
+- **Ricarica senza polling:** all'apertura dell'app, all'apertura del pannello, al ritorno sulla scheda del browser e dopo ogni
+  azione sulle amicizie. Il ritorno sulla scheda usa `setupListeners` in `store.ts` e `refetchOnFocus` solo sulla query della
+  campanella; le altre liste non cambiano comportamento.
+- **«Scrivi» spento:** nello stato `FRIENDS` il pulsante c'è ma è disattivato, con la nota «Disponibile a breve»; FE-09b lo
+  attiva con `POST /api/chats` e il passaggio a `chatPath`. Il badge dei messaggi sull'icona Messaggi resta a FE-09b.
+- **«Carica altri»** negli elenchi e nei risultati, come bacheca e feed. Nome e foto di ogni riga aprono il profilo
+  pubblico `/utenti/:id`. Nessun pulsante dell'amicizia nel profilo pubblico: solo la ricerca restituisce lo stato.
+- **Conferma scritta in cima alla pagina:** dopo un'azione riuscita compare una striscia, che sparisce dopo 4 secondi e si può
+  chiudere. Testi: «Richiesta inviata», «Richiesta annullata», «Amicizia accettata», «Richiesta rifiutata», «Amicizia
+  rimossa». `FRIEND_REQUEST_ALREADY_RECEIVED` non è un errore: la striscia dice «Questa persona ti ha già inviato una
+  richiesta», la ricerca si ricarica e compare «Accetta».
+- **Testi dell'interfaccia:** campo «Cerca per nome»; «Scrivi almeno 2 caratteri per cercare.»; «Nessuna persona trovata.»;
+  pulsanti «Aggiungi», «Richiesta inviata» con «Annulla», «Accetta» e «Rifiuta», «Amici» con «Scrivi» e «Rimuovi», «Non
+  disponibile» (spento); schede «Amici», «Ricevute», «Inviate»; elenchi vuoti «Non hai ancora amici.», «Nessuna richiesta
+  ricevuta.», «Nessuna richiesta inviata.» con il link «Cerca persone»; rimozione con titolo «Rimuovere NOME dagli amici?» e
+  testo «La chat resta leggibile, ma nessuno dei due potrà più scrivere. NOME non riceve nessun avviso.»; voce del menu «Amici».
+- **`AvatarAmico` di NoseY non si porta:** il pallino «online» richiede la presenza degli utenti, che Resonance non ha.
+
+### Motivazione
+
+- Il pannello evita di riscrivere la campanella quando arriveranno altri tipi di notifica, e con una sola chiamata il numero e
+  le righe non si possono contraddire.
+- L'indirizzo che ricorda scheda e testo rende utili il tasto «Indietro» e il collegamento «Vedi tutte».
+- L'attesa di 400 ms e il minimo di 2 caratteri evitano di consumare il limite `USER_SEARCH`, che conta anche le richieste non
+  valide (decisione 64).
+- Nessun polling: le notifiche live delle amicizie sono Post-V1 (decisione 59) e un aggiornamento periodico le imiterebbe.
+- «Scrivi» spento evita di creare conversazioni che nessuno può ancora leggere.
+
+### Alternative scartate
+
+- **Campanella come semplice link a `/amici`:** va riscritta appena arriva un secondo tipo di notifica.
+- **Due chiamate (numero con `size=1` e righe a parte):** due richieste da tenere allineate dopo ogni azione.
+- **Sesta voce «Amici» nella navigazione:** contraddice le 5 voci della decisione 83 e stringe le tab del telefono.
+- **Schede e testo di ricerca solo nello stato del componente:** la campanella non potrebbe aprire «Ricevute» e «Indietro»
+  perderebbe la ricerca.
+- **`setupListeners` scritto a mano nel componente:** codice nostro da mantenere al posto di quello della libreria.
+- **«Scrivi» già collegato a `POST /api/chats`** o **nascosto:** la prima crea chat illeggibili, la seconda non distingue lo
+  stato `FRIENDS`.
+- **Messaggio di esito scritto nella riga:** la riga esce dalla lista dopo accettazione, rifiuto o rimozione e il messaggio
+  sparirebbe con lei.
+- **Caricamento automatico allo scorrimento:** codice nuovo, diverso dalle altre liste.

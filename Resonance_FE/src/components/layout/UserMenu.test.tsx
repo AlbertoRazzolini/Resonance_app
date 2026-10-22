@@ -113,7 +113,15 @@ describe('UserMenu', () => {
 
     await screen.findByText('Esci')
     const items = [...document.querySelectorAll('.dropdown-item')].map((item) => item.textContent)
-    expect(items).toEqual(['Pubblica concerto', 'Pubblica indie event', 'Esci'])
+    expect(items).toEqual(['Amici', 'Pubblica concerto', 'Pubblica indie event', 'Esci'])
+  })
+
+  it('a tutti i ruoli mostra «Amici», che porta all’elenco degli amici', async () => {
+    renderMenu('Mattia', { roles: ['FAN'] })
+
+    await userEvent.click(screen.getByRole('button', { name: /Menu dell'account/ }))
+
+    expect(await screen.findByRole('link', { name: 'Amici' })).toHaveAttribute('href', ROUTES.friends)
   })
 
   it('Esci chiude la sessione dopo il DELETE del refresh token', async () => {

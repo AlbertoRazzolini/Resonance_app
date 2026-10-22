@@ -1442,3 +1442,120 @@ textarea {
   line-clamp: 3;
   overflow-wrap: anywhere;
 }
+
+/* Righe delle persone (ricerca, amici, campanella): foto, nome con città e azioni; sul telefono le azioni vanno a capo */
+.rs-person-list {
+  display: grid;
+  gap: var(--rs-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rs-person {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rs-space-3);
+  padding: var(--rs-space-3);
+  border: 1px solid var(--rs-color-border);
+  border-radius: var(--rs-radius-lg);
+  background: var(--rs-color-surface);
+}
+
+.rs-person__who {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.rs-person__name {
+  display: block;
+  overflow: hidden;
+  color: var(--rs-color-text);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rs-person__city {
+  margin: 0;
+  color: var(--rs-color-text-muted);
+  font-size: var(--rs-text-sm);
+}
+
+.rs-person__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rs-space-2);
+  margin-left: auto;
+}
+
+.rs-person__state {
+  color: var(--rs-color-text-muted);
+  font-size: var(--rs-text-sm);
+}
+
+.rs-person__note {
+  color: var(--rs-color-text-muted);
+  font-size: var(--rs-text-sm);
+}
+
+/* Errore di un'azione: sotto tutta la riga */
+.rs-person__error {
+  flex: 1 0 100%;
+}
+
+.rs-person__error .alert {
+  margin: 0;
+}
+
+/* Conferma in cima alla pagina: resta visibile mentre si scorre l'elenco */
+.rs-confirmation {
+  position: sticky;
+  top: var(--rs-space-3);
+  z-index: 1020;
+}
+
+/* Numero delle richieste in attesa sopra la campanella (da 1 a «9+») */
+.rs-bell {
+  position: relative;
+}
+
+.rs-bell::after {
+  display: none;
+}
+
+.rs-bell__count {
+  position: absolute;
+  top: -0.15rem;
+  right: -0.35rem;
+  min-width: 1.15rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--rs-color-accent);
+  color: var(--rs-color-accent-ink);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.15rem;
+  text-align: center;
+}
+
+/* Pannello della campanella: largo come lo schermo sul telefono, 24 rem da tablet in su */
+.rs-bell__panel {
+  width: min(24rem, calc(100vw - 2 * var(--rs-space-3)));
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: var(--rs-space-3);
+}
+
+.rs-bell__title {
+  margin: 0 0 var(--rs-space-3);
+  font-size: var(--rs-text-lg);
+}
+
+.rs-bell__all {
+  display: block;
+  margin-top: var(--rs-space-3);
+  text-align: center;
+}

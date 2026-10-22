@@ -6,15 +6,19 @@ import { makeStore } from '@/app/store'
 import { ROUTES } from '@/app/routes'
 import { sessionEnded, sessionStarted } from '@/features/auth/authSlice'
 import { makeLoginResponse, makeMe } from '@/test/fixtures/users'
+import { friendshipsFound } from '@/test/handlers/friends'
+import { server } from '@/test/server'
 import { NavBar } from './NavBar'
 
 // Barra in alto: il logo porta agli eventi (e si toglie sul desktop, dove sta nella colonna), il titolo lo dichiara la
-// rotta, la campanella (disattivata fino a FE-09b) c'è solo con la sessione e non esiste il menu a scomparsa
+// rotta, la campanella (richieste di amicizia in attesa, FE-09a) c'è solo con la sessione e non esiste il menu a scomparsa
 // (decisione 83). Serve un router a dati: il titolo si legge da `useMatches`.
 function renderNavBar(
   loggedIn: boolean,
   { showLogo = true, title }: { showLogo?: boolean; title?: string } = {},
 ) {
+  // La campanella chiede le richieste in attesa appena compare
+  server.use(friendshipsFound({}))
   const store = makeStore()
   store.dispatch(loggedIn ? sessionStarted(makeLoginResponse({ user: makeMe() })) : sessionEnded())
   const router = createMemoryRouter([
@@ -52,10 +56,10 @@ describe('NavBar', () => {
     expect(document.querySelector('.rs-topbar__title')).toBeNull()
   })
 
-  it("per chi ha la sessione mostra la campanella, disattivata e con il nome 'Notifiche'", () => {
+  it("per chi ha la sessione mostra la campanella, attiva e con il nome 'Notifiche'", () => {
     renderNavBar(true)
 
-    expect(screen.getByRole('button', { name: 'Notifiche' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Notifiche' })).toBeEnabled()
   })
 
   it("per l'anonimo non mostra la campanella ma Accedi e Registrati", () => {

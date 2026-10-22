@@ -88,6 +88,16 @@ export const routes: RouteObject[] = [
             lazy: () => import('@/features/chat/pages/ChatPage'),
           },
           {
+            path: ROUTES.friends,
+            handle: titled('Amici'),
+            lazy: () => import('@/features/friends/pages/FriendsPage'),
+          },
+          {
+            path: ROUTES.userSearch,
+            handle: titled('Cerca persone'),
+            lazy: () => import('@/features/friends/pages/UserSearchPage'),
+          },
+          {
             path: ROUTES.profile,
             handle: titled('Profilo'),
             lazy: () => import('@/features/users/pages/ProfilePage'),

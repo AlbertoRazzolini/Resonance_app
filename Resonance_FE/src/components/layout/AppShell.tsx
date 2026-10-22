@@ -1,5 +1,6 @@
 import { Container } from 'react-bootstrap'
 import { Outlet } from 'react-router'
+import { ConfirmationBar } from '@/components/ui/ConfirmationBar'
 import { NoticeBar } from '@/components/ui/NoticeBar'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { Footer } from './Footer'
@@ -23,6 +24,7 @@ export function AppShell() {
       <main className="rs-main">
         <Container className="py-4">
           <NoticeBar />
+          <ConfirmationBar />
           <Outlet />
         </Container>
       </main>

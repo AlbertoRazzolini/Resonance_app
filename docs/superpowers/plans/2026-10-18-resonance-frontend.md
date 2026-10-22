@@ -724,6 +724,18 @@ footer (`Footer.tsx`), con lo studente; le due informative sono già vere. Sosti
   Eventi vicini: decisione 85 e test del router), che cosa vede chi ha già fatto l'accesso, il mock-up in Stitch e i testi.
   Aggiunta dello studente il 21 ottobre.
 
+**Difetto da correggere (22 ottobre):** nelle pagine di accesso e registrazione, da 768 px, il footer non parte dal bordo
+sinistro dello schermo: `.rs-footer` ha `left: 4.5rem` (da 1200 px `15rem`) per stare a destra della colonna di
+navigazione, che quelle pagine non hanno. Si corregge nel sotto-task 1 (regola per le pagine senza colonna, con un test sul
+CSS). Segnalato dallo studente durante FE-09a; scelta dello studente: rimandarlo a FE-12.
+
+**Da decidere in FE-12 (22 ottobre):** la password richiesta di nuovo nella schermata del codice (`/verifica`) è ridondante
+per lo studente. Il controllo sta nel backend (progettazione, sezione 4.5, passo 7: `WRONG_PASSWORD`), quindi non si toglie
+solo dal frontend. Due strade, da scegliere con lo studente: (a) togliere il controllo dal backend (`VerifyRequest`, service,
+test, Postman, progettazione e una decisione nuova; fuori dal "nessuna modifica al backend" del piano); (b) solo frontend: il
+form di registrazione tiene la password in memoria e la invia da solo alla verifica, ma dopo un ricarico o un link aperto
+altrove va riscritta. Richiesta dello studente durante FE-09a, rimandata a FE-12.
+
 **Candidato se avanza tempo (21 ottobre):** titolo nei post del feed. Richiede una modifica al backend (colonna in
 `feed_posts` con migrazione, DTO, Postman), fuori dal "nessuna modifica al backend" del piano: si decide con lo studente
 solo a fine frontend, con il calendario davanti. Le altre funzioni emerse (suggerimento degli indirizzi, elenco di generi
