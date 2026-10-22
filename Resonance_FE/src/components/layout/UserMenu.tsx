@@ -5,11 +5,13 @@ import { Avatar } from '@/components/ui/Avatar'
 import { selectCurrentUser, selectHasRole } from '@/features/auth/authSlice'
 import { useLogoutMutation } from '@/features/auth/api/authApi'
 import { useAppSelector } from '@/hooks/redux'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 
 /**
  * Menu utente della barra (decisione 83): per l'anonimo i pulsanti Accedi e Registrati; per chi ha la sessione il
- * cerchio giallo con la foto o l'iniziale e un menu con «Amici», le voci «Pubblica» secondo i ruoli, le voci dell'area di
- * moderazione per ADMIN e SUPERADMIN (solo per mostrare o nascondere: la protezione vera è nel backend) e "Esci".
+ * cerchio giallo con la foto o l'iniziale e un menu con «Amici», le voci «Pubblica» secondo i ruoli, sul telefono le voci
+ * dell'area di moderazione per ADMIN e SUPERADMIN (da 768 px le ha la colonna a sinistra; solo per mostrare o nascondere: la
+ * protezione vera è nel backend) e "Esci".
  */
 export function UserMenu() {
   const user = useAppSelector(selectCurrentUser)
@@ -17,6 +19,8 @@ export function UserMenu() {
   const isMusician = useAppSelector(selectHasRole('MUSICIAN'))
   // Il SUPERADMIN vale anche come ADMIN (selectHasRole): la voce dell'area di moderazione serve a entrambi
   const isAdmin = useAppSelector(selectHasRole('ADMIN'))
+  // Da 768 px la colonna a sinistra ha già «Utenti» e «Nascosti»: nel menu sarebbero ridondanti, restano solo sul telefono
+  const hasSideNav = useMediaQuery('(min-width: 768px)')
   const [logout] = useLogoutMutation()
 
   if (!user) {
@@ -63,7 +67,7 @@ export function UserMenu() {
             </Dropdown.Item>
           )}
           {(isHost || isMusician) && <Dropdown.Divider />}
-          {isAdmin && (
+          {isAdmin && !hasSideNav && (
             <>
               <Dropdown.Item as={Link} to={ROUTES.adminUsers}>
                 Utenti

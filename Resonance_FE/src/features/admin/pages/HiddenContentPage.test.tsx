@@ -253,7 +253,11 @@ describe('HiddenContentPage · ripristino', () => {
     await screen.findByText('Evento cancellato')
 
     const row = rowOf('Evento cancellato')
-    expect(row.getByRole('button', { name: /Ripristina/ })).toBeDisabled()
-    expect(row.getByText('Eliminato dall\'utente: non si può ripristinare.')).toBeInTheDocument()
+    const button = row.getByRole('button', { name: /Ripristina/ })
+    expect(button).toBeDisabled()
+    // La frase sta sotto il pulsante, nello stesso gruppo
+    const hint = row.getByText('Eliminato dall\'utente: non si può ripristinare.')
+    expect(button.parentElement).toHaveClass('rs-admin-action')
+    expect(button.parentElement).toContainElement(hint)
   })
 })

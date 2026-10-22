@@ -47,12 +47,14 @@ export function HiddenContentRow({ type, item }: { type: ModeratedType; item: Hi
   return (
     <tr className="rs-admin-row">
       <td className="rs-admin-row__who">
-        <span className="rs-admin-row__name">
-          <UserText text={item.title} />
-        </span>
-        <Link className="rs-admin-row__email" to={userPath(item.author.id)}>
-          {item.author.displayName}
-        </Link>
+        <div className="rs-admin-row__cell rs-admin-row__cell--stack">
+          <span className="rs-admin-row__name">
+            <UserText text={item.title} />
+          </span>
+          <Link className="rs-admin-row__email" to={userPath(item.author.id)}>
+            {item.author.displayName}
+          </Link>
+        </div>
       </td>
       <td data-label="Nascosto il">
         <time dateTime={item.hiddenAt}>{formatDate(item.hiddenAt)}</time>
@@ -68,31 +70,36 @@ export function HiddenContentRow({ type, item }: { type: ModeratedType; item: Hi
         </p>
       </td>
       <td className="rs-admin-row__actions">
-        <Button
-          variant="outline-light"
-          size="sm"
-          disabled={item.deletedByOwner}
-          aria-label={`Ripristina ${item.title}`}
-          aria-describedby={item.deletedByOwner ? hintId : undefined}
-          onClick={() => setConfirming(true)}
-        >
-          Ripristina
-        </Button>
-        {item.deletedByOwner && (
-          <span id={hintId} className="rs-admin-row__hint">
-            Eliminato dall'utente: non si può ripristinare.
-          </span>
-        )}
-        <ConfirmDialog
-          show={confirming}
-          title="Ripristinare il contenuto?"
-          body="Tornerà visibile a tutti."
-          confirmLabel="Ripristina"
-          busy={restoring.isLoading}
-          error={restoring.error}
-          onConfirm={() => void handleRestore()}
-          onCancel={close}
-        />
+        <div className="rs-admin-row__cell">
+          {/* Il pulsante e la sua frase in colonna: la frase sta sotto, mai di fianco */}
+          <div className="rs-admin-action">
+            <Button
+              variant="outline-light"
+              size="sm"
+              disabled={item.deletedByOwner}
+              aria-label={`Ripristina ${item.title}`}
+              aria-describedby={item.deletedByOwner ? hintId : undefined}
+              onClick={() => setConfirming(true)}
+            >
+              Ripristina
+            </Button>
+            {item.deletedByOwner && (
+              <span id={hintId} className="rs-admin-row__hint">
+                Eliminato dall'utente: non si può ripristinare.
+              </span>
+            )}
+          </div>
+          <ConfirmDialog
+            show={confirming}
+            title="Ripristinare il contenuto?"
+            body="Tornerà visibile a tutti."
+            confirmLabel="Ripristina"
+            busy={restoring.isLoading}
+            error={restoring.error}
+            onConfirm={() => void handleRestore()}
+            onCancel={close}
+          />
+        </div>
       </td>
     </tr>
   )

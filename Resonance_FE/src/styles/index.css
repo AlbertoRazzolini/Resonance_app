@@ -2113,10 +2113,20 @@ textarea {
   font-size: var(--rs-text-sm);
 }
 
-.rs-admin-row > .rs-admin-row__who {
+/* Il contenuto di ogni cella sta in un contenitore flex: da 992 px la cella è una cella di tabella e lì il gap non vale */
+.rs-admin-row__cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rs-space-2);
+  min-width: 0;
+}
+
+/* Nome ed email in colonna, con un po' d'aria fra le due righe */
+.rs-admin-row__cell--stack {
   flex-direction: column;
   align-items: flex-start;
-  gap: 0;
+  gap: var(--rs-space-1);
 }
 
 .rs-admin-row__name {
@@ -2168,6 +2178,12 @@ textarea {
 
 .rs-admin-row__actions {
   justify-content: flex-start;
+}
+
+/* I pulsanti della riga distanziati fra loro e allineati in alto, anche quando uno ha la sua frase sotto */
+.rs-admin-row__actions .rs-admin-row__cell {
+  align-items: flex-start;
+  gap: var(--rs-space-3);
 }
 
 @media (min-width: 992px) {
@@ -2223,11 +2239,16 @@ textarea {
     content: none;
   }
 
-  .rs-admin-row > .rs-admin-row__who {
-    flex-direction: initial;
+  .rs-admin-row__actions .rs-admin-row__cell {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
   }
 
-  .rs-admin-row__actions {
+  .rs-admin-row__actions .rs-admin-action {
+    align-items: flex-end;
+  }
+
+  .rs-admin-row__actions .rs-admin-row__hint {
     text-align: right;
   }
 }
@@ -2260,14 +2281,23 @@ textarea {
   display: flex;
   flex-direction: column;
   flex-basis: 100%;
+  gap: var(--rs-space-1);
   margin: 0;
   color: var(--rs-color-text-muted);
   font-size: var(--rs-text-sm);
   overflow-wrap: anywhere;
 }
 
+/* Un pulsante con la sua frase sotto (pulsante spento): colonna, frase sotto con un po' d'aria */
+.rs-admin-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--rs-space-1);
+  max-width: 14rem;
+}
+
 .rs-admin-row__hint {
-  flex-basis: 100%;
   color: var(--rs-color-text-muted);
   font-size: var(--rs-text-xs);
 }

@@ -9,6 +9,7 @@ import { sessionEnded, sessionStarted } from '@/features/auth/authSlice'
 import { makeLoginResponse, makeMe } from '@/test/fixtures/users'
 import { logoutSucceeds } from '@/test/handlers/auth'
 import { server } from '@/test/server'
+import { setViewportWidth } from '@/test/viewport'
 import type { MeResponse, Role } from '@/types/users'
 import { UserMenu } from './UserMenu'
 
@@ -129,9 +130,12 @@ describe('UserMenu', () => {
     },
   )
 
+  // Sul telefono non c'è la colonna a sinistra: l'area admin sta qui. Da 768 px la colonna ha «Utenti» e «Nascosti» e nel menu
+  // sarebbero ridondanti (scelta dello studente, FE-10).
   it.each([['ADMIN'], ['SUPERADMIN']] as [Role][])(
-    'a un %s mostra «Utenti» e «Contenuti nascosti», con i loro collegamenti, prima di Esci',
+    'sul telefono a un %s mostra «Utenti» e «Contenuti nascosti», con i loro collegamenti, prima di Esci',
     async (role) => {
+      setViewportWidth(375)
       renderMenu('Mattia', { roles: ['FAN', role] })
 
       await userEvent.click(screen.getByRole('button', { name: /Menu dell'account/ }))
@@ -140,6 +144,24 @@ describe('UserMenu', () => {
       expect(screen.getByRole('link', { name: 'Contenuti nascosti' })).toHaveAttribute('href', ROUTES.adminContent)
       const items = [...document.querySelectorAll('.dropdown-item')].map((item) => item.textContent)
       expect(items).toEqual(['Amici', 'Utenti', 'Contenuti nascosti', 'Esci'])
+    },
+  )
+
+  it.each([[768], [1024], [1280]])(
+    'a %s px a un admin non mostra «Utenti» e «Contenuti nascosti»: li ha già la colonna a sinistra',
+    async (width) => {
+      setViewportWidth(width)
+      renderMenu('Mattia', { roles: ['FAN', 'SUPERADMIN'] })
+
+      await userEvent.click(screen.getByRole('button', { name: /Menu dell'account/ }))
+
+      await screen.findByText('Esci')
+      expect(screen.queryByText('Utenti')).not.toBeInTheDocument()
+      expect(screen.queryByText('Contenuti nascosti')).not.toBeInTheDocument()
+      const items = [...document.querySelectorAll('.dropdown-item')].map((item) => item.textContent)
+      expect(items).toEqual(['Amici', 'Esci'])
+      // Nessun separatore in più dove le voci admin mancano
+      expect(document.querySelectorAll('.dropdown-divider')).toHaveLength(1)
     },
   )
 

@@ -5,13 +5,18 @@ import { MemoryRouter } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { makeStore } from '@/app/store'
 import { ROUTES } from '@/app/routes'
+import { sessionStarted } from '@/features/auth/authSlice'
+import { makeLoginResponse, makeMe } from '@/test/fixtures/users'
+import type { Role } from '@/types/users'
 import { SideNav } from './SideNav'
 
 // Colonna a sinistra (da 768 px): le stesse cinque voci delle tab; il logo solo se `showLogo` (desktop, dove la
-// barra in alto non lo ha più).
-function renderSideNav(path: string, showLogo: boolean) {
+// barra in alto non lo ha più). Per ADMIN e SUPERADMIN, dopo Profilo, «Utenti» e «Nascosti» dell'area di moderazione.
+function renderSideNav(path: string, showLogo: boolean, roles?: Role[]) {
+  const store = makeStore()
+  if (roles) store.dispatch(sessionStarted(makeLoginResponse({ user: makeMe({ roles }) })))
   render(
-    <Provider store={makeStore()}>
+    <Provider store={store}>
       <MemoryRouter initialEntries={[path]}>
         <SideNav showLogo={showLogo} />
       </MemoryRouter>
@@ -38,6 +43,46 @@ describe('SideNav', () => {
       ROUTES.chat,
       ROUTES.profile,
     ])
+  })
+
+  it.each([['ADMIN'], ['SUPERADMIN']] as [Role][])(
+    'a un %s aggiunge «Utenti» e «Nascosti» dopo Profilo, con i percorsi dell’area admin',
+    (role) => {
+      renderSideNav(ROUTES.events, false, ['FAN', role])
+
+      const links = screen.getAllByRole('link')
+      expect(links.map((link) => link.textContent)).toEqual([
+        'Eventi',
+        'Collab',
+        'Feed',
+        'Messaggi',
+        'Profilo',
+        'Utenti',
+        'Nascosti',
+      ])
+      expect(links.slice(5).map((link) => link.getAttribute('href'))).toEqual([
+        ROUTES.adminUsers,
+        ROUTES.adminContent,
+      ])
+    },
+  )
+
+  it.each([[['FAN']], [['FAN', 'MUSICIAN', 'HOST']]] as [Role[]][])(
+    'a chi ha i ruoli %s non mostra le voci dell’area admin',
+    (roles) => {
+      renderSideNav(ROUTES.events, false, roles)
+
+      expect(screen.getAllByRole('link')).toHaveLength(5)
+      expect(screen.queryByRole('link', { name: 'Utenti' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: 'Nascosti' })).not.toBeInTheDocument()
+    },
+  )
+
+  it('segna come corrente la voce admin della pagina aperta', () => {
+    renderSideNav(ROUTES.adminContent, false, ['FAN', 'ADMIN'])
+
+    expect(screen.getByRole('link', { name: 'Nascosti' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'Utenti' })).not.toHaveAttribute('aria-current')
   })
 
   it('segna come corrente la voce della pagina aperta, anche su una sottopagina', () => {

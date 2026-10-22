@@ -5,6 +5,8 @@ import { MemoryRouter } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { makeStore } from '@/app/store'
 import { ROUTES } from '@/app/routes'
+import { sessionStarted } from '@/features/auth/authSlice'
+import { makeLoginResponse, makeMe } from '@/test/fixtures/users'
 import { TabBar } from './TabBar'
 
 // Barra di tab del telefono: le cinque voci con i loro percorsi e la voce attiva segnata per i lettori di schermo.
@@ -19,6 +21,26 @@ function renderTabBar(path: string) {
 }
 
 describe('TabBar', () => {
+  it('anche per un admin resta a cinque voci: sul telefono l’area admin sta nel menu utente', () => {
+    const store = makeStore()
+    store.dispatch(sessionStarted(makeLoginResponse({ user: makeMe({ roles: ['FAN', 'SUPERADMIN'] }) })))
+    render(
+      <Provider store={store}>
+        <MemoryRouter initialEntries={[ROUTES.events]}>
+          <TabBar />
+        </MemoryRouter>
+      </Provider>,
+    )
+
+    expect(screen.getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'Eventi',
+      'Collab',
+      'Feed',
+      'Messaggi',
+      'Profilo',
+    ])
+  })
+
   it("mostra le cinque voci, nell'ordine del prototipo, ciascuna col suo percorso", () => {
     renderTabBar(ROUTES.events)
 

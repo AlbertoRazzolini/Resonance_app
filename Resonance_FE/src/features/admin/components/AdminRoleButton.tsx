@@ -61,21 +61,24 @@ export function AdminRoleButton({ user }: { user: AdminUserResponse }) {
 
   return (
     <>
-      <Button
-        variant="outline-light"
-        size="sm"
-        disabled={block !== undefined}
-        aria-label={`${isAdmin ? 'Togli admin' : 'Rendi admin'} ${user.displayName}`}
-        aria-describedby={block ? hintId : undefined}
-        onClick={() => setConfirming(true)}
-      >
-        {isAdmin ? 'Togli admin' : 'Rendi admin'}
-      </Button>
-      {block && (
-        <span id={hintId} className="rs-admin-row__hint">
-          {block}
-        </span>
-      )}
+      {/* Il pulsante e la sua frase in colonna: la frase sta sotto, mai di fianco */}
+      <div className="rs-admin-action">
+        <Button
+          variant="outline-light"
+          size="sm"
+          disabled={block !== undefined}
+          aria-label={`${isAdmin ? 'Togli admin' : 'Rendi admin'} ${user.displayName}`}
+          aria-describedby={block ? hintId : undefined}
+          onClick={() => setConfirming(true)}
+        >
+          {isAdmin ? 'Togli admin' : 'Rendi admin'}
+        </Button>
+        {block && (
+          <span id={hintId} className="rs-admin-row__hint">
+            {block}
+          </span>
+        )}
+      </div>
 
       <ConfirmDialog
         show={confirming}

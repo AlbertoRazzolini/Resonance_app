@@ -3072,7 +3072,10 @@ più spento e la campanella non mostra più solo le richieste (testo del pannell
 
 ### Scelta
 
-- **Ingresso:** le voci «Utenti» (`/admin/utenti`) e «Contenuti nascosti» (`/admin/contenuti`) stanno nel menu utente, solo per
+- **Ingresso:** da 768 px la colonna di navigazione a sinistra ha, dopo Profilo, «Utenti» (icona `user-cog`) e «Nascosti» (icona
+  `eye-off`), animate come le altre (Animate UI), solo per ADMIN e SUPERADMIN; sul telefono le tab restano cinque (aggiunta dello
+  studente dopo aver visto che il menu utente passava inosservato). Sul telefono, dove la colonna non c'è, le voci «Utenti» (`/admin/utenti`) e «Contenuti
+  nascosti» (`/admin/contenuti`) stanno nel menu utente (da 768 px sarebbero ridondanti e non ci sono), solo per
   ADMIN e SUPERADMIN (`selectHasRole('ADMIN')` vale anche per il SUPERADMIN). Le rotte sono dietro `RequireRole` e le pagine
   sono caricate in modo differito. È solo interfaccia: la protezione vera resta nel backend.
 - **Elenco utenti:** ricerca su email e nome con attesa di 400 ms (come la ricerca persone), filtro «Tutti gli stati / Attivi /
@@ -3113,7 +3116,8 @@ più spento e la campanella non mostra più solo le richieste (testo del pannell
 
 ### Alternative scartate
 
-- **Voce «Admin» nella navigazione principale:** una sesta voce stringe la barra del telefono e cambia il layout approvato.
+- **Voci admin nelle tab del telefono:** stringono la barra di cinque voci; sul telefono restano nel solo menu utente.
+- **Una voce «Admin» sola nella colonna a sinistra:** le due pagine sono distinte, due voci portano a ciascuna a un clic.
 - **Pagina `/admin` con due link:** un clic in più e una pagina quasi vuota.
 - **Giorni liberi o data di fine nel form:** più campi e validazioni per un'azione rara; il tetto di un anno proposto in alternativa
   è stato superato dalle durate fisse.
@@ -3122,3 +3126,24 @@ più spento e la campanella non mostra più solo le richieste (testo del pannell
 - **«Nascosto da un admin» fisso o senza chi ha nascosto:** meno informazione per l'admin; scelto l'ibrido con il nome per i
   contenuti moderati e «Eliminato dall'utente» per gli altri.
 - **«Ripristina» e riattivazione senza conferma:** un clic per sbaglio rende di nuovo pubblico un contenuto o riapre un account.
+
+## Decisione 94: Playwright per le prove visive del frontend (card FE-10, progettazione, sezione 11)
+
+### Scelta
+
+- **`playwright` 1.64.1** (versione esatta) come dipendenza di sviluppo di `Resonance_FE`, con il solo Chromium (scaricato nella cache
+  dell'utente, fuori dal repository). Serve a guardare le schermate vere a 375, 768 e 1280 px (controllo «tre larghezze» di ogni
+  card) e, in FE-12, a rifinire l'interfaccia. Gli script di prova stanno fuori dal repository.
+- **Nessun test automatico lo usa:** i test restano Vitest con jsdom e MSW; Playwright non entra in `npm test`, nel build né in CI.
+
+### Motivazione
+
+- Con jsdom non si vede il layout: la prova delle tre larghezze restava a occhio dello studente e ha lasciato passare difetti reali
+  (celle di tabella senza distanza, pulsanti uno sopra l'altro) che con uno screenshot si vedono subito.
+- Una dipendenza di sviluppo non entra nell'immagine di produzione (il Dockerfile costruisce solo il bundle).
+
+### Alternative scartate
+
+- **Solo controllo a occhio dello studente:** un giro in più per ogni ritocco di stile.
+- **Test end-to-end con Playwright Test nel repository:** richiede backend, database e dati di prova a ogni esecuzione; fuori dal piano.
+- **Puppeteer o Selenium:** stessa funzione, ma Playwright gestisce le attese e le larghezze della finestra con meno codice.

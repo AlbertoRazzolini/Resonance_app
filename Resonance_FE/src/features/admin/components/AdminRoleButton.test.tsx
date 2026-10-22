@@ -65,6 +65,16 @@ describe('AdminRoleButton · «Rendi admin» spento', () => {
     expect(screen.getByText('Email non ancora verificata')).toBeInTheDocument()
   })
 
+  it('la frase sta sotto il pulsante, nello stesso gruppo', () => {
+    renderButton(makeAdminUser({ emailVerified: false }))
+
+    const button = screen.getByRole('button', { name: /Rendi admin/ })
+    const hint = screen.getByText('Email non ancora verificata')
+    expect(button.parentElement).toHaveClass('rs-admin-action')
+    expect(button.parentElement).toContainElement(hint)
+    expect(button.compareDocumentPosition(hint) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('con un account sospeso spiega di riattivarlo prima', () => {
     renderButton(makeAdminUser({ status: 'SUSPENDED', suspendedUntil: null }))
 

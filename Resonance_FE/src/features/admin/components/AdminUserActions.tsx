@@ -54,22 +54,25 @@ export function AdminUserActions({ user }: { user: AdminUserResponse }) {
 
   return (
     <>
-      <Button
-        variant={isSuspended ? 'outline-light' : 'outline-danger'}
-        size="sm"
-        disabled={!allowed}
-        // Il nome serve a chi legge con lo schermo: in una tabella i pulsanti «Sospendi» sono tutti uguali
-        aria-label={`${isSuspended ? 'Riattiva' : 'Sospendi'} ${user.displayName}`}
-        aria-describedby={allowed ? undefined : hintId}
-        onClick={() => setDialog(isSuspended ? 'reactivate' : 'suspend')}
-      >
-        {isSuspended ? 'Riattiva' : 'Sospendi'}
-      </Button>
-      {!allowed && (
-        <span id={hintId} className="rs-admin-row__hint">
-          {ERROR_MESSAGES.INSUFFICIENT_PLATFORM_LEVEL}
-        </span>
-      )}
+      {/* Il pulsante e la sua frase in colonna: la frase sta sotto, mai di fianco */}
+      <div className="rs-admin-action">
+        <Button
+          variant={isSuspended ? 'outline-light' : 'outline-danger'}
+          size="sm"
+          disabled={!allowed}
+          // Il nome serve a chi legge con lo schermo: in una tabella i pulsanti «Sospendi» sono tutti uguali
+          aria-label={`${isSuspended ? 'Riattiva' : 'Sospendi'} ${user.displayName}`}
+          aria-describedby={allowed ? undefined : hintId}
+          onClick={() => setDialog(isSuspended ? 'reactivate' : 'suspend')}
+        >
+          {isSuspended ? 'Riattiva' : 'Sospendi'}
+        </Button>
+        {!allowed && (
+          <span id={hintId} className="rs-admin-row__hint">
+            {ERROR_MESSAGES.INSUFFICIENT_PLATFORM_LEVEL}
+          </span>
+        )}
+      </div>
 
       <SuspensionDialog
         show={dialog === 'suspend'}

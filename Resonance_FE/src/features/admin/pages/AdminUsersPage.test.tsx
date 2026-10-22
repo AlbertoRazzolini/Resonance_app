@@ -267,8 +267,13 @@ describe('AdminUsersPage · livelli di piattaforma', () => {
       await screen.findByText(name)
 
       const row = rowOf(name)
-      expect(row.getByRole('button', { name: /Sospendi/ })).toBeDisabled()
-      expect(row.getByText(HINT)).toBeInTheDocument()
+      const button = row.getByRole('button', { name: /Sospendi/ })
+      expect(button).toBeDisabled()
+      // La frase sta sotto il pulsante, nello stesso gruppo (e non di fianco)
+      const hint = row.getByText(HINT)
+      expect(button.parentElement).toHaveClass('rs-admin-action')
+      expect(button.parentElement).toContainElement(hint)
+      expect(button.compareDocumentPosition(hint) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     },
   )
 
