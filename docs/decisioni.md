@@ -3147,3 +3147,26 @@ più spento e la campanella non mostra più solo le richieste (testo del pannell
 - **Solo controllo a occhio dello studente:** un giro in più per ogni ritocco di stile.
 - **Test end-to-end con Playwright Test nel repository:** richiede backend, database e dati di prova a ogni esecuzione; fuori dal piano.
 - **Puppeteer o Selenium:** stessa funzione, ma Playwright gestisce le attese e le larghezze della finestra con meno codice.
+
+## Decisione 95: polling del server di sviluppo di Vite (card FE-10, progettazione, sezione 12.1)
+
+### Scelta
+
+- Il server di sviluppo di Vite controlla le modifiche dei file **a intervalli** (`server.watch: { usePolling: true, interval: 300 }`
+  in `vite.config.ts`). Vale solo per `npm run dev`: `vite preview`, il build e i test non lo usano.
+- Un test (`src/viteConfig.test.ts`) legge il testo di `vite.config.ts` e controlla che il polling resti attivo e che il proxy di
+  `/api` e `/ws` non sia stato tolto.
+
+### Motivazione
+
+- Il progetto sta in una cartella di OneDrive, dove il controllo delle modifiche del disco (eventi del sistema) perde aggiornamenti:
+  il browser riceveva moduli vecchi anche dopo un ricarico (visto due volte il 22 ottobre, con la barra di navigazione e con le righe
+  admin) e l'unico rimedio era riavviare `npm run dev`. Il polling le vede sempre: provato modificando e ripristinando un file, con
+  entrambe le versioni servite entro 3 secondi.
+- 300 ms bastano per non accorgersene e pesano poco sul processore.
+
+### Alternative scartate
+
+- **Riavviare `npm run dev` a mano a ogni modifica:** facile da dimenticare e fa perdere tempo nelle sessioni lunghe.
+- **Spostare il progetto fuori da OneDrive:** risolverebbe alla radice ma cambia l'ambiente dello studente a pochi giorni dalla consegna.
+- **Intervallo più basso (100 ms, il valore predefinito):** più reattivo ma con un costo di processore inutile per uno schermo di prova.

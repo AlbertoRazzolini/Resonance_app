@@ -25,7 +25,12 @@ export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(import.meta.dirname, './src') },
   },
-  server: { proxy: backendProxy },
+  server: {
+    proxy: backendProxy,
+    // Il progetto sta in OneDrive: lì il controllo delle modifiche del disco perde aggiornamenti e il browser riceve moduli
+    // vecchi. Il polling li vede sempre (costa un po' di processore solo in sviluppo; `vite preview` e il build non lo usano).
+    watch: { usePolling: true, interval: 300 },
+  },
   preview: {
     proxy: backendProxy,
     headers: { 'Content-Security-Policy': contentSecurityPolicy },
