@@ -37,6 +37,7 @@ import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -241,6 +242,36 @@ public class ChatService {
                                            String body) {
         ChatConversation conversation = findOrCreateConversation(senderId, recipientId);
         unlock(conversation, source, sourceId);
+        return appendAndPublish(conversation, senderId, recipientId, body);
+    }
+
+    /**
+     * Come {@link #sendUnlockedMessage} ma ammessa una volta sola per la stessa origine (candidatura unica,
+     * decisione 99): se lo sblocco c'era gia' non salva ne' pubblica niente e restituisce un Optional vuoto. Il
+     * rifiuto e' quello atomico dell'{@code insert ... on conflict}, quindi vale anche con due richieste insieme.
+     */
+    @Transactional
+    public Optional<ChatMessage> sendFirstUnlockedMessage(UUID senderId, UUID recipientId, ChatUnlockSource source,
+                                                          UUID sourceId, String body) {
+        ChatConversation conversation = findOrCreateConversation(senderId, recipientId);
+        if (unlocks.insertIfAbsent(conversation.getId(), source.name(), sourceId) == 0) {
+            return Optional.empty();
+        }
+        return Optional.of(appendAndPublish(conversation, senderId, recipientId, body));
+    }
+
+    /**
+     * Se fra i due utenti c'e' gia' uno sblocco da questa origine: controllo veloce che non crea la conversazione.
+     */
+    @Transactional(readOnly = true)
+    public boolean hasUnlock(UUID a, UUID b, ChatUnlockSource source, UUID sourceId) {
+        return conversations.findByPair(lower(a, b), higher(a, b))
+                .map(conversation -> unlocks.existsById(new ChatUnlockId(conversation.getId(), source, sourceId)))
+                .orElse(false);
+    }
+
+    private ChatMessage appendAndPublish(ChatConversation conversation, UUID senderId, UUID recipientId,
+                                         String body) {
         ChatMessage saved = appendMessage(conversation, senderId, body);
         events.publishEvent(new ChatMessageEvent(senderId, recipientId, ChatMessageResponse.from(saved)));
         return saved;

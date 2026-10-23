@@ -195,6 +195,10 @@ di sicurezza con Strix, circa 3 h, dipende dalle segnalazioni), stime provvisori
 si sommano al totale; la tabella non è ricalcolata e il rischio del 23 ottobre resta **alto**. Scelta dello studente: nessun
 taglio e, se serve, lavoro anche di sera e di notte. L'ordine dei tagli sotto resta la riserva.
 
+**Aggiunta del 23 ottobre:** sette card di rifinitura (F7-09, FE-14, FE-15, FE-16, FE-17, FE-18, FE-19, circa 11,5 h in tutto, stime
+provvisorie), da fare nell'ordine indicato prima di FE-12 e FE-11; si sommano al totale e la tabella non è ricalcolata. Lo studente le
+vuole fare tutte il 23 ottobre. L'ordine dei tagli sotto resta la riserva.
+
 ### Ordine dei tagli (se una card o un giorno sfora, avvisare subito)
 
 1. **ReactBits** in FE-12 (−1 h).
@@ -220,7 +224,8 @@ FE-05 crea `Map`, `ExternalLink` e `LoadMore`; FE-06 crea `ConfirmDialog`; FE-07
 da lì si applica a ogni testo. FE-09a precede FE-09b (la chat nuova si apre solo fra amici); il pulsante
 "Scrivi" (FE-09a) e "Apri la chat" della candidatura (FE-08) funzionano dopo FE-09b. FE-10 usa i dettagli
 dei contenuti di FE-05–FE-08. F7-08 (nome utente unico) prima di F7-06, perché la sua migrazione precede quella delle notifiche. F7-06 → FE-13 (notifiche persistenti: il frontend usa gli endpoint del backend; FE-13 riprende la campanella di
-FE-09a e FE-09b). F7-07 dopo FE-13 (la prova di sicurezza copre anche le notifiche nuove). FE-12 dopo tutte le schermate, FE-11 per
+FE-09a e FE-09b). F7-07 dopo FE-13 (la prova di sicurezza copre anche le notifiche nuove). F7-09 → FE-14 (la candidatura unica: il bottone usa la regola del backend); FE-16 dopo FE-09a (amicizie); FE-17 dopo FE-16 (la voce «Amici» e il bottone sul profilo
+completano insieme l'accesso alle amicizie); FE-15, FE-18 e FE-19 non dipendono da altre card di questo gruppo. FE-12 dopo tutte le schermate, FE-11 per
 ultima (le sue prove su Render includono le notifiche).
 
 ## Rischi e incompatibilità dichiarati
@@ -863,6 +868,154 @@ dipendenze del progetto e non si committa nulla di suo.
 **Criterio:** nessuna segnalazione valida di gravità alta o media lasciata aperta senza una decisione dello studente; test verdi dopo le
 correzioni; report aggiornato; nessun dato o chiave nel repository.
 **Commit proposto:** `fix(security): corregge le falle trovate dalla prova dinamica`
+
+---
+
+# Rifiniture del 23 ottobre (prima di FE-12)
+
+Richieste dello studente emerse provando l'app in locale il 23 ottobre (otto card, una per voce, con la candidatura unica divisa
+in backend e frontend); si fanno tutte lo stesso giorno, un commit per card, nell'ordine sotto, prima di FE-12. **Le stime sono
+provvisorie.** Se il giorno sfora si avvisa subito e si propone un taglio. Ogni card ha i suoi punti aperti da porre allo studente a inizio card, uno
+per uno, prima di scrivere test o codice. **Eccezione ai Vincoli globali** per F7-09 (e per FE-16 se serve il backend): il backend si
+tocca con la collection Postman.
+
+**Restano fuori (scelta dello studente, 23 ottobre):** la **partecipazione agli eventi** con un click resta in Post-V1 (serve una
+tabella nuova e una migrazione) e la **cancellazione dei messaggi** di chat resta in Post-V1. Nessuna pagina delle notifiche: resta il
+pannello della campanella (FE-15).
+
+### Card F7-09 · Candidatura unica per annuncio (backend) — stima 2 h (provvisoria)
+
+**Perché:** oggi ci si può candidare allo stesso annuncio senza limite e si riempie la chat dell'autore di messaggi (nel database
+c'erano già due candidature dello stesso utente allo stesso annuncio).
+**Riferimenti:** progettazione §6.7 (candidatura), decisione 97 (notifiche), `CollabService.apply`, `docs/schema-db.md`.
+**Sicurezza: sì** (abuso e spam di messaggistica).
+**File (da confermare a inizio card):** `collab/CollabService`, eventuale migrazione, `ErrorCode`, test d'integrazione, Postman
+(cartella Collab), `progettazione.md`, `decisioni.md`, questo piano.
+
+**Scelta approvata (23 ottobre):** una sola candidatura per annuncio e utente; la seconda dà errore.
+
+**Punti aperti (decisi dallo studente il 23 ottobre, decisione 99):**
+- come si riconosce la candidatura già fatta (oggi non c'è una tabella delle candidature: vincolo nuovo con migrazione, oppure
+  controllo sulle tracce esistenti) e che cosa accade alle candidature doppie già presenti;
+- codice d'errore, stato HTTP e testo; ordine rispetto agli altri controlli e al limite di frequenza;
+- due richieste insieme: la seconda ottiene l'errore previsto e non un 500;
+- se l'annuncio chiuso e riaperto ammette una nuova candidatura.
+
+**Sotto-task:**
+- [x] **1. Test e regola.** Test che fallisce prima; la seconda candidatura è rifiutata; due richieste insieme.
+- [x] **2. Schema (se serve).** Non serve: la riga di `chat_unlocks` basta, nessuna migrazione. Migrazione e `schema-db.md` (erDiagram di dettaglio e completo, flowchart di panoramica).
+- [x] **3. Postman, documentazione e chiusura.** Richiesta di successo e errore, `progettazione.md`, `decisioni.md`, questo piano;
+  `./mvnw -q verify`.
+
+**Criterio:** `./mvnw -q verify` verde; la seconda candidatura allo stesso annuncio è rifiutata e non crea messaggi né notifiche.
+**Commit proposto:** `feat(collab): consente una sola candidatura per annuncio`
+
+### Card FE-14 · Candidatura unica (frontend) — stima 1 h (provvisoria)
+
+**Riferimenti:** F7-09; FE-08 (collab e candidature).
+**Scelta approvata (23 ottobre):** dopo la candidatura il bottone diventa «Candidatura inviata» e non si può premere.
+**Punti aperti a inizio card:** come il frontend sa che ci si è già candidati (campo nella risposta dell'annuncio, che sarebbe una
+modifica al backend, oppure solo dopo l'errore); testo dell'errore e dell'etichetta; che cosa vede chi ricarica la pagina.
+**Sotto-task:**
+- [ ] **1. Stato e bottone.** «Candidatura inviata», errore chiaro se il server rifiuta; test.
+- [ ] **2. Chiusura.** Tre larghezze con Playwright; `npm run lint`, `npm test`, `npm run build`; piano e decisioni.
+
+**Criterio:** nessuna seconda candidatura dall'interfaccia; test verdi; tre larghezze.
+**Commit proposto:** `feat(fe-collab): mostra la candidatura inviata e blocca la ripetizione`
+
+### Card FE-15 · Margine del pannello delle notifiche sul telefono — stima 0,5 h (provvisoria)
+
+**Perché:** sotto i 460 px di larghezza il pannello della campanella sta attaccato al bordo (visto a 448 px, a 460 è corretto).
+**Scelta approvata (23 ottobre):** solo il margine, deve fermarsi con lo stesso margine che ha a 460 px; il resto del pannello
+(a pagine di 10 con «Carica altri») non cambia; nessuna pagina nuova e nessuno scorrimento infinito.
+**File:** `src/styles/index.css` (`.rs-bell__panel`), test sul CSS dove c'è.
+**Punti aperti a inizio card:** il margine esatto da usare e come si comporta il pannello sotto i 360 px.
+**Sotto-task:**
+- [ ] **1. CSS e prova.** Margine corretto a 448 px e sotto; invariato da 460 px in su; controllo con Playwright; `npm run lint`,
+  `npm test`, `npm run build`.
+
+**Criterio:** a 448 px il pannello ha gli stessi margini che a 460 px.
+**Commit proposto:** `fix(fe-ui): corregge il margine del pannello delle notifiche sul telefono`
+
+### Card FE-16 · Richiesta di amicizia dal profilo — stima 2,5 h (provvisoria)
+
+**Perché:** oggi non si può chiedere l'amicizia da un profilo (da ricerca utenti o dal nome dell'autore di un evento, di un post o di
+un annuncio).
+**Riferimenti:** FE-09a (amicizie e ricerca utenti), decisioni 78 e 91; pagina profilo degli altri utenti.
+**Scelta approvata (23 ottobre):** bottone che segue lo stato: «Aggiungi agli amici», «Richiesta inviata», «Accetta» e «Rifiuta» se la
+richiesta l'ha mandata l'altro, «Amici».
+**Punti aperti a inizio card:** se il backend dà già lo stato dell'amicizia nel profilo (altrimenti serve un campo nuovo o una
+chiamata in più, cioè una modifica al backend con Postman e una card o un sotto-task nuovo da concordare); testi e posizione del
+bottone; che cosa succede se il profilo è il proprio o se l'utente non è autenticato; aggiornamento della campanella.
+**Sotto-task:**
+- [ ] **1. Stato dell'amicizia.** Come il frontend lo ottiene; dati finti e handler MSW.
+- [ ] **2. Bottone sul profilo.** Quattro stati, errori, test.
+- [ ] **3. Chiusura.** Tre larghezze con Playwright; `npm run lint`, `npm test`, `npm run build`; piano e decisioni.
+
+**Criterio:** da un profilo (anche arrivando dal nome dell'autore) si manda e si accetta una richiesta fra due account, senza doppioni.
+**Commit proposto:** `feat(fe-friends): aggiunge la richiesta di amicizia dal profilo`
+
+### Card FE-17 · Amici nella navigazione laterale — stima 1,5 h (provvisoria)
+
+**Riferimenti:** decisione 83 (navigazione), `SideNav`, `navItems.ts`, `UserMenu`; icone animate (Animate UI).
+**Scelte approvate (23 ottobre):** una voce «Amici» che apre `/amici`, nella colonna a sinistra da 768 px, con la stessa animazione al
+passaggio del mouse delle altre voci (l'animazione sta sulla voce intera); icona nuova scaricata dal registro Animate UI, diversa da
+quelle di Collab e Profilo; la voce «Amici» esce dal menu del profilo solo da 768 px, sul telefono resta (le tab sono già cinque).
+**Punti aperti a inizio card:** quale icona del registro; posizione esatta nella colonna (dopo «Profilo», prima della schedina ADMIN);
+se serve un badge delle richieste ricevute (non previsto); come si nasconde la voce nel menu senza duplicare la logica dei
+breakpoint.
+**Sotto-task:**
+- [ ] **1. Icona e voce.** Icona adattata al progetto, voce nella colonna con hover animato, stato attivo.
+- [ ] **2. Menu del profilo.** «Amici» solo sul telefono; test aggiornati.
+- [ ] **3. Chiusura.** Tre larghezze con Playwright; `npm run lint`, `npm test`, `npm run build`; piano e decisioni.
+
+**Criterio:** da 768 px «Amici» è nella colonna e non nel menu; sul telefono resta nel menu; comportamento uguale alle altre voci.
+**Commit proposto:** `feat(fe-nav): sposta le amicizie nella navigazione laterale`
+
+### Card FE-18 · Filtro «Eventi» sulla mappa — stima 2 h (provvisoria)
+
+**Riferimenti:** FE-05 (eventi vicini e mappa), decisioni 78 e 83; scheda Ufficiali / Indie.
+**Scelta approvata (23 ottobre):** nuova scheda «Eventi» prima di Ufficiali e Indie, selezionata all'apertura, che mostra insieme i
+due tipi sulla mappa nel raggio scelto; Ufficiali e Indie restano come filtri.
+**Punti aperti a inizio card:** come si uniscono i due elenchi (una chiamata per tipo o una sola), ordinamento e «Carica altri»;
+marcatori e legenda; testi (titolo, conteggio, vuoto); che cosa cambia nell'indirizzo della pagina.
+**Sotto-task:**
+- [ ] **1. Dati.** Elenco unico dei due tipi nel raggio; test e handler MSW.
+- [ ] **2. Scheda e mappa.** Scheda «Eventi» predefinita, marcatori dei due tipi, vuoto ed errore.
+- [ ] **3. Chiusura.** Tre larghezze con Playwright; `npm run lint`, `npm test`, `npm run build`; piano e decisioni.
+
+**Criterio:** all'apertura si vedono sulla mappa tutti gli eventi nel raggio; Ufficiali e Indie li restringono.
+**Commit proposto:** `feat(fe-events): aggiunge la scheda Eventi con ufficiali e indie insieme`
+
+### Card FE-19 · Selettore di emoji nella chat — stima 2 h (provvisoria)
+
+**Riferimenti:** FE-09b (chat), regola sulle emoji (decisione 84: ammesse nei messaggi, non in nome e password); CSP (decisione 76).
+**Scelta approvata (23 ottobre):** si fa adesso, con una libreria già pronta; un pulsante nella casella del messaggio apre il selettore
+e inserisce l'emoji nel testo.
+**Punti aperti a inizio card:** quale libreria (peso, tema scuro, italiano, compatibilità con la CSP: niente script inline né da CDN);
+dove sta il pulsante e come si apre su telefono e desktop; inserimento nel punto del cursore; accessibilità da tastiera; peso del
+bundle.
+**Sotto-task:**
+- [ ] **1. Libreria e pulsante.** Dipendenza scelta, pulsante e selettore nel tema scuro.
+- [ ] **2. Inserimento nel testo.** Nel punto del cursore, con il limite di lunghezza del messaggio; test.
+- [ ] **3. Chiusura.** Tre larghezze con Playwright, prova del peso; `npm run lint`, `npm test`, `npm run build`; piano e decisioni.
+
+**Criterio:** dalla chat si apre il selettore e l'emoji entra nel messaggio; test verdi; tre larghezze; bundle sotto controllo.
+**Commit proposto:** `feat(fe-chat): aggiunge il selettore di emoji nella chat`
+
+### Card FE-20 · Icone animate al tocco su tablet — stima 1 h (provvisoria)
+
+**Perché:** su tablet le icone non si animano al tocco come sul telefono e, senza cursore, l'animazione al passaggio del mouse non
+scatta mai (richiesta dello studente, 23 ottobre).
+**Riferimenti:** decisione 83 (navigazione), `SideNav`, `navItems.ts`, icone animate (Animate UI).
+**Punti aperti a inizio card (nessuno è deciso):** quali icone e quale evento le anima al tocco; come si riconosce un dispositivo senza
+cursore (`hover: none` / `pointer: coarse`) e che cosa succede con tastiera o mouse collegati; durata e `prefers-reduced-motion`.
+**Sotto-task:**
+- [ ] **1. Animazione al tocco.** Le icone si animano al tocco sui dispositivi senza cursore; test.
+- [ ] **2. Chiusura.** Tre larghezze con Playwright (768 px in modalità touch); `npm run lint`, `npm test`, `npm run build`; piano e decisioni.
+
+**Criterio:** su tablet le icone si animano al tocco come sul telefono; con il mouse nessuna regressione.
+**Commit proposto:** `fix(fe-ui): anima le icone al tocco sui dispositivi senza cursore`
 
 ---
 

@@ -942,6 +942,7 @@ nascosto → 404. Nessuna cancellazione fisica.
 | `EVENT_ALREADY_PUBLISHED` | 409 | Pubblicazione di un indie event già pubblicato |
 | `EVENT_DATE_PAST` | 400 | Pubblicazione di una bozza con data passata |
 | `COLLAB_CLOSED` | 409 | Candidatura su annuncio chiuso |
+| `COLLAB_ALREADY_APPLIED` | 409 | Seconda candidatura dello stesso utente allo stesso annuncio (decisione 99) |
 | `CANNOT_APPLY_OWN_POST` | 400 | Candidatura al proprio annuncio |
 | `CANNOT_MESSAGE_SELF` | 400 | Conversazione con se stessi |
 | `NOT_CONVERSATION_MEMBER` | 403 | Chat |
@@ -1084,9 +1085,11 @@ Parametri nearby: `lat` −90..90, `lng` −180..180 (obbligatori), `radiusKm` 0
 | `POST /api/collab-posts/{id}/applications` | autenticato | `{message (1–1800)}` → 201 `{conversationId, messageId}` |
 
 Candidatura (P6): annuncio esistente e non nascosto, con autore attivo (404), aperto (409 `COLLAB_CLOSED`),
-autore ≠ candidato (400 `CANNOT_APPLY_OWN_POST`), limite `COLLAB_APPLICATIONS` (decisione 67). Nella stessa transazione:
+autore ≠ candidato (400 `CANNOT_APPLY_OWN_POST`), candidatura non ancora fatta (409 `COLLAB_ALREADY_APPLIED`,
+decisione 99), limite `COLLAB_APPLICATIONS` (decisione 67). Nella stessa transazione:
 trova o crea la conversazione candidato–autore (senza controllo di amicizia), crea lo sblocco
-`COLLAB_POST` con l'id dell'annuncio (decisione 59) e salva un messaggio con testo
+`COLLAB_POST` con l'id dell'annuncio (decisione 59; la riga è anche il segno della candidatura già fatta: una sola
+candidatura per annuncio e utente) e salva un messaggio con testo
 `Candidatura per «<titolo>»:` seguito dal messaggio (1800 caratteri al massimo, perché il totale stia nei 2000 del
 corpo di un messaggio). Lo sblocco permette a entrambi di scriversi finché
 l'annuncio è aperto, non cancellato e non nascosto (sezione 6.9). Dopo il commit: messaggio su

@@ -3360,3 +3360,27 @@ in memoria, al massimo 20); i toast della 92 restano.
 - **Rileggere elenco e numero a ogni notifica live:** due chiamate per notifica e lampi nel pannello aperto.
 - **Caricare tutte le richieste in attesa (`size=100`):** risposta più grossa a ogni apertura per un caso quasi inesistente.
 - **Controllo periodico del numero:** contraddice «nessun polling» (decisione 91) e pesa sul piano gratuito.
+
+## Decisione 99: candidatura unica per annuncio (card F7-09, progettazione, sezioni 6.7 e 6.9)
+
+### Scelta
+
+- **Una sola candidatura per annuncio e utente:** la seconda risponde 409 `COLLAB_ALREADY_APPLIED` con il testo «Ti sei gia' candidato a questo annuncio», senza creare messaggi né notifiche.
+- **Come si riconosce:** dalla riga di `chat_unlocks` (conversazione, `COLLAB_POST`, id dell'annuncio), che la prima candidatura crea già. Nessuna migrazione e nessuna tabella nuova. Le candidature doppie già nel database restano com'erano (hanno una sola riga di sblocco): non si toccano.
+- **Ordine dei controlli:** 404, `COLLAB_CLOSED`, `CANNOT_APPLY_OWN_POST`, `COLLAB_ALREADY_APPLIED`, limite `COLLAB_APPLICATIONS`. Come gli altri rifiuti, un tentativo respinto non consuma le 10 candidature al giorno.
+- **Due richieste insieme:** il controllo veloce (`ChatService.hasUnlock`) non basta da solo; il rifiuto vero è l'`insert ... on conflict` dello sblocco, atomico: la seconda transazione aspetta la prima, trova la riga e viene annullata con lo stesso 409, mai un 500.
+- **Meccanismo:** `ChatService.sendFirstUnlockedMessage` restituisce un `Optional` vuoto se lo sblocco c'era già; `CollabService` lancia l'errore. `sendUnlockedMessage` resta com'è per il contatto degli eventi, che può ripetersi.
+- **Annuncio chiuso e riaperto:** nessuna nuova candidatura, una sola per sempre (oggi il backend non ha comunque la riapertura).
+
+### Motivazione
+
+La tabella `chat_unlocks` ha già la chiave unica che serve, quindi la regola costa poco e non richiede una migrazione. L'insert atomico protegge dalla corsa senza blocchi espliciti. Un metodo nuovo evita un flag booleano e lascia il contatto degli eventi invariato.
+
+### Alternative scartate
+
+- **Tabella `collab_applications` con vincolo UNIQUE:** migrazione, schema da aggiornare e pulizia dei doppioni, per un'informazione già presente.
+- **Ricerca nel testo dei messaggi:** fragile (il titolo può ripetersi, il testo si può scrivere a mano) e non protegge dalla corsa.
+- **Codice generico `CONFLICT`:** il frontend non potrebbe distinguere l'errore (FE-14).
+- **Controllo dopo il limite di frequenza:** chi ripete la candidatura per un doppio click consumerebbe le 10 al giorno.
+- **Parametro booleano su `sendUnlockedMessage`:** chiamate poco leggibili e un errore della collab dentro il servizio chat.
+- **Dividere `sendUnlockedMessage` in passi:** refactor più grande che tocca anche il contatto degli eventi.

@@ -125,9 +125,11 @@ public class CollabService {
     /**
      * Candidatura a un annuncio (sezione 6.7), controlli nell'ordine: annuncio non nascosto con autore attivo
      * (404), aperto (409 {@code COLLAB_CLOSED}), autore diverso dal candidato (400 {@code CANNOT_APPLY_OWN_POST}),
-     * limite {@code COLLAB_APPLICATIONS} per ultimo, cosi' i rifiuti non lo consumano. Poi, nella stessa
-     * transazione: conversazione senza controllo di amicizia, sblocco {@code COLLAB_POST} (una sola riga per
-     * annuncio, anche con piu' candidature) e messaggio con il titolo. Dopo il commit arrivano il messaggio a
+     * candidatura non ancora fatta (409 {@code COLLAB_ALREADY_APPLIED}, decisione 99), limite
+     * {@code COLLAB_APPLICATIONS} per ultimo, cosi' i rifiuti non lo consumano. Poi, nella stessa
+     * transazione: conversazione senza controllo di amicizia, sblocco {@code COLLAB_POST} (la riga dello sblocco
+     * e' anche il segno della candidatura fatta: l'insert atomico respinge la seconda richiesta insieme alla
+     * prima) e messaggio con il titolo. Dopo il commit arrivano il messaggio a
      * entrambi e la notifica {@code COLLAB_APPLICATION} all'autore, salvata nella stessa transazione (decisione 97), non anche
      * NEW_MESSAGE (sezione 7.6).
      */
@@ -146,14 +148,23 @@ public class CollabService {
         if (author.getId().equals(applicantId)) {
             throw new AppException(ErrorCode.CANNOT_APPLY_OWN_POST, "Non puoi candidarti al tuo annuncio");
         }
+        if (chat.hasUnlock(applicantId, author.getId(), ChatUnlockSource.COLLAB_POST, postId)) {
+            throw alreadyApplied();
+        }
         rateLimits.consume(RateLimit.COLLAB_APPLICATIONS, applicantId.toString());
 
-        ChatMessage saved = chat.sendUnlockedMessage(applicantId, author.getId(), ChatUnlockSource.COLLAB_POST,
-                postId, "Candidatura per \u00ab" + post.getTitle() + "\u00bb:\n" + message);
+        ChatMessage saved = chat.sendFirstUnlockedMessage(applicantId, author.getId(), ChatUnlockSource.COLLAB_POST,
+                postId, "Candidatura per \u00ab" + post.getTitle() + "\u00bb:\n" + message)
+                // Perde la corsa con un'altra richiesta dello stesso utente: la transazione si annulla.
+                .orElseThrow(CollabService::alreadyApplied);
         ChatConversation conversation = saved.getConversation();
         User applicant = conversation.otherThan(author.getId());
         notifications.create(author, applicant, NotificationType.COLLAB_APPLICATION, postId, saved.getSentAt());
         return new ApplicationResponse(conversation.getId(), saved.getId());
+    }
+
+    private static AppException alreadyApplied() {
+        return new AppException(ErrorCode.COLLAB_ALREADY_APPLIED, "Ti sei gia' candidato a questo annuncio");
     }
 
     /**

@@ -58,6 +58,7 @@ public enum ErrorCode {
     CHAT_LOCKED(HttpStatus.FORBIDDEN),
     COLLAB_CLOSED(HttpStatus.CONFLICT),
     CANNOT_APPLY_OWN_POST(HttpStatus.BAD_REQUEST),
+    COLLAB_ALREADY_APPLIED(HttpStatus.CONFLICT),
     EVENT_CLOSED(HttpStatus.CONFLICT),
     CANNOT_CONTACT_OWN_EVENT(HttpStatus.BAD_REQUEST),
     // Solo WebSocket (sezione 7.2): sulle API il token non valido e' UNAUTHENTICATED.

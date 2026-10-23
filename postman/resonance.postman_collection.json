@@ -4184,6 +4184,60 @@
           "response": []
         },
         {
+          "name": "Seconda candidatura allo stesso annuncio (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 COLLAB_ALREADY_APPLIED', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql('COLLAB_ALREADY_APPLIED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/collab-posts/{{collabPostId}}/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "collab-posts",
+                "{{collabPostId}}",
+                "applications"
+              ]
+            },
+            "description": "Errore significativo. Da eseguire subito dopo 'Candidatura all'annuncio (201)', con lo stesso utente (fanAccessToken): una sola candidatura per annuncio e utente; la seconda non crea messaggi ne' notifiche e non consuma il limite di frequenza.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Suono la batteria da dieci anni, ho una sala prove a Firenze.\"\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Candidatura al proprio annuncio (400)",
           "event": [
             {

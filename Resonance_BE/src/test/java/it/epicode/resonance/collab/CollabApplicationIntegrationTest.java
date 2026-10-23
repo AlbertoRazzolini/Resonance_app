@@ -2,6 +2,7 @@ package it.epicode.resonance.collab;
 
 import it.epicode.resonance.chat.ChatConversation;
 import it.epicode.resonance.chat.ChatTestSupport;
+import it.epicode.resonance.notification.NotificationRepository;
 import it.epicode.resonance.support.StompTestClient;
 import it.epicode.resonance.support.StompTestClient.Connection;
 import it.epicode.resonance.user.User;
@@ -15,9 +16,15 @@ import org.springframework.http.MediaType;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.test.web.servlet.ResultActions;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,7 +35,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Candidature agli annunci (progettazione, sezioni 6.7 e 6.9; decisione 59): controlli e codici d'errore, messaggio
  * in chat e notifica COLLAB_APPLICATION dopo il commit, sblocco che permette a due non amici di scriversi finche'
- * l'annuncio e' aperto e poi CHAT_LOCKED, una sola riga di sblocco per annuncio.
+ * l'annuncio e' aperto e poi CHAT_LOCKED, candidatura unica per annuncio e utente (anche con due richieste
+ * insieme) con COLLAB_ALREADY_APPLIED.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class CollabApplicationIntegrationTest extends ChatTestSupport {
@@ -40,6 +48,9 @@ class CollabApplicationIntegrationTest extends ChatTestSupport {
 
     @Autowired
     private SimpMessagingTemplate template;
+
+    @Autowired
+    private NotificationRepository notifications;
 
     private StompTestClient stomp;
 
@@ -178,18 +189,101 @@ class CollabApplicationIntegrationTest extends ChatTestSupport {
                 .containsEntry("code", "CHAT_LOCKED");
     }
 
+    // ---- candidatura unica (decisione 99) ----
+
     @Test
-    void secondApplicationToTheSamePost_keepsOneConversationAndOneUnlockRow() throws Exception {
+    void secondApplicationToTheSamePost_returns409_andCreatesNoMessageNorNotification() throws Exception {
         User author = user("autore@example.com", "Autore");
         User applicant = user("candidato@example.com", "Candidato");
         UUID postId = openCollabPost(author);
+        apply(applicant, postId, BODY).andExpect(status().isCreated());
 
-        apply(applicant, postId, BODY).andExpect(status().isCreated());
-        apply(applicant, postId, BODY).andExpect(status().isCreated());
+        apply(applicant, postId, BODY)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("COLLAB_ALREADY_APPLIED"))
+                .andExpect(jsonPath("$.message").value("Ti sei gia' candidato a questo annuncio"));
 
         assertThat(conversations.count()).isEqualTo(1);
-        assertThat(messages.count()).isEqualTo(2);
+        assertThat(messages.count()).isEqualTo(1);
+        assertThat(notifications.count()).isEqualTo(1);
         assertThat(unlockRows(conversations.findAll().get(0))).isEqualTo(1);
+    }
+
+    @Test
+    void applicationsFromAnotherUserOrToAnotherPost_stayAllowed() throws Exception {
+        User author = user("autore@example.com", "Autore");
+        User applicant = user("candidato@example.com", "Candidato");
+        User other = user("altro@example.com", "Altro");
+        UUID postId = openCollabPost(author);
+        UUID otherPostId = openCollabPost(author);
+
+        apply(applicant, postId, BODY).andExpect(status().isCreated());
+        apply(other, postId, BODY).andExpect(status().isCreated());
+        apply(applicant, otherPostId, BODY).andExpect(status().isCreated());
+
+        assertThat(messages.count()).isEqualTo(3);
+    }
+
+    @Test
+    void twoSimultaneousApplications_oneSucceedsAndTheOtherGets409() throws Exception {
+        User author = user("autore@example.com", "Autore");
+        User applicant = user("candidato@example.com", "Candidato");
+        UUID postId = openCollabPost(author);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            List<Future<Integer>> results = new ArrayList<>();
+            for (int i = 0; i < 2; i++) {
+                results.add(pool.submit(() -> {
+                    start.await();
+                    return apply(applicant, postId, BODY).andReturn().getResponse().getStatus();
+                }));
+            }
+            start.countDown();
+            List<Integer> statuses = new ArrayList<>();
+            for (Future<Integer> result : results) {
+                statuses.add(result.get(30, TimeUnit.SECONDS));
+            }
+
+            // Mai un 500: la seconda richiesta perde la corsa e riceve l'errore previsto.
+            assertThat(statuses).containsExactlyInAnyOrder(201, 409);
+        } finally {
+            pool.shutdownNow();
+        }
+        assertThat(messages.count()).isEqualTo(1);
+        assertThat(notifications.count()).isEqualTo(1);
+        assertThat(conversations.count()).isEqualTo(1);
+    }
+
+    @Test
+    void closedPostWithAnExistingApplication_returnsCollabClosedBeforeAlreadyApplied() throws Exception {
+        User author = user("autore@example.com", "Autore");
+        User applicant = user("candidato@example.com", "Candidato");
+        UUID postId = openCollabPost(author);
+        apply(applicant, postId, BODY).andExpect(status().isCreated());
+        jdbc.update("update collab_posts set is_open = false where id = ?", postId);
+
+        apply(applicant, postId, BODY)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("COLLAB_CLOSED"));
+    }
+
+    @Test
+    void duplicateApplications_doNotConsumeTheLimit() throws Exception {
+        User author = user("autore@example.com", "Autore");
+        User applicant = user("candidato@example.com", "Candidato");
+        UUID postId = openCollabPost(author);
+        UUID otherPostId = openCollabPost(author);
+        apply(applicant, postId, BODY).andExpect(status().isCreated());
+
+        // Se il rifiuto consumasse il limite, la dodicesima richiesta sarebbe un 429.
+        for (int i = 0; i < 11; i++) {
+            apply(applicant, postId, BODY)
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("COLLAB_ALREADY_APPLIED"));
+        }
+
+        apply(applicant, otherPostId, BODY).andExpect(status().isCreated());
     }
 
     // ---- controlli ----
@@ -280,13 +374,12 @@ class CollabApplicationIntegrationTest extends ChatTestSupport {
     void eleventhApplicationInADay_returns429() throws Exception {
         User author = user("autore@example.com", "Autore");
         User applicant = user("candidato@example.com", "Candidato");
-        UUID postId = openCollabPost(author);
-
+        // Una sola candidatura per annuncio: il limite si raggiunge con annunci diversi.
         for (int i = 0; i < 10; i++) {
-            apply(applicant, postId, BODY).andExpect(status().isCreated());
+            apply(applicant, openCollabPost(author), BODY).andExpect(status().isCreated());
         }
 
-        apply(applicant, postId, BODY)
+        apply(applicant, openCollabPost(author), BODY)
                 .andExpect(status().isTooManyRequests())
                 .andExpect(jsonPath("$.code").value("TOO_MANY_REQUESTS"));
         assertThat(messages.count()).isEqualTo(10);
