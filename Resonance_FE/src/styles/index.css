@@ -107,6 +107,24 @@ textarea {
   gap: var(--rs-space-4);
   min-height: var(--rs-topbar-height);
   padding: 0 var(--rs-space-4);
+  /* Sempre in vista, così profilo e campanella restano raggiungibili scorrendo; sopra la colonna laterale */
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+}
+
+/*
+ * Telefono: sfondo pieno con lo stesso bagliore fisso della pagina (si fonde con lo sfondo ma i contenuti non
+ * passano sotto) e bordo inferiore come le altre linee. Da 768 px valgono lo sfondo e il bordo del layout a griglia.
+ */
+@media (max-width: 767.98px) {
+  .rs-topbar {
+    background-color: var(--rs-color-bg);
+    background-image: var(--rs-spotlight-layers);
+    background-size: var(--rs-spotlight-sizes);
+    background-attachment: fixed;
+    border-bottom: 1px solid var(--rs-color-border);
+  }
 }
 
 .rs-topbar__brand {
