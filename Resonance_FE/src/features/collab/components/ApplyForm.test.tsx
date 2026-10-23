@@ -11,17 +11,23 @@ import { makeCollabPost } from '@/test/fixtures/collab'
 import { makeLoginResponse, makeMe } from '@/test/fixtures/users'
 import { applicationRejected, applicationSent } from '@/test/handlers/collab'
 import { server } from '@/test/server'
+import type { CollabPostResponse } from '@/types/collab'
 import { ApplyForm } from './ApplyForm'
 
 // Modulo di candidatura: messaggio 1–1800 con contatore, controlli del client prima di chiamare il server, esito con il
 // collegamento alla chat, errori COLLAB_CLOSED, CANNOT_APPLY_OWN_POST e TOO_MANY_REQUESTS con i testi dei loro codici,
-// e per un anonimo il passaggio dall'accesso con ritorno alla stessa pagina (progettazione, sezione 6.7).
+// e per un anonimo il passaggio dall'accesso con ritorno alla stessa pagina (progettazione, sezione 6.7). Candidatura
+// unica (decisione 100): dopo l'invio, dopo un 409 COLLAB_ALREADY_APPLIED o se il dettaglio porta già la conversazione,
+// il campo sparisce e resta il pulsante spento «Candidatura inviata».
 function LocationProbe() {
   const location = useLocation()
   return <p data-testid="location">{location.pathname + '|' + JSON.stringify(location.state)}</p>
 }
 
-function renderForm({ loggedIn = true }: { loggedIn?: boolean } = {}) {
+function renderForm({
+  loggedIn = true,
+  post = makeCollabPost({ id: 'a1' }),
+}: { loggedIn?: boolean; post?: CollabPostResponse } = {}) {
   const store = makeStore()
   if (loggedIn) store.dispatch(sessionStarted(makeLoginResponse({ user: makeMe({ id: 'me-id' }) })))
   const router = createMemoryRouter(
@@ -30,7 +36,7 @@ function renderForm({ loggedIn = true }: { loggedIn?: boolean } = {}) {
         path: '/collab/:id',
         element: (
           <>
-            <ApplyForm post={makeCollabPost({ id: 'a1' })} />
+            <ApplyForm post={post} />
             <LocationProbe />
           </>
         ),
@@ -93,11 +99,11 @@ describe('ApplyForm', () => {
     await user.click(field)
     await user.paste('a'.repeat(1800))
     await user.click(screen.getByRole('button', { name: 'Invia candidatura' }))
-    expect(await screen.findByText(/Candidatura inviata/)).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Candidatura inviata' })).toBeDisabled()
     expect(calls).toHaveLength(1)
   })
 
-  it('a candidatura riuscita manda il messaggio senza spazi ai bordi e offre «Apri la chat» verso la conversazione', async () => {
+  it('a candidatura riuscita manda il messaggio senza spazi ai bordi, spegne il pulsante «Candidatura inviata» e offre «Apri la chat»', async () => {
     const calls: Request[] = []
     server.use(applicationSent({ conversationId: 'conv-9', messageId: 'm1' }, calls))
     const user = renderForm()
@@ -105,11 +111,40 @@ describe('ApplyForm', () => {
     await user.type(screen.getByLabelText("Messaggio per l'autore"), '  Suono il basso da dieci anni  ')
     await user.click(screen.getByRole('button', { name: 'Invia candidatura' }))
 
-    expect(await screen.findByText('Candidatura inviata. Puoi continuare la conversazione in chat.')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Candidatura inviata' })).toBeDisabled()
     expect(screen.getByRole('link', { name: 'Apri la chat' })).toHaveAttribute('href', '/chat/conv-9')
+    expect(screen.queryByLabelText("Messaggio per l'autore")).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Invia candidatura' })).not.toBeInTheDocument()
     expect(new URL(calls[0].url).pathname).toBe('/api/collab-posts/a1/applications')
     expect(await calls[0].json()).toEqual({ message: 'Suono il basso da dieci anni' })
+  })
+
+  it('se il dettaglio porta già la conversazione (pagina ricaricata) mostra subito lo stato bloccato, senza campo e senza chiamare il server', () => {
+    const calls: Request[] = []
+    server.use(applicationSent({ conversationId: 'c1', messageId: 'm1' }, calls))
+
+    renderForm({ post: makeCollabPost({ id: 'a1', applicationConversationId: 'conv-4' }) })
+
+    expect(screen.getByRole('button', { name: 'Candidatura inviata' })).toBeDisabled()
+    expect(screen.getByRole('link', { name: 'Apri la chat' })).toHaveAttribute('href', '/chat/conv-4')
+    expect(screen.queryByLabelText("Messaggio per l'autore")).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Invia candidatura' })).not.toBeInTheDocument()
+    expect(calls).toHaveLength(0)
+  })
+
+  it('409 COLLAB_ALREADY_APPLIED passa allo stato bloccato con la spiegazione, senza campo né errore rosso', async () => {
+    server.use(applicationRejected(409, 'COLLAB_ALREADY_APPLIED'))
+    const user = renderForm()
+
+    await user.type(screen.getByLabelText("Messaggio per l'autore"), 'Ci riprovo')
+    await user.click(screen.getByRole('button', { name: 'Invia candidatura' }))
+
+    expect(await screen.findByRole('button', { name: 'Candidatura inviata' })).toBeDisabled()
+    expect(screen.getByText('Ti sei già candidato a questo annuncio.')).toBeInTheDocument()
+    expect(screen.queryByLabelText("Messaggio per l'autore")).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    // Il 409 non porta l'id della conversazione: il link arriva dal dettaglio riletto (prova nella pagina)
+    expect(screen.queryByRole('link', { name: 'Apri la chat' })).not.toBeInTheDocument()
   })
 
   it.each([
@@ -141,7 +176,7 @@ describe('ApplyForm', () => {
     await user.click(screen.getByRole('button', { name: 'Invia candidatura' }))
 
     expect(screen.getByRole('button', { name: 'Invia candidatura' })).toBeDisabled()
-    await screen.findByText(/Candidatura inviata/)
+    await screen.findByRole('button', { name: 'Candidatura inviata' })
   })
 
   it("un anonimo che invia va all'accesso e la pagina d'origine è ricordata; il server non è chiamato", async () => {

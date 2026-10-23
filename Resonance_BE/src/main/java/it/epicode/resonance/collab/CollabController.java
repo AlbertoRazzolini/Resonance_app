@@ -65,11 +65,12 @@ public class CollabController {
     }
 
     /**
-     * Dettaglio pubblico, anche di un annuncio chiuso; 404 se e' nascosto.
+     * Dettaglio pubblico, anche di un annuncio chiuso; 404 se e' nascosto. Con il token, porta anche la conversazione
+     * della candidatura del chiamante (decisione 100); senza, il campo e' null.
      */
     @GetMapping("/{id}")
-    public CollabPostResponse get(@PathVariable UUID id) {
-        return collabService.get(id);
+    public CollabPostResponse get(@PathVariable UUID id, @AuthenticationPrincipal AuthenticatedUser user) {
+        return collabService.get(id, user == null ? null : user.id());
     }
 
     /**

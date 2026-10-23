@@ -1079,7 +1079,7 @@ Parametri nearby: `lat` −90..90, `lng` −180..180 (obbligatori), `radiusKm` 0
 | `POST /api/collab-posts` | `hasRole("MUSICIAN")` | `{title, description, roleNeeded, genreTags, location?}` → 201 |
 | `GET /api/collab-posts?page&size` | pubblico | solo aperti e non nascosti, dal più recente |
 | `GET /api/collab-posts/mine?page&size` | autenticato | annunci del chiamante, chiusi compresi, non nascosti; dal più recente (decisione 77) |
-| `GET /api/collab-posts/{id}` | pubblico | anche chiusi; 404 se nascosto |
+| `GET /api/collab-posts/{id}` | pubblico | anche chiusi; 404 se nascosto; `applicationConversationId` = conversazione della candidatura del chiamante, null per anonimi, autore e chi non si è candidato (solo nel dettaglio, decisione 100) |
 | `PATCH /api/collab-posts/{id}/close` | proprietario | `is_open = false`, idempotente → 200 |
 | `DELETE /api/collab-posts/{id}` | proprietario | soft delete |
 | `POST /api/collab-posts/{id}/applications` | autenticato | `{message (1–1800)}` → 201 `{conversationId, messageId}` |

@@ -3384,3 +3384,28 @@ La tabella `chat_unlocks` ha già la chiave unica che serve, quindi la regola co
 - **Controllo dopo il limite di frequenza:** chi ripete la candidatura per un doppio click consumerebbe le 10 al giorno.
 - **Parametro booleano su `sendUnlockedMessage`:** chiamate poco leggibili e un errore della collab dentro il servizio chat.
 - **Dividere `sendUnlockedMessage` in passi:** refactor più grande che tocca anche il contatto degli eventi.
+
+## Decisione 100: conversazione della candidatura nel dettaglio dell'annuncio (card FE-14, progettazione, sezione 6.7)
+
+### Scelta
+
+- **Campo nuovo `applicationConversationId`** nella risposta di `GET /api/collab-posts/{id}`: l'id della conversazione con l'autore se il chiamante si è già candidato, altrimenti `null`. Serve al frontend per mostrare «Candidatura inviata» e il link «Apri la chat» anche dopo un ricarico della pagina.
+- **Solo nel dettaglio:** elenco, `/mine`, creazione e chiusura restituiscono sempre `null` e non fanno query in più (nessun costo per le pagine da 10). Il Javadoc del DTO lo dice, perché un `null` in elenco non significa «non candidato».
+- **`null` per anonimi, autore e chi non si è candidato:** nessun dato di altri utenti; l'autore non si candida al proprio annuncio e per lui la chat non viene nemmeno interrogata.
+- **Come si riconosce:** dalla stessa riga di `chat_unlocks` della decisione 99 (`ChatService.findUnlockConversationId`; `hasUnlock` ora la usa). Nessuna migrazione. Il dato resta valido anche se l'annuncio viene chiuso dopo.
+- **Frontend (FE-14):** a invio riuscito, dopo un 409 `COLLAB_ALREADY_APPLIED` o se il dettaglio porta già l'id, il campo del messaggio sparisce e resta il pulsante spento «Candidatura inviata» con «Apri la chat» (quando l'id è noto). Dopo il 409 e dopo un invio riuscito il dettaglio si rilegge (tag `CollabPost` invalidato dalla mutazione), così il link compare e, tornando sulla pagina, il modulo non riappare; gli altri errori non rileggono. Testo del codice `COLLAB_ALREADY_APPLIED`: «Ti sei già candidato a questo annuncio.», mostrato sotto il pulsante e non come errore rosso. Gli altri errori (`COLLAB_CLOSED`, `CANNOT_APPLY_OWN_POST`, 429) restano com'erano.
+- **Eccezione ai vincoli globali del piano del frontend**, approvata dallo studente il 23 ottobre: la card FE-14 tocca backend e collection Postman (richiesta «Dettaglio annuncio del candidato (200)», e il dettaglio anonimo controlla il `null`).
+
+### Motivazione
+
+Senza il campo il frontend saprebbe della candidatura già fatta solo dopo l'errore 409, e chi ricarica la pagina rivedrebbe il modulo. L'id della conversazione (e non un booleano) permette di mostrare anche «Apri la chat» dopo il ricarico, con una query sola sul dettaglio.
+
+### Alternative scartate
+
+- **Booleano `hasApplied`:** bottone bloccato dopo il ricarico, ma senza il link alla chat.
+- **Campo in tutte le risposte:** una query in più per ogni annuncio dell'elenco (o una query a lotto da scrivere), non usata da nessuna schermata.
+- **Solo «dopo l'invio o l'errore», senza backend:** dopo il ricarico si rivede il modulo.
+- **Campo del messaggio visibile ma bloccato:** dopo un ricarico sarebbe una casella vuota e grigia, perché il testo inviato non è più noto.
+- **Errore rosso sopra il modulo dopo il 409:** il pulsante resterebbe premibile e si potrebbe riprovare all'infinito.
+- **Nessuna rilettura dopo il 409:** il link «Apri la chat» comparirebbe solo dopo un ricarico.
+- **Memoria nel browser (`localStorage`):** vale solo per quel browser e il progetto lo evita per i dati di sessione.

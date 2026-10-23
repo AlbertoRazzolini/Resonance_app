@@ -914,11 +914,13 @@ c'erano già due candidature dello stesso utente allo stesso annuncio).
 
 **Riferimenti:** F7-09; FE-08 (collab e candidature).
 **Scelta approvata (23 ottobre):** dopo la candidatura il bottone diventa «Candidatura inviata» e non si può premere.
-**Punti aperti a inizio card:** come il frontend sa che ci si è già candidati (campo nella risposta dell'annuncio, che sarebbe una
-modifica al backend, oppure solo dopo l'errore); testo dell'errore e dell'etichetta; che cosa vede chi ricarica la pagina.
+**Punti aperti (decisi dallo studente il 23 ottobre, decisione 100):** come il frontend sa che ci si è già candidati (campo nella risposta
+dell'annuncio, cioè una modifica al backend: `applicationConversationId` nel solo dettaglio); testo dell'errore e dell'etichetta; che cosa
+vede chi ricarica la pagina. **Eccezione ai Vincoli globali** (backend e Postman toccati, con test d'integrazione e richiesta Postman).
 **Sotto-task:**
-- [ ] **1. Stato e bottone.** «Candidatura inviata», errore chiaro se il server rifiuta; test.
-- [ ] **2. Chiusura.** Tre larghezze con Playwright; `npm run lint`, `npm test`, `npm run build`; piano e decisioni.
+- [x] **1. Stato e bottone.** «Candidatura inviata», errore chiaro se il server rifiuta; test. Con il campo nuovo nel dettaglio (backend, Postman,
+  `progettazione.md`), campo nascosto e pulsante spento anche dopo il ricarico, `COLLAB_ALREADY_APPLIED` con testo e rilettura del dettaglio.
+- [x] **2. Chiusura.** Tre larghezze con Playwright; `npm run lint`, `npm test`, `npm run build`; piano e decisioni.
 
 **Criterio:** nessuna seconda candidatura dall'interfaccia; test verdi; tre larghezze.
 **Commit proposto:** `feat(fe-collab): mostra la candidatura inviata e blocca la ripetizione`

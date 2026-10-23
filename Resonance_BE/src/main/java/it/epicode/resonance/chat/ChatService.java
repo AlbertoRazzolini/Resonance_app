@@ -265,9 +265,18 @@ public class ChatService {
      */
     @Transactional(readOnly = true)
     public boolean hasUnlock(UUID a, UUID b, ChatUnlockSource source, UUID sourceId) {
+        return findUnlockConversationId(a, b, source, sourceId).isPresent();
+    }
+
+    /**
+     * L'id della conversazione fra i due utenti se c'e' uno sblocco da questa origine, altrimenti vuoto (decisione
+     * 100: il dettaglio dell'annuncio la mostra al candidato). Non crea nulla.
+     */
+    @Transactional(readOnly = true)
+    public Optional<UUID> findUnlockConversationId(UUID a, UUID b, ChatUnlockSource source, UUID sourceId) {
         return conversations.findByPair(lower(a, b), higher(a, b))
-                .map(conversation -> unlocks.existsById(new ChatUnlockId(conversation.getId(), source, sourceId)))
-                .orElse(false);
+                .filter(conversation -> unlocks.existsById(new ChatUnlockId(conversation.getId(), source, sourceId)))
+                .map(ChatConversation::getId);
     }
 
     private ChatMessage appendAndPublish(ChatConversation conversation, UUID senderId, UUID recipientId,

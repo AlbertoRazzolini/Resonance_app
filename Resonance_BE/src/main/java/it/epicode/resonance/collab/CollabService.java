@@ -92,10 +92,20 @@ public class CollabService {
 
     /**
      * Dettaglio pubblico: vale anche per gli annunci chiusi, mentre uno nascosto e' un 404 per tutti (sezione 3.5).
+     * Se {@code viewerId} (null per gli anonimi) si e' candidato, porta la conversazione della candidatura
+     * (decisione 100): lo sblocco {@code COLLAB_POST} e' il segno della candidatura, come in {@link #apply}. L'autore
+     * non si candida al proprio annuncio, quindi per lui il campo resta null senza interrogare la chat.
      */
     @Transactional(readOnly = true)
-    public CollabPostResponse get(UUID id) {
-        return CollabPostResponse.from(findVisible(id));
+    public CollabPostResponse get(UUID id, UUID viewerId) {
+        CollabPost post = findVisible(id);
+        UUID authorId = post.getMusician().getId();
+        if (viewerId == null || viewerId.equals(authorId)) {
+            return CollabPostResponse.from(post);
+        }
+        UUID conversationId = chat.findUnlockConversationId(viewerId, authorId, ChatUnlockSource.COLLAB_POST, id)
+                .orElse(null);
+        return CollabPostResponse.from(post, conversationId);
     }
 
     /**

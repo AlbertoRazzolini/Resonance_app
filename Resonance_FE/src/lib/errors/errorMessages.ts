@@ -58,6 +58,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   EVENT_CLOSED: "L'evento è già iniziato: non si può più contattare l'organizzatore.",
   CANNOT_CONTACT_OWN_EVENT: "Non puoi contattare l'organizzatore del tuo stesso evento.",
   COLLAB_CLOSED: "L'annuncio è chiuso e non accetta più candidature.",
+  COLLAB_ALREADY_APPLIED: 'Ti sei già candidato a questo annuncio.',
   CANNOT_APPLY_OWN_POST: 'Non puoi candidarti al tuo stesso annuncio.',
 
   // Amicizie e chat

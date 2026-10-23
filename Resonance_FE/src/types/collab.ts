@@ -14,6 +14,11 @@ export type CollabPostResponse = {
   location: string | null
   isOpen: boolean
   createdAt: string
+  /**
+   * Conversazione della candidatura del chiamante: solo nel dettaglio (decisione 100), `null` per anonimi, autore e chi
+   * non si è candidato, e in ogni altra risposta (elenco, `/mine`, creazione, chiusura), dove non è calcolata.
+   */
+  applicationConversationId: string | null
 }
 
 /** Corpo di `POST /api/collab-posts` (solo MUSICIAN): generi e luogo facoltativi, i vuoti non si inviano. */

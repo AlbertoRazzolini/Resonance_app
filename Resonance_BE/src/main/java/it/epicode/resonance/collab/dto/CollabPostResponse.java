@@ -9,6 +9,8 @@ import java.util.UUID;
 
 /**
  * Annuncio di collaborazione nelle risposte (progettazione, sezione 6.7); l'autore e' ridotto ai dati pubblici.
+ * {@code applicationConversationId} e' la conversazione della candidatura del chiamante e vale solo nel dettaglio
+ * (decisione 100): null per anonimi, autore e chi non si e' candidato, e in ogni altra risposta, dove non e' calcolato.
  */
 public record CollabPostResponse(
         UUID id,
@@ -19,13 +21,22 @@ public record CollabPostResponse(
         List<String> genreTags,
         String location,
         boolean isOpen,
-        Instant createdAt
+        Instant createdAt,
+        UUID applicationConversationId
 ) {
 
     /**
-     * Converte l'annuncio; l'autore deve essere gia' caricato.
+     * Converte l'annuncio senza il dato della candidatura; l'autore deve essere gia' caricato.
      */
     public static CollabPostResponse from(CollabPost post) {
+        return from(post, null);
+    }
+
+    /**
+     * Converte l'annuncio con la conversazione della candidatura del chiamante (null se non c'e'); l'autore deve
+     * essere gia' caricato.
+     */
+    public static CollabPostResponse from(CollabPost post, UUID applicationConversationId) {
         return new CollabPostResponse(
                 post.getId(),
                 AuthorSummary.from(post.getMusician()),
@@ -35,6 +46,7 @@ public record CollabPostResponse(
                 List.copyOf(post.getGenreTags()),
                 post.getLocation(),
                 post.isOpen(),
-                post.getCreatedAt());
+                post.getCreatedAt(),
+                applicationConversationId);
     }
 }

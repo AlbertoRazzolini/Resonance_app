@@ -4064,6 +4064,7 @@
                   "pm.test('200 con l\\'annuncio richiesto', function () {",
                   "    pm.response.to.have.status(200);",
                   "    pm.expect(pm.response.json().id).to.eql(pm.environment.get('collabPostId'));",
+                  "    pm.expect(pm.response.json().applicationConversationId).to.eql(null);",
                   "});"
                 ]
               }
@@ -4086,7 +4087,7 @@
                 "{{collabPostId}}"
               ]
             },
-            "description": "Pubblico. Vale anche per un annuncio chiuso; un annuncio nascosto e' un 404."
+            "description": "Pubblico. Vale anche per un annuncio chiuso; un annuncio nascosto e' un 404. Senza token applicationConversationId e' null."
           },
           "response": []
         },
@@ -4224,6 +4225,52 @@
               "mode": "raw",
               "raw": "{\n  \"message\": \"Suono la batteria da dieci anni, ho una sala prove a Firenze.\"\n}"
             },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Dettaglio annuncio del candidato (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con la conversazione della candidatura', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.id).to.eql(pm.environment.get('collabPostId'));",
+                  "    pm.expect(body.applicationConversationId).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/collab-posts/{{collabPostId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "collab-posts",
+                "{{collabPostId}}"
+              ]
+            },
+            "description": "Da eseguire dopo 'Candidatura all'annuncio (201)', con lo stesso utente (fanAccessToken). Con il token del candidato il dettaglio porta applicationConversationId, la conversazione con l'autore; chi non si e' candidato, l'autore e gli anonimi la vedono null (decisione 100).",
             "auth": {
               "type": "bearer",
               "bearer": [

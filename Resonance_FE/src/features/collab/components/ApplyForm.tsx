@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Alert, Button, Form } from 'react-bootstrap'
+import { Button, Form } from 'react-bootstrap'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { chatPath, ROUTES } from '@/app/routes'
 import type { LoginRedirectState } from '@/components/guards/RequireAuth'
@@ -7,17 +7,20 @@ import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import { FieldError } from '@/components/ui/FieldError'
 import { selectCurrentUser } from '@/features/auth/authSlice'
 import { useAppSelector } from '@/hooks/redux'
-import { getFieldErrors } from '@/lib/errors/getErrorMessage'
+import { getErrorMessage, getFieldErrors } from '@/lib/errors/getErrorMessage'
 import type { ApplicationResponse, CollabPostResponse } from '@/types/collab'
-import { useApplyToCollabPostMutation } from '../api/collabApi'
+import { isAlreadyApplied, useApplyToCollabPostMutation } from '../api/collabApi'
 import { MESSAGE_MAX, validateApplication } from '../collabForm'
 
 /**
  * Modulo di candidatura a un annuncio aperto (progettazione, sezione 6.7): un messaggio di 1–1800 caratteri che il
- * backend trasforma in un messaggio nella conversazione con l'autore (decisione 24). A invio riuscito il modulo lascia
- * il posto all'avviso con «Apri la chat»; gli errori (`COLLAB_CLOSED`, `CANNOT_APPLY_OWN_POST`, `TOO_MANY_REQUESTS`)
- * mostrano il testo del loro codice e il messaggio scritto resta. Un anonimo che invia va all'accesso e poi torna qui,
- * come per il «Mi piace» del feed. Chi mostra il modulo decide quando nasconderlo (proprio annuncio, annuncio chiuso).
+ * backend trasforma in un messaggio nella conversazione con l'autore (decisione 24). Una sola candidatura per annuncio
+ * (decisioni 99 e 100): a invio riuscito, dopo un 409 `COLLAB_ALREADY_APPLIED` o se il dettaglio porta già la
+ * conversazione (pagina ricaricata) il campo sparisce e resta il pulsante spento «Candidatura inviata», con «Apri la
+ * chat» quando l'id della conversazione è noto (dopo il 409 arriva con il dettaglio riletto). Gli altri errori
+ * (`COLLAB_CLOSED`, `CANNOT_APPLY_OWN_POST`, `TOO_MANY_REQUESTS`) mostrano il testo del loro codice e il messaggio
+ * scritto resta. Un anonimo che invia va all'accesso e poi torna qui, come per il «Mi piace» del feed. Chi mostra il
+ * modulo decide quando nasconderlo (proprio annuncio, annuncio chiuso).
  */
 export function ApplyForm({ post }: { post: CollabPostResponse }) {
   const user = useAppSelector(selectCurrentUser)
@@ -49,14 +52,21 @@ export function ApplyForm({ post }: { post: CollabPostResponse }) {
     }
   }
 
-  if (sent) {
+  const alreadyApplied = isAlreadyApplied(error)
+  const conversationId = sent?.conversationId ?? post.applicationConversationId
+  if (conversationId !== null || alreadyApplied) {
     return (
-      <Alert variant="success" role="status">
-        <p className="mb-2">Candidatura inviata. Puoi continuare la conversazione in chat.</p>
-        <Link className="btn btn-primary btn-sm" to={chatPath(sent.conversationId)}>
-          Apri la chat
-        </Link>
-      </Alert>
+      <div className="rs-apply rs-apply--sent" role="status">
+        <Button variant="primary" disabled>
+          Candidatura inviata
+        </Button>
+        {conversationId !== null && (
+          <Link className="btn btn-outline-light" to={chatPath(conversationId)}>
+            Apri la chat
+          </Link>
+        )}
+        {alreadyApplied && <p className="rs-field-hint">{getErrorMessage(error)}</p>}
+      </div>
     )
   }
 

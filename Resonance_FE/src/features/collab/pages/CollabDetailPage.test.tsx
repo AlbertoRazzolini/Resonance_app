@@ -1,5 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
 import { Provider } from 'react-redux'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { describe, expect, it } from 'vitest'
@@ -7,7 +8,9 @@ import { makeStore } from '@/app/store'
 import { sessionStarted } from '@/features/auth/authSlice'
 import { makeCollabPost } from '@/test/fixtures/collab'
 import { makeLoginResponse, makeMe } from '@/test/fixtures/users'
+import { errorResponse } from '@/test/handlers/auth'
 import {
+  applicationRejected,
   collabCloseRejected,
   collabClosed,
   collabDeleted,
@@ -178,6 +181,77 @@ describe('CollabDetailPage · candidatura', () => {
     renderPage('a1')
 
     expect(await screen.findByLabelText("Messaggio per l'autore")).toBeInTheDocument()
+  })
+
+  it('se il dettaglio porta la conversazione della candidatura, mostra «Candidatura inviata» con «Apri la chat» e nessun modulo', async () => {
+    server.use(collabPostFound(ownPost({ applicationConversationId: 'conv-4' })))
+
+    renderPage('a1', OTHER)
+
+    expect(await screen.findByRole('button', { name: 'Candidatura inviata' })).toBeDisabled()
+    expect(screen.getByRole('link', { name: 'Apri la chat' })).toHaveAttribute('href', '/chat/conv-4')
+    expect(screen.queryByLabelText("Messaggio per l'autore")).not.toBeInTheDocument()
+  })
+
+  it('dopo un 409 COLLAB_ALREADY_APPLIED rilegge il dettaglio e compare «Apri la chat»', async () => {
+    let applied = false
+    const detailCalls: Request[] = []
+    server.use(
+      http.get('*/api/collab-posts/:id', ({ request }) => {
+        detailCalls.push(request.clone())
+        return HttpResponse.json(ownPost({ applicationConversationId: applied ? 'conv-8' : null }))
+      }),
+      http.post('*/api/collab-posts/:id/applications', () => {
+        applied = true
+        return HttpResponse.json(errorResponse(409, 'COLLAB_ALREADY_APPLIED'), { status: 409 })
+      }),
+    )
+    const user = renderPage('a1', OTHER)
+
+    await user.type(await screen.findByLabelText("Messaggio per l'autore"), 'Ciao')
+    await user.click(screen.getByRole('button', { name: 'Invia candidatura' }))
+
+    expect(await screen.findByRole('link', { name: 'Apri la chat' })).toHaveAttribute('href', '/chat/conv-8')
+    expect(screen.getByRole('button', { name: 'Candidatura inviata' })).toBeDisabled()
+    expect(detailCalls).toHaveLength(2)
+  })
+
+  it('dopo una candidatura riuscita rilegge il dettaglio, così tornando sulla pagina il modulo non riappare', async () => {
+    let applied = false
+    const detailCalls: Request[] = []
+    server.use(
+      http.get('*/api/collab-posts/:id', ({ request }) => {
+        detailCalls.push(request.clone())
+        return HttpResponse.json(ownPost({ applicationConversationId: applied ? 'conv-3' : null }))
+      }),
+      http.post('*/api/collab-posts/:id/applications', () => {
+        applied = true
+        return HttpResponse.json({ conversationId: 'conv-3', messageId: 'm1' }, { status: 201 })
+      }),
+    )
+    const user = renderPage('a1', OTHER)
+
+    await user.type(await screen.findByLabelText("Messaggio per l'autore"), 'Ciao')
+    await user.click(screen.getByRole('button', { name: 'Invia candidatura' }))
+
+    expect(await screen.findByRole('link', { name: 'Apri la chat' })).toHaveAttribute('href', '/chat/conv-3')
+    await waitFor(() => expect(detailCalls).toHaveLength(2))
+  })
+
+  it('un altro rifiuto (COLLAB_CLOSED) non rilegge il dettaglio e il modulo resta', async () => {
+    const detailCalls: Request[] = []
+    server.use(
+      collabPostFound(ownPost(), detailCalls),
+      applicationRejected(409, 'COLLAB_CLOSED'),
+    )
+    const user = renderPage('a1', OTHER)
+
+    await user.type(await screen.findByLabelText("Messaggio per l'autore"), 'Ciao')
+    await user.click(screen.getByRole('button', { name: 'Invia candidatura' }))
+
+    expect(await screen.findByText("L'annuncio è chiuso e non accetta più candidature.")).toBeInTheDocument()
+    expect(screen.getByLabelText("Messaggio per l'autore")).toBeInTheDocument()
+    expect(detailCalls).toHaveLength(1)
   })
 
   it('sul proprio annuncio il modulo di candidatura non compare', async () => {

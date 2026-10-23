@@ -2098,6 +2098,21 @@ textarea {
   align-self: stretch;
 }
 
+/* Candidatura già inviata: pulsante spento e «Apri la chat» in riga, a capo sui telefoni stretti; la spiegazione sotto */
+.rs-apply--sent {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rs-space-3);
+}
+
+.rs-apply--sent .rs-field-hint {
+  flex-basis: 100%;
+  margin: 0;
+  /* Il suggerimento dei campi sta a destra (contatore): qui è una frase, a sinistra come il resto */
+  text-align: left;
+}
+
 /* Sezione «Contatta l'organizzatore» sotto il dettaglio di un evento */
 .rs-contact {
   /* Il dettaglio allinea i figli a sinistra e li stringe al contenuto: il modulo prende tutta la larghezza */

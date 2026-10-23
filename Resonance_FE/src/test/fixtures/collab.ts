@@ -12,6 +12,7 @@ export function makeCollabPost(overrides: Partial<CollabPostResponse> = {}): Col
     location: 'Milano (NoLo)',
     isOpen: true,
     createdAt: '2026-10-20T10:00:00Z',
+    applicationConversationId: null,
     ...overrides,
   }
 }

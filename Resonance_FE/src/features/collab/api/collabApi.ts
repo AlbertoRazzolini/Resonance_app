@@ -6,11 +6,21 @@ import type { PageResponse } from '@/types/common'
 /** Argomenti di una cancellazione: l'annuncio e il motivo facoltativo (massimo 500 caratteri). */
 export type DeleteCollabArgs = { id: string; reason?: string }
 
-/** Vero per un 404 con codice `NOT_FOUND`: annuncio inesistente o nascosto (progettazione, sezione 6.7). */
-export function isCollabNotFound(error: unknown): boolean {
+/** Vero se l'errore ha lo stato HTTP e il codice del backend indicati (il frontend decide sul codice, mai sul testo). */
+function hasStatusAndCode(error: unknown, expectedStatus: number, expectedCode: string): boolean {
   if (typeof error !== 'object' || error === null) return false
   const { status, data } = error as { status?: unknown; data?: unknown }
-  return status === 404 && errorCode(data) === 'NOT_FOUND'
+  return status === expectedStatus && errorCode(data) === expectedCode
+}
+
+/** Vero per un 404 con codice `NOT_FOUND`: annuncio inesistente o nascosto (progettazione, sezione 6.7). */
+export function isCollabNotFound(error: unknown): boolean {
+  return hasStatusAndCode(error, 404, 'NOT_FOUND')
+}
+
+/** Vero per un 409 con codice `COLLAB_ALREADY_APPLIED`: candidatura già fatta a questo annuncio (decisione 99). */
+export function isAlreadyApplied(error: unknown): boolean {
+  return hasStatusAndCode(error, 409, 'COLLAB_ALREADY_APPLIED')
 }
 
 /** Etichette di cache degli annunci: ogni voce dell'elenco porta la propria, più quella dell'elenco intero. */
@@ -77,7 +87,9 @@ export const collabApi = api.injectEndpoints({
 
     /**
      * `POST /api/collab-posts/{id}/applications` (201): la candidatura è un messaggio nella conversazione con l'autore
-     * (decisione 24). Nessuna invalidazione: nessun annuncio cambia.
+     * (decisione 24). Se riesce, o se il server risponde 409 `COLLAB_ALREADY_APPLIED`, il dettaglio dell'annuncio si
+     * rilegge: ora porta `applicationConversationId` (decisione 100), così il modulo non riappare tornando sulla pagina
+     * e dopo il 409 compare «Apri la chat». Gli altri errori non cambiano nulla.
      */
     applyToCollabPost: build.mutation<ApplicationResponse, ApplyArgs>({
       query: ({ id, message }) => ({
@@ -85,6 +97,8 @@ export const collabApi = api.injectEndpoints({
         method: 'POST',
         body: { message },
       }),
+      invalidatesTags: (_result, error, { id }) =>
+        !error || isAlreadyApplied(error) ? [{ type: 'CollabPost', id }] : [],
     }),
   }),
 })

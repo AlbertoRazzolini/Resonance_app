@@ -28,6 +28,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -36,7 +38,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Candidature agli annunci (progettazione, sezioni 6.7 e 6.9; decisione 59): controlli e codici d'errore, messaggio
  * in chat e notifica COLLAB_APPLICATION dopo il commit, sblocco che permette a due non amici di scriversi finche'
  * l'annuncio e' aperto e poi CHAT_LOCKED, candidatura unica per annuncio e utente (anche con due richieste
- * insieme) con COLLAB_ALREADY_APPLIED.
+ * insieme) con COLLAB_ALREADY_APPLIED, conversazione della candidatura nel dettaglio dell'annuncio solo per il
+ * candidato.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class CollabApplicationIntegrationTest extends ChatTestSupport {
@@ -286,6 +289,71 @@ class CollabApplicationIntegrationTest extends ChatTestSupport {
         apply(applicant, otherPostId, BODY).andExpect(status().isCreated());
     }
 
+    // ---- candidatura nel dettaglio (decisione 100) ----
+
+    @Test
+    void detail_ofTheApplicant_carriesTheConversationIdAfterApplying_evenIfThePostIsClosedLater() throws Exception {
+        User author = user("autore@example.com", "Autore");
+        User applicant = user("candidato@example.com", "Candidato");
+        UUID postId = openCollabPost(author);
+        apply(applicant, postId, BODY).andExpect(status().isCreated());
+        String conversationId = conversations.findAll().get(0).getId().toString();
+
+        detail(postId, bearer(applicant)).andExpect(jsonPath("$.applicationConversationId").value(conversationId));
+
+        jdbc.update("update collab_posts set is_open = false where id = ?", postId);
+        detail(postId, bearer(applicant)).andExpect(jsonPath("$.applicationConversationId").value(conversationId));
+    }
+
+    @Test
+    void detail_beforeApplying_hasNullApplicationConversationId() throws Exception {
+        User author = user("autore@example.com", "Autore");
+        User applicant = user("candidato@example.com", "Candidato");
+        UUID postId = openCollabPost(author);
+
+        detail(postId, bearer(applicant)).andExpect(jsonPath("$.applicationConversationId").value(nullValue()));
+    }
+
+    @Test
+    void detail_forAnonymousAuthorAndOtherUsers_hasNullApplicationConversationId() throws Exception {
+        User author = user("autore@example.com", "Autore");
+        User applicant = user("candidato@example.com", "Candidato");
+        User other = user("altro@example.com", "Altro");
+        UUID postId = openCollabPost(author);
+        apply(applicant, postId, BODY).andExpect(status().isCreated());
+
+        // Chi non e' il candidato non vede la conversazione di un altro, nemmeno l'autore dell'annuncio.
+        mockMvc.perform(get("/api/collab-posts/{id}", postId)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.applicationConversationId").value(nullValue()));
+        detail(postId, bearer(author)).andExpect(jsonPath("$.applicationConversationId").value(nullValue()));
+        detail(postId, bearer(other)).andExpect(jsonPath("$.applicationConversationId").value(nullValue()));
+    }
+
+    @Test
+    void detail_afterApplyingToAnotherPost_stillHasNullForThisPost() throws Exception {
+        User author = user("autore@example.com", "Autore");
+        User applicant = user("candidato@example.com", "Candidato");
+        UUID postId = openCollabPost(author);
+        UUID otherPostId = openCollabPost(author);
+        apply(applicant, otherPostId, BODY).andExpect(status().isCreated());
+
+        detail(postId, bearer(applicant)).andExpect(jsonPath("$.applicationConversationId").value(nullValue()));
+    }
+
+    @Test
+    void listAndMine_doNotCarryTheApplication() throws Exception {
+        User author = user("autore@example.com", "Autore");
+        User applicant = user("candidato@example.com", "Candidato");
+        UUID postId = openCollabPost(author);
+        apply(applicant, postId, BODY).andExpect(status().isCreated());
+
+        // Il campo vale solo nel dettaglio: nessuna query in piu' per ogni annuncio dell'elenco.
+        mockMvc.perform(get("/api/collab-posts").header("Authorization", bearer(applicant)))
+                .andExpect(jsonPath("$.content[0].applicationConversationId").value(nullValue()));
+        mockMvc.perform(get("/api/collab-posts/mine").header("Authorization", bearer(author)))
+                .andExpect(jsonPath("$.content[0].applicationConversationId").value(nullValue()));
+    }
+
     // ---- controlli ----
 
     @Test
@@ -405,6 +473,11 @@ class CollabApplicationIntegrationTest extends ChatTestSupport {
     private ResultActions apply(User user, UUID postId, String json) throws Exception {
         return mockMvc.perform(post("/api/collab-posts/{id}/applications", postId)
                 .header("Authorization", bearer(user)).contentType(MediaType.APPLICATION_JSON).content(json));
+    }
+
+    private ResultActions detail(UUID postId, String authorization) throws Exception {
+        return mockMvc.perform(get("/api/collab-posts/{id}", postId).header("Authorization", authorization))
+                .andExpect(status().isOk());
     }
 
     private int unlockRows(ChatConversation conversation) {
