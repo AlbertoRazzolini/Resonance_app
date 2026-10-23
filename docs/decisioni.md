@@ -3454,3 +3454,32 @@ Il profilo non diceva nulla dell'amicizia e solo la ricerca la mostrava. Un endp
 - **Etichetta «Aggiungi agli amici» anche nella ricerca:** cambia la decisione 91 e i suoi test, e la riga della ricerca è stretta sul telefono.
 - **Pulsante in una striscia sotto l'intestazione:** più lontano dal nome e più spazio verticale.
 - **Anonimo senza link, o link senza ritorno al profilo:** l'anonimo non sarebbe guidato, o perderebbe il profilo che stava guardando.
+
+
+## Decisione 103: «Amici» nella navigazione, con badge delle richieste (card FE-17, decisioni 83, 85 e 91)
+
+Sostituisce due punti: le cinque voci della navigazione (decisioni 83 e 85) e l'alternativa «sesta voce Amici» che la decisione 91 aveva scartato. Tutte le scelte sono dello studente, 23 ottobre.
+
+### Scelta
+
+- **Sesta voce «Amici»** in `NAV_ITEMS`, dopo Profilo e prima della schedina ADMIN: la stessa lista serve alle sei tab del telefono e alla colonna a sinistra da 768 px. Apre `/amici`, con la stessa animazione delle altre voci (sulla voce intera) e lo stesso stato attivo.
+- **Icona `coffee`** (un caffè fra amici), scaricata dal registro Animate UI (`icons-lucide-coffee`) e adattata come le altre. Nel registro non esiste un abbraccio né una stretta di mano; `users` resta a Collab.
+- **Menu del profilo senza «Amici»**, a ogni larghezza (prima la voce era il primo elemento, seguita da un separatore). Non serve più nessuna logica di breakpoint per questa voce.
+- **Badge con il numero delle richieste ricevute** (`FriendRequestsBadge`): `totalElements` della stessa query della campanella (`getPendingRequests`), stesso stile e stesso limite «9+» dei Messaggi, con il testo per i lettori di schermo. Non mostra nulla senza richieste o senza sessione (e allora non chiama il server). La campanella non cambia: usa la stessa cache, che ora è già piena anche a pannello chiuso.
+- **Aggiornamento del badge:** al ritorno sulla scheda, dopo ogni azione su una richiesta (accetta, rifiuta, annulla: già invalidavano `FriendRequests`), **quando arriva una notifica live `FRIEND_REQUEST`** e dopo una riconnessione STOMP (`FriendRequests` si aggiunge ai tag già invalidati). Una notifica di altro tipo non rilegge niente.
+- **Sei tab sul telefono:** a 360 e 375 px ogni tab misura 60-63 px e nessuna scritta è tagliata. 320 px non si controlla: schermo ormai quasi inesistente.
+- **Eccezione ai vincoli globali del piano:** la card tocca `notificationsApi.ts` e `LiveNotifications.tsx` (poche righe) per il badge live, approvata dallo studente.
+
+### Motivazione
+
+Gli amici sono una funzione centrale: con il badge è utile averli sempre a portata di pollice, mentre nel menu del profilo il badge non si vedrebbe. Una sola lista di voci evita una lista parallela per la colonna e la logica del breakpoint nel menu. Riusare la query della campanella tiene i due numeri uguali e la cache unica.
+
+### Alternative scartate
+
+- **Voce «Amici» solo nella colonna e nel menu sul telefono (scelta iniziale della card):** il badge sarebbe invisibile sul telefono.
+- **Spostare Profilo nel menu per tenere cinque tab:** cambia una voce già approvata e riporta la logica del breakpoint; tenuta come ripiego, non servito.
+- **Cambiare l'icona di Collab (`link`) e dare `users` agli amici:** tocca una voce già approvata e le sue prove; `link` per Collab è meno chiaro.
+- **`heart`, `link`, `users-round`, `share-2`:** `heart` richiama i «mi piace» del feed, `link` sembra un link web, `users-round` si confonde con Collab.
+- **Badge senza numero (pallino) o senza badge:** meno informativo; la scelta dello studente è con il numero.
+- **Query dedicata per il badge:** due richieste per lo stesso dato e numeri che possono differire dalla campanella.
+- **Badge che si aggiorna solo al ritorno sulla scheda e dopo le azioni:** una richiesta arrivata mentre l'app è aperta resterebbe fuori dal badge, mentre la campanella sale subito.

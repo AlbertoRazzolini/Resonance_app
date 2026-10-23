@@ -102,7 +102,7 @@ export function LiveNotifications() {
     })
     const stopReconnected = onStompReconnected(() => {
       store.dispatch(chatApi.util.invalidateTags(['Chat', 'Messages']))
-      store.dispatch(notificationsApi.util.invalidateTags(['Notification']))
+      store.dispatch(notificationsApi.util.invalidateTags(['Notification', 'FriendRequests']))
     })
     return () => {
       stopMessages()

@@ -14,7 +14,7 @@ import type { MeResponse, Role } from '@/types/users'
 import { UserMenu } from './UserMenu'
 
 // Menu utente della barra: Accedi e Registrati per l'anonimo; per chi ha la sessione il cerchio con la foto o l'iniziale
-// e, nel menu, le voci «Pubblica» secondo i ruoli ed Esci.
+// e, nel menu, le voci «Pubblica» secondo i ruoli ed Esci (non «Amici»: sta nella navigazione).
 function renderMenu(displayName: string | null, overrides: Partial<MeResponse> = {}) {
   const store = makeStore()
   if (displayName) {
@@ -114,7 +114,7 @@ describe('UserMenu', () => {
 
     await screen.findByText('Esci')
     const items = [...document.querySelectorAll('.dropdown-item')].map((item) => item.textContent)
-    expect(items).toEqual(['Amici', 'Pubblica concerto', 'Pubblica indie event', 'Esci'])
+    expect(items).toEqual(['Pubblica concerto', 'Pubblica indie event', 'Esci'])
   })
 
   it.each([[['FAN']], [['FAN', 'MUSICIAN', 'HOST']]] as [Role[]][])(
@@ -143,7 +143,7 @@ describe('UserMenu', () => {
       expect(await screen.findByRole('link', { name: 'Utenti' })).toHaveAttribute('href', ROUTES.adminUsers)
       expect(screen.getByRole('link', { name: 'Contenuti nascosti' })).toHaveAttribute('href', ROUTES.adminContent)
       const items = [...document.querySelectorAll('.dropdown-item')].map((item) => item.textContent)
-      expect(items).toEqual(['Amici', 'Utenti', 'Contenuti nascosti', 'Esci'])
+      expect(items).toEqual(['Utenti', 'Contenuti nascosti', 'Esci'])
     },
   )
 
@@ -159,18 +159,21 @@ describe('UserMenu', () => {
       expect(screen.queryByText('Utenti')).not.toBeInTheDocument()
       expect(screen.queryByText('Contenuti nascosti')).not.toBeInTheDocument()
       const items = [...document.querySelectorAll('.dropdown-item')].map((item) => item.textContent)
-      expect(items).toEqual(['Amici', 'Esci'])
-      // Nessun separatore in più dove le voci admin mancano
-      expect(document.querySelectorAll('.dropdown-divider')).toHaveLength(1)
+      expect(items).toEqual(['Esci'])
+      // Nessun separatore dove le altre voci mancano
+      expect(document.querySelectorAll('.dropdown-divider')).toHaveLength(0)
     },
   )
 
-  it('a tutti i ruoli mostra «Amici», che porta all’elenco degli amici', async () => {
+  // «Amici» ha la sua voce nelle tab del telefono e nella colonna (FE-17): il menu non la ripete a nessuna larghezza.
+  it.each([[375], [768], [1280]])('a %s px non ha la voce «Amici»: sta nella navigazione', async (width) => {
+    setViewportWidth(width)
     renderMenu('Mattia', { roles: ['FAN'] })
 
     await userEvent.click(screen.getByRole('button', { name: /Menu dell'account/ }))
 
-    expect(await screen.findByRole('link', { name: 'Amici' })).toHaveAttribute('href', ROUTES.friends)
+    await screen.findByText('Esci')
+    expect(screen.queryByRole('link', { name: 'Amici' })).not.toBeInTheDocument()
   })
 
   it('Esci chiude la sessione dopo il DELETE del refresh token', async () => {

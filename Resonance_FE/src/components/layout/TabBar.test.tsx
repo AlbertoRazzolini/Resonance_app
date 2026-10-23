@@ -9,7 +9,7 @@ import { sessionStarted } from '@/features/auth/authSlice'
 import { makeLoginResponse, makeMe } from '@/test/fixtures/users'
 import { TabBar } from './TabBar'
 
-// Barra di tab del telefono: le cinque voci con i loro percorsi e la voce attiva segnata per i lettori di schermo.
+// Barra di tab del telefono: le sei voci con i loro percorsi e la voce attiva segnata per i lettori di schermo.
 function renderTabBar(path: string) {
   render(
     <Provider store={makeStore()}>
@@ -21,7 +21,7 @@ function renderTabBar(path: string) {
 }
 
 describe('TabBar', () => {
-  it('anche per un admin resta a cinque voci: sul telefono l’area admin sta nel menu utente', () => {
+  it('anche per un admin resta a sei voci: sul telefono l’area admin sta nel menu utente', () => {
     const store = makeStore()
     store.dispatch(sessionStarted(makeLoginResponse({ user: makeMe({ roles: ['FAN', 'SUPERADMIN'] }) })))
     render(
@@ -38,10 +38,11 @@ describe('TabBar', () => {
       'Feed',
       'Messaggi',
       'Profilo',
+      'Amici',
     ])
   })
 
-  it("mostra le cinque voci, nell'ordine del prototipo, ciascuna col suo percorso", () => {
+  it("mostra le sei voci, con Amici dopo Profilo, ciascuna col suo percorso", () => {
     renderTabBar(ROUTES.events)
 
     const links = screen.getAllByRole('link')
@@ -51,6 +52,7 @@ describe('TabBar', () => {
       'Feed',
       'Messaggi',
       'Profilo',
+      'Amici',
     ])
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       ROUTES.events,
@@ -58,6 +60,7 @@ describe('TabBar', () => {
       ROUTES.feed,
       ROUTES.chat,
       ROUTES.profile,
+      ROUTES.friends,
     ])
   })
 

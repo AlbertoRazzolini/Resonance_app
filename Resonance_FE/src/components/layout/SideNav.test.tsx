@@ -10,7 +10,7 @@ import { makeLoginResponse, makeMe } from '@/test/fixtures/users'
 import type { Role } from '@/types/users'
 import { SideNav } from './SideNav'
 
-// Colonna a sinistra (da 768 px): le stesse cinque voci delle tab; il logo solo se `showLogo` (desktop, dove la
+// Colonna a sinistra (da 768 px): le stesse sei voci delle tab; il logo solo se `showLogo` (desktop, dove la
 // barra in alto non lo ha più). Per ADMIN e SUPERADMIN, dopo Profilo, «Utenti» e «Nascosti» dell'area di moderazione.
 function renderSideNav(path: string, showLogo: boolean, roles?: Role[]) {
   const store = makeStore()
@@ -25,7 +25,7 @@ function renderSideNav(path: string, showLogo: boolean, roles?: Role[]) {
 }
 
 describe('SideNav', () => {
-  it('mostra le cinque voci con i percorsi delle tab', () => {
+  it('mostra le sei voci con i percorsi delle tab', () => {
     renderSideNav(ROUTES.events, false)
 
     const links = screen.getAllByRole('link')
@@ -35,6 +35,7 @@ describe('SideNav', () => {
       'Feed',
       'Messaggi',
       'Profilo',
+      'Amici',
     ])
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       ROUTES.events,
@@ -42,11 +43,12 @@ describe('SideNav', () => {
       ROUTES.feed,
       ROUTES.chat,
       ROUTES.profile,
+      ROUTES.friends,
     ])
   })
 
   it.each([['ADMIN'], ['SUPERADMIN']] as [Role][])(
-    'a un %s aggiunge «Utenti» e «Nascosti» dopo Profilo, con i percorsi dell’area admin',
+    'a un %s aggiunge «Utenti» e «Nascosti» dopo Amici, con i percorsi dell’area admin',
     (role) => {
       renderSideNav(ROUTES.events, false, ['FAN', role])
 
@@ -57,10 +59,11 @@ describe('SideNav', () => {
         'Feed',
         'Messaggi',
         'Profilo',
+        'Amici',
         'Utenti',
         'Nascosti',
       ])
-      expect(links.slice(5).map((link) => link.getAttribute('href'))).toEqual([
+      expect(links.slice(6).map((link) => link.getAttribute('href'))).toEqual([
         ROUTES.adminUsers,
         ROUTES.adminContent,
       ])
@@ -68,7 +71,7 @@ describe('SideNav', () => {
   )
 
   it.each([['ADMIN'], ['SUPERADMIN']] as [Role][])(
-    'a un %s racchiude «Utenti» e «Nascosti» in una schedina «ADMIN», senza le cinque voci principali',
+    'a un %s racchiude «Utenti» e «Nascosti» in una schedina «ADMIN», senza le sei voci principali',
     (role) => {
       renderSideNav(ROUTES.events, false, ['FAN', role])
 
@@ -95,7 +98,7 @@ describe('SideNav', () => {
     (roles) => {
       renderSideNav(ROUTES.events, false, roles)
 
-      expect(screen.getAllByRole('link')).toHaveLength(5)
+      expect(screen.getAllByRole('link')).toHaveLength(6)
       expect(screen.queryByRole('link', { name: 'Utenti' })).not.toBeInTheDocument()
       expect(screen.queryByRole('link', { name: 'Nascosti' })).not.toBeInTheDocument()
     },

@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeStore } from '@/app/store'
 import { sessionEnded, sessionStarted } from '@/features/auth/authSlice'
 import { chatApi } from '@/features/chat/api/chatApi'
+import { friendsApi } from '@/features/friends/api/friendsApi'
 import { totalUnread } from '@/features/chat/chatCache'
 import { confirmationShown } from '@/lib/notices/confirmationSlice'
 import { QUEUES } from '@/lib/stomp/destinations'
@@ -13,6 +14,7 @@ import { makeConversation, makeMessage } from '@/test/fixtures/chat'
 import { makeLoginResponse, makeMe } from '@/test/fixtures/users'
 import { makeNotifications } from '@/test/fixtures/notifications'
 import { conversationsFound } from '@/test/handlers/chat'
+import { friendshipsFound } from '@/test/handlers/friends'
 import {
   notificationPage,
   notificationReadSucceeds,
@@ -169,6 +171,18 @@ describe('LiveNotifications · messaggi in arrivo', () => {
     act(() => reconnected.current())
 
     await vi.waitFor(() => expect(counts).toHaveLength(2))
+  })
+
+  it('dopo una riconnessione rilegge anche le richieste di amicizia ricevute: il badge di Amici', async () => {
+    const requests: Request[] = []
+    server.use(friendshipsFound({}, requests))
+    const { store } = await setup()
+    await store.dispatch(friendsApi.endpoints.getPendingRequests.initiate()).unwrap()
+    expect(requests).toHaveLength(1)
+
+    act(() => reconnected.current())
+
+    await vi.waitFor(() => expect(requests).toHaveLength(2))
   })
 })
 

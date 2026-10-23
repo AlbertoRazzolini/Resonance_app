@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { makeStore } from '@/app/store'
 import { sessionStarted } from '@/features/auth/authSlice'
+import { friendsApi } from '@/features/friends/api/friendsApi'
 import { makeNotification, makeNotifications } from '@/test/fixtures/notifications'
 import { makeLoginResponse } from '@/test/fixtures/users'
+import { friendshipsFound } from '@/test/handlers/friends'
 import {
   notificationPage,
   notificationReadRejected,
@@ -255,5 +257,30 @@ describe('receiveLiveNotification', () => {
     receiveLiveNotification(store.dispatch, store.getState, live())
 
     await expect.poll(() => calls.length).toBeGreaterThanOrEqual(2)
+  })
+
+  // Il badge della voce Amici legge le richieste ricevute (FE-17): una richiesta in arrivo le fa rileggere, un'altra notifica no.
+  it('una richiesta di amicizia fa rileggere le richieste ricevute, per il badge di Amici', async () => {
+    const calls: Request[] = []
+    server.use(friendshipsFound({}, calls))
+    const { store } = setup()
+    await store.dispatch(friendsApi.endpoints.getPendingRequests.initiate()).unwrap()
+    expect(calls).toHaveLength(1)
+
+    receiveLiveNotification(store.dispatch, store.getState, live({ type: 'FRIEND_REQUEST' }))
+
+    await expect.poll(() => calls.length).toBe(2)
+  })
+
+  it('una notifica di altro tipo (mi piace) non fa rileggere le richieste ricevute', async () => {
+    const calls: Request[] = []
+    server.use(friendshipsFound({}, calls))
+    const { store } = setup()
+    await store.dispatch(friendsApi.endpoints.getPendingRequests.initiate()).unwrap()
+
+    receiveLiveNotification(store.dispatch, store.getState, live({ type: 'NEW_LIKE' }))
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(calls).toHaveLength(1)
   })
 })

@@ -112,6 +112,8 @@ export function receiveLiveNotification(dispatch: AppDispatch, getState: () => u
       .data?.content.some((row) => row.id === id),
   )
   if (known) return
+  // Il badge della voce Amici legge le richieste ricevute (FE-17): una nuova va riletta, il server ha il numero giusto
+  if (type === 'FRIEND_REQUEST') dispatch(notificationsApi.util.invalidateTags(['FriendRequests']))
 
   const saved: NotificationResponse = {
     id,

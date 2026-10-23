@@ -9,7 +9,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery'
 
 /**
  * Menu utente della barra (decisione 83): per l'anonimo i pulsanti Accedi e Registrati; per chi ha la sessione il
- * cerchio giallo con la foto o l'iniziale e un menu con «Amici», le voci «Pubblica» secondo i ruoli, sul telefono le voci
+ * cerchio giallo con la foto o l'iniziale e un menu con le voci «Pubblica» secondo i ruoli, sul telefono le voci
  * dell'area di moderazione per ADMIN e SUPERADMIN (da 768 px le ha la colonna a sinistra; solo per mostrare o nascondere: la
  * protezione vera è nel backend) e "Esci".
  */
@@ -52,10 +52,6 @@ export function UserMenu() {
           <Avatar displayName={user.displayName} avatarUrl={user.avatarUrl} />
         </Dropdown.Toggle>
         <Dropdown.Menu>
-          <Dropdown.Item as={Link} to={ROUTES.friends}>
-            Amici
-          </Dropdown.Item>
-          <Dropdown.Divider />
           {isHost && (
             <Dropdown.Item as={Link} to={ROUTES.newConcert}>
               Pubblica concerto

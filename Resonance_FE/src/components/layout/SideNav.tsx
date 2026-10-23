@@ -22,7 +22,7 @@ function SideItem({ label, to, Icon, Badge }: NavItem) {
 /**
  * Colonna di navigazione a sinistra, da 768 px (decisione 83): stretta con la scritta sotto l'icona a tablet, larga
  * con icona e scritta affiancate da 1200 px, dove ospita anche il logo (`showLogo`). La forma la decide il CSS. Per ADMIN
- * e SUPERADMIN, dopo le cinque voci, c'è una schedina «ADMIN» (riquadro dal bordo giallo tenue) con «Utenti» e «Nascosti»:
+ * e SUPERADMIN, dopo le sei voci, c'è una schedina «ADMIN» (riquadro dal bordo giallo tenue) con «Utenti» e «Nascosti»:
  * dice a colpo d'occhio che è un'area a sé (solo interfaccia: la protezione vera è nel backend).
  */
 export function SideNav({ showLogo }: { showLogo: boolean }) {

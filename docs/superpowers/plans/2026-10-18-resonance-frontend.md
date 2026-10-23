@@ -963,20 +963,22 @@ Provato con Playwright a 375, 768 e 1280 px fra due account su un database di pr
 
 ### Card FE-17 · Amici nella navigazione laterale — stima 1,5 h (provvisoria)
 
-**Riferimenti:** decisione 83 (navigazione), `SideNav`, `navItems.ts`, `UserMenu`; icone animate (Animate UI).
-**Scelte approvate (23 ottobre):** una voce «Amici» che apre `/amici`, nella colonna a sinistra da 768 px, con la stessa animazione al
-passaggio del mouse delle altre voci (l'animazione sta sulla voce intera); icona nuova scaricata dal registro Animate UI, diversa da
-quelle di Collab e Profilo; la voce «Amici» esce dal menu del profilo solo da 768 px, sul telefono resta (le tab sono già cinque).
-**Punti aperti a inizio card:** quale icona del registro; posizione esatta nella colonna (dopo «Profilo», prima della schedina ADMIN);
-se serve un badge delle richieste ricevute (non previsto); come si nasconde la voce nel menu senza duplicare la logica dei
-breakpoint.
+**Riferimenti:** decisione 83 (navigazione), `SideNav`, `navItems.ts`, `UserMenu`; icone animate (Animate UI); decisione 103.
+**Scelte approvate (23 ottobre, riviste con lo studente a inizio card):** una voce «Amici» che apre `/amici`, in `NAV_ITEMS` dopo
+«Profilo»: quindi nella colonna a sinistra da 768 px **e** nelle tab del telefono (sei), con la stessa animazione delle altre voci (sulla
+voce intera); icona `coffee` dal registro Animate UI (diversa da Collab e Profilo); la voce «Amici» **esce dal menu del profilo a ogni
+larghezza**; badge col numero delle richieste ricevute (stessa query della campanella, stile dei Messaggi, aggiornato anche dalla
+notifica live e dopo una riconnessione). La scelta iniziale («sul telefono resta nel menu») è sostituita: vedi decisione 103.
 **Sotto-task:**
-- [ ] **1. Icona e voce.** Icona adattata al progetto, voce nella colonna con hover animato, stato attivo.
-- [ ] **2. Menu del profilo.** «Amici» solo sul telefono; test aggiornati.
-- [ ] **3. Chiusura.** Tre larghezze con Playwright; `npm run lint`, `npm test`, `npm run build`; piano e decisioni.
+- [x] **1. Icona e voce.** Icona adattata al progetto, voce nella colonna con hover animato, stato attivo. `coffee.tsx`, voce in `navItems.ts`,
+  `FriendRequestsBadge` (con test).
+- [x] **2. Menu del profilo.** «Amici» solo sul telefono; test aggiornati. Poi riveduto: «Amici» esce dal menu a ogni larghezza; test di
+  `UserMenu`, `TabBar` e `SideNav` aggiornati; notifica live e riconnessione invalidano `FriendRequests` (test in `notificationsApi` e `LiveNotifications`).
+- [x] **3. Chiusura.** Tre larghezze con Playwright; `npm run lint`, `npm test`, `npm run build`; piano e decisioni.
 
-**Criterio:** da 768 px «Amici» è nella colonna e non nel menu; sul telefono resta nel menu; comportamento uguale alle altre voci.
-**Commit proposto:** `feat(fe-nav): sposta le amicizie nella navigazione laterale`
+**Criterio:** «Amici» è nella colonna da 768 px e nelle tab del telefono, non nel menu; comportamento uguale alle altre voci, con il badge delle richieste.
+Provato con Playwright a 360, 375, 768 e 1280 px con tre account reali su un database di prova separato.
+**Commit proposto:** `feat(fe-nav): aggiunge Amici alla navigazione con il badge delle richieste`
 
 ### Card FE-18 · Filtro «Eventi» sulla mappa — stima 2 h (provvisoria)
 
