@@ -985,14 +985,17 @@ Provato con Playwright a 360, 375, 768 e 1280 px con tre account reali su un dat
 **Riferimenti:** FE-05 (eventi vicini e mappa), decisioni 78 e 83; scheda Ufficiali / Indie.
 **Scelta approvata (23 ottobre):** nuova scheda «Eventi» prima di Ufficiali e Indie, selezionata all'apertura, che mostra insieme i
 due tipi sulla mappa nel raggio scelto; Ufficiali e Indie restano come filtri.
-**Punti aperti a inizio card:** come si uniscono i due elenchi (una chiamata per tipo o una sola), ordinamento e «Carica altri»;
-marcatori e legenda; testi (titolo, conteggio, vuoto); che cosa cambia nell'indirizzo della pagina.
+**Scelte approvate (23 ottobre, a inizio card):** due chiamate in parallelo, elenco unito per distanza, «Carica altri» per tipo; con un
+tipo non caricato si mostra l'altro con un avviso e «Riprova»; nessun parametro = Eventi, `?tipo=ufficiali` e `?tipo=indie`; legenda,
+titolo e conteggio (somma dei totali) invariati, vuoto «Nessun evento entro N km». Vedi decisione 104.
 **Sotto-task:**
-- [ ] **1. Dati.** Elenco unico dei due tipi nel raggio; test e handler MSW.
-- [ ] **2. Scheda e mappa.** Scheda «Eventi» predefinita, marcatori dei due tipi, vuoto ed errore.
-- [ ] **3. Chiusura.** Tre larghezze con Playwright; `npm run lint`, `npm test`, `npm run build`; piano e decisioni.
+- [x] **1. Dati.** Elenco unico dei due tipi nel raggio: hook `useNearbyEvents` con test (gli handler MSW esistenti bastano).
+- [x] **2. Scheda e mappa.** Scheda «Eventi» predefinita, marcatori dei due tipi, vuoto ed errore (anche di un tipo solo); `router.test.tsx`
+  registra anche gli indie.
+- [x] **3. Chiusura.** Tre larghezze con Playwright (risposte simulate); `npm run lint`, `npm test`, `npm run build`; piano e decisioni.
 
 **Criterio:** all'apertura si vedono sulla mappa tutti gli eventi nel raggio; Ufficiali e Indie li restringono.
+Provato con Playwright a 375, 768 e 1280 px con le risposte di `/nearby` simulate nel browser (nessun database).
 **Commit proposto:** `feat(fe-events): aggiunge la scheda Eventi con ufficiali e indie insieme`
 
 ### Card FE-19 · Selettore di emoji nella chat — stima 2 h (provvisoria)

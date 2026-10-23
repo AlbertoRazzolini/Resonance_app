@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { Provider } from 'react-redux'
 import { MemoryRouter, useLocation } from 'react-router'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeStore } from '@/app/store'
 import type { MapProps } from '@/components/map/Map'
 import { sessionStarted } from '@/features/auth/authSlice'
@@ -13,13 +13,15 @@ import {
   nearbyConcertsFound,
   nearbyConcertsRejected,
   nearbyIndieFound,
+  nearbyIndieRejected,
 } from '@/test/handlers/events'
 import { server } from '@/test/server'
 import { Component as NearbyEventsPage } from './NearbyEventsPage'
 
-// Eventi vicini: schede Ufficiali/Indie e raggio nell'indirizzo, centro (Firenze, profilo, browser), "Carica altri",
-// elenco vuoto, errore con "Riprova", e il legame fra marker della mappa, fumetto e card. MapLibre non gira in jsdom:
-// la mappa vera è sostituita da una finta che espone marker, zoom e fumetto.
+// Eventi vicini: schede Eventi/Ufficiali/Indie e raggio nell'indirizzo, centro (Firenze, profilo, browser), "Carica altri",
+// elenco vuoto, errore con "Riprova" (anche di un solo tipo), e il legame fra marker della mappa, fumetto e card. La
+// scheda Eventi mostra i due tipi insieme; negli altri test gli indie event sono vuoti, se non diversamente detto.
+// MapLibre non gira in jsdom: la mappa vera è sostituita da una finta che espone marker, zoom e fumetto.
 vi.mock('@/components/map/Map', () => ({
   default: ({ markers = [], selectedId, onMarkerClick, renderPopup, zoom, radiusKm, center }: MapProps) => {
     const selected = markers.find((marker) => marker.id === selectedId)
@@ -40,6 +42,7 @@ type Success = (position: { coords: { latitude: number; longitude: number } }) =
 function stubGeolocation(getCurrentPosition: (ok: Success) => void) {
   Object.defineProperty(navigator, 'geolocation', { value: { getCurrentPosition }, configurable: true })
 }
+beforeEach(() => server.use(nearbyIndieFound([makePage([])])))
 afterEach(() => {
   // @ts-expect-error: jsdom non ha `geolocation`, si toglie lo stub per i test seguenti
   delete navigator.geolocation
@@ -67,15 +70,63 @@ const params = (request: Request) => Object.fromEntries(new URL(request.url).sea
 const FLORENCE = { lat: '43.7696', lng: '11.2558' }
 
 describe('NearbyEventsPage · ricerca', () => {
-  it('parte da Firenze a 15 km con la scheda Ufficiali e mostra i concerti trovati', async () => {
+  it('parte da Firenze a 15 km con la scheda Eventi e mostra insieme concerti e indie event', async () => {
     const calls: Request[] = []
-    server.use(nearbyConcertsFound([makePage([makeConcert({ title: 'Mogwai' }), makeConcert({ id: 'c2', title: 'Soviet' })])], calls))
+    const indieCalls: Request[] = []
+    server.use(
+      nearbyConcertsFound([makePage([makeConcert({ title: 'Mogwai' }), makeConcert({ id: 'c2', title: 'Soviet' })])], calls),
+      nearbyIndieFound([makePage([makeIndieEvent({ title: 'Gazebo' })])], indieCalls),
+    )
 
     renderPage()
 
     expect(await screen.findByRole('heading', { name: 'Mogwai' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Soviet' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Gazebo' })).toBeInTheDocument()
     expect(params(calls[0])).toEqual({ ...FLORENCE, radiusKm: '15', page: '0' })
+    expect(params(indieCalls[0])).toEqual({ ...FLORENCE, radiusKm: '15', page: '0' })
+    expect(screen.getByRole('link', { name: 'Eventi' })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('nella scheda Eventi l\'elenco è dal più vicino, concerti e indie mescolati', async () => {
+    server.use(
+      nearbyConcertsFound([makePage([makeConcert({ title: 'Lontano', distanceKm: 9 })])]),
+      nearbyIndieFound([makePage([makeIndieEvent({ title: 'Vicino', distanceKm: 2 })])]),
+    )
+
+    renderPage()
+
+    await screen.findByRole('heading', { name: 'Lontano' })
+    const titles = screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)
+    expect(titles).toEqual(['Vicino', 'Lontano'])
+  })
+
+  it('la scheda Ufficiali cerca solo i concerti e la sceglie nell\'indirizzo', async () => {
+    const indieCalls: Request[] = []
+    server.use(
+      nearbyConcertsFound([makePage([makeConcert({ title: 'Mogwai' })])]),
+      nearbyIndieFound([makePage([makeIndieEvent({ title: 'Gazebo' })])], indieCalls),
+    )
+    const user = renderPage('/eventi?tipo=ufficiali')
+
+    expect(await screen.findByRole('heading', { name: 'Mogwai' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Ufficiali' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.queryByRole('heading', { name: 'Gazebo' })).not.toBeInTheDocument()
+    expect(indieCalls).toHaveLength(0)
+
+    await user.click(screen.getByRole('link', { name: 'Eventi' }))
+    expect(await screen.findByRole('heading', { name: 'Gazebo' })).toBeInTheDocument()
+    expect(screen.getByTestId('search')).toHaveTextContent(/^$/)
+  })
+
+  it('il clic su Ufficiali scrive tipo=ufficiali nell\'indirizzo', async () => {
+    server.use(nearbyConcertsFound([makePage([makeConcert({ title: 'Mogwai' })])]))
+    const user = renderPage()
+    await screen.findByRole('heading', { name: 'Mogwai' })
+
+    await user.click(screen.getByRole('link', { name: 'Ufficiali' }))
+
+    expect(screen.getByTestId('search')).toHaveTextContent('tipo=ufficiali')
   })
 
   it('la scheda Indie cerca gli indie event, e il clic sulla scheda la mette nell\'indirizzo', async () => {
@@ -171,12 +222,19 @@ describe('NearbyEventsPage · Carica altri', () => {
 })
 
 describe('NearbyEventsPage · vuoto e errore', () => {
-  it('senza concerti dice che non ce ne sono entro il raggio e suggerisce di allargarlo', async () => {
-    server.use(nearbyConcertsFound([makePage([])]))
+  it('senza eventi dice che non ce ne sono entro il raggio e suggerisce di allargarlo', async () => {
+    server.use(nearbyConcertsFound([makePage([])]), nearbyIndieFound([makePage([])]))
     renderPage()
 
-    expect(await screen.findByText('Nessun evento ufficiale entro 15 km')).toBeInTheDocument()
+    expect(await screen.findByText('Nessun evento entro 15 km')).toBeInTheDocument()
     expect(screen.getByText('Prova ad allargare il raggio.')).toBeInTheDocument()
+  })
+
+  it('nella scheda Ufficiali senza concerti usa il testo dei concerti', async () => {
+    server.use(nearbyConcertsFound([makePage([])]))
+    renderPage('/eventi?tipo=ufficiali')
+
+    expect(await screen.findByText('Nessun evento ufficiale entro 15 km')).toBeInTheDocument()
   })
 
   it('senza indie event usa il testo degli indie', async () => {
@@ -189,13 +247,43 @@ describe('NearbyEventsPage · vuoto e errore', () => {
   it('con un errore del server mostra l\'avviso e "Riprova" cerca di nuovo', async () => {
     const calls: Request[] = []
     server.use(nearbyConcertsRejected(500, 'INTERNAL_ERROR', calls))
-    const user = renderPage()
+    const user = renderPage('/eventi?tipo=ufficiali')
     expect(await screen.findByRole('alert')).toHaveTextContent('Si è verificato un problema imprevisto')
 
     server.use(nearbyConcertsFound([makePage([makeConcert({ title: 'Ritorno' })])], calls))
     await user.click(screen.getByRole('button', { name: 'Riprova' }))
 
     expect(await screen.findByRole('heading', { name: 'Ritorno' })).toBeInTheDocument()
+  })
+
+  it('nella scheda Eventi, se un tipo non si carica, l\'altro resta e l\'avviso dice quale manca', async () => {
+    const calls: Request[] = []
+    server.use(
+      nearbyConcertsRejected(500, 'INTERNAL_ERROR', calls),
+      nearbyIndieFound([makePage([makeIndieEvent({ title: 'Gazebo' })], { totalElements: 1 })]),
+    )
+    const user = renderPage()
+
+    expect(await screen.findByRole('heading', { name: 'Gazebo' })).toBeInTheDocument()
+    expect(await screen.findByText('Gli eventi ufficiali non si sono caricati.')).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Si è verificato un problema imprevisto')
+    expect(screen.queryByText('Nessun evento entro 15 km')).not.toBeInTheDocument()
+
+    server.use(nearbyConcertsFound([makePage([makeConcert({ title: 'Ritorno' })])], calls))
+    await user.click(screen.getByRole('button', { name: /Riprova/ }))
+
+    expect(await screen.findByRole('heading', { name: 'Ritorno' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Gazebo' })).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('nella scheda Eventi, se falliscono entrambi, ci sono due avvisi con il loro "Riprova"', async () => {
+    server.use(nearbyConcertsRejected(500, 'INTERNAL_ERROR'), nearbyIndieRejected(500, 'INTERNAL_ERROR'))
+    renderPage()
+
+    expect(await screen.findByText('Gli eventi ufficiali non si sono caricati.')).toBeInTheDocument()
+    expect(await screen.findByText('Gli indie event non si sono caricati.')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /Riprova/ })).toHaveLength(2)
   })
 })
 
@@ -277,10 +365,33 @@ describe('NearbyEventsPage · mappa', () => {
 
   it('con un errore la mappa resta sull\'Italia', async () => {
     server.use(nearbyConcertsRejected(500, 'INTERNAL_ERROR'))
-    renderPage()
+    renderPage('/eventi?tipo=ufficiali')
     await screen.findByRole('button', { name: 'Riprova' })
 
     expect(screen.getByTestId('map')).toHaveAttribute('data-zoom', '5')
+  })
+
+  it('se fallisce un tipo solo la mappa si avvicina comunque, con i marker dell\'altro', async () => {
+    server.use(nearbyConcertsRejected(500, 'INTERNAL_ERROR'), nearbyIndieFound([makePage([makeIndieEvent({ title: 'Gazebo' })])]))
+    renderPage()
+
+    await screen.findByRole('button', { name: 'marker Gazebo' })
+    await waitFor(() => expect(Number(screen.getByTestId('map').getAttribute('data-zoom'))).toBeGreaterThan(9))
+  })
+
+  it('nella scheda Eventi la mappa ha i marker dei due tipi, e il fumetto di un indie event porta al suo dettaglio', async () => {
+    server.use(
+      nearbyConcertsFound([makePage([makeConcert({ id: 'c1', title: 'Mogwai' })])]),
+      nearbyIndieFound([makePage([makeIndieEvent({ id: 'e1', title: 'Gazebo', distanceKm: 4.4 })])]),
+    )
+    const user = renderPage()
+    await screen.findByRole('button', { name: 'marker Mogwai' })
+
+    await user.click(await screen.findByRole('button', { name: 'marker Gazebo' }))
+
+    const popup = screen.getByTestId('map')
+    expect(within(popup).getByRole('link', { name: /Dettagli/ })).toHaveAttribute('href', '/indie/e1')
+    expect(within(popup).getByText('4,4 km')).toBeInTheDocument()
   })
 
   it('disegna il cerchio del raggio scelto', async () => {

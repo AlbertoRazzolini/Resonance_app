@@ -15,9 +15,8 @@ import {
   type CenterSource,
 } from '@/hooks/useSearchCenter'
 import { formatDistance, zoomForRadius } from '@/lib/format/distance'
-import type { IndieEventResponse, OfficialConcertResponse } from '@/types/events'
-import { useGetNearbyConcertsQuery, useGetNearbyIndieEventsQuery } from '../api/eventsApi'
 import { EventCard } from '../components/EventCard'
+import { useNearbyEvents, type EventFilter } from '../hooks/useNearbyEvents'
 
 /** Zoom iniziale della mappa: l'Italia intera dall'alto, finché i risultati non arrivano (decisione dello studente, 20 ottobre). */
 const ITALY_ZOOM = 5
@@ -29,25 +28,52 @@ const SOURCE_TITLES: Record<CenterSource, string> = {
   browser: 'Vicino a te',
 }
 
-type Item =
-  | { kind: 'official'; event: OfficialConcertResponse }
-  | { kind: 'indie'; event: IndieEventResponse }
+/** Valore di `?tipo=` di ogni scheda; la scheda Eventi, quella iniziale, non scrive niente nell'indirizzo. */
+const FILTER_PARAMS: Record<EventKind, string> = { official: 'ufficiali', indie: 'indie' }
+
+/** Nome del tipo nel pulsante «Riprova», che con due errori deve dire a quale ricerca si riferisce. */
+const KIND_LABELS: Record<EventKind, string> = { official: 'eventi ufficiali', indie: 'indie event' }
+
+/** Avviso quando un tipo non si è caricato nella scheda Eventi: l'altro tipo resta visibile. */
+const KIND_ERRORS: Record<EventKind, string> = {
+  official: 'Gli eventi ufficiali non si sono caricati.',
+  indie: 'Gli indie event non si sono caricati.',
+}
+
+/** Le schede nell'ordine in cui compaiono. */
+const FILTER_TABS: { filter: EventFilter; label: string }[] = [
+  { filter: 'all', label: 'Eventi' },
+  { filter: 'official', label: 'Ufficiali' },
+  { filter: 'indie', label: 'Indie' },
+]
+
+/** Testo del vuoto di ogni scheda. */
+const EMPTY_TITLES: Record<EventFilter, string> = {
+  all: 'Nessun evento',
+  official: 'Nessun evento ufficiale',
+  indie: 'Nessun indie event',
+}
+
+/** Scheda scritta nell'indirizzo; un valore sconosciuto apre la scheda Eventi. */
+function parseFilter(value: string | null): EventFilter {
+  return (Object.keys(FILTER_PARAMS) as EventKind[]).find((kind) => FILTER_PARAMS[kind] === value) ?? 'all'
+}
 
 /**
- * Eventi vicini (progettazione, sezioni 6.6 e 10.2), aperti anche a chi non ha la sessione: concerti ufficiali e indie
- * event in due schede, con la mappa accanto all'elenco. Scheda e raggio stanno nell'indirizzo (`?tipo=indie&raggio=25`),
- * così «Indietro» dal dettaglio li ritrova.
+ * Eventi vicini (progettazione, sezioni 6.6 e 10.2), aperti anche a chi non ha la sessione: tre schede, Eventi (concerti
+ * ufficiali e indie event insieme, quella iniziale), Ufficiali e Indie, con la mappa accanto all'elenco. Scheda e raggio
+ * stanno nell'indirizzo (`?tipo=indie&raggio=25`), così «Indietro» dal dettaglio li ritrova.
  */
 export function Component() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const kind: EventKind = searchParams.get('tipo') === 'indie' ? 'indie' : 'official'
+  const filter = parseFilter(searchParams.get('tipo'))
   const radius = parseRadius(searchParams.get('raggio'))
   const { center, source, positionStatus, requestPosition } = useSearchCenter()
 
   /** Indirizzo con la scheda e il raggio dati; i valori iniziali non si scrivono. */
-  function searchFor(nextKind: EventKind, nextRadius: number) {
+  function searchFor(nextFilter: EventFilter, nextRadius: number) {
     const next = new URLSearchParams()
-    if (nextKind === 'indie') next.set('tipo', 'indie')
+    if (nextFilter !== 'all') next.set('tipo', FILTER_PARAMS[nextFilter])
     if (nextRadius !== DEFAULT_RADIUS_KM) next.set('raggio', String(nextRadius))
     return next
   }
@@ -87,37 +113,30 @@ export function Component() {
 
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
         <Nav as="nav" variant="pills" aria-label="Tipo di evento">
-          <Nav.Item>
-            <Nav.Link
-              as={Link}
-              to={{ search: searchFor('official', radius).toString() }}
-              replace
-              active={kind === 'official'}
-            >
-              Ufficiali
-            </Nav.Link>
-          </Nav.Item>
-          <Nav.Item>
-            <Nav.Link
-              as={Link}
-              to={{ search: searchFor('indie', radius).toString() }}
-              replace
-              active={kind === 'indie'}
-            >
-              Indie
-            </Nav.Link>
-          </Nav.Item>
+          {FILTER_TABS.map(({ filter: tab, label }) => (
+            <Nav.Item key={tab}>
+              <Nav.Link
+                as={Link}
+                to={{ search: searchFor(tab, radius).toString() }}
+                replace
+                active={filter === tab}
+                aria-current={filter === tab ? 'page' : undefined}
+              >
+                {label}
+              </Nav.Link>
+            </Nav.Item>
+          ))}
         </Nav>
         <RadiusSelector
           value={radius}
-          onChange={(next) => setSearchParams(searchFor(kind, next), { replace: true })}
+          onChange={(next) => setSearchParams(searchFor(filter, next), { replace: true })}
         />
       </div>
 
       {/* Con una ricerca diversa si riparte dalla prima pagina: cambiando la chiave lo stato dei risultati si azzera */}
       <NearbyResults
-        key={`${kind}|${center.latitude},${center.longitude}|${radius}`}
-        kind={kind}
+        key={`${filter}|${center.latitude},${center.longitude}|${radius}`}
+        filter={filter}
         center={center}
         radius={radius}
         title={SOURCE_TITLES[source]}
@@ -127,37 +146,33 @@ export function Component() {
 }
 
 type NearbyResultsProps = {
-  kind: EventKind
+  filter: EventFilter
   center: { latitude: number; longitude: number }
   radius: number
   title: string
 }
 
 /** Risultati di una ricerca (scheda, centro e raggio fissi): conteggio, mappa, elenco a pagine. */
-function NearbyResults({ kind, center, radius, title }: NearbyResultsProps) {
-  const [page, setPage] = useState(0)
+function NearbyResults({ filter, center, radius, title }: NearbyResultsProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const args = { lat: center.latitude, lng: center.longitude, radiusKm: radius, page }
-  // Una sola delle due ricerche è attiva: l'altra resta spenta con `skip`
-  const concerts = useGetNearbyConcertsQuery(args, { skip: kind !== 'official' })
-  const indie = useGetNearbyIndieEventsQuery(args, { skip: kind !== 'indie' })
-  const query = kind === 'official' ? concerts : indie
+  const { items, totalElements, hasMore, isLoading, isFetching, isSuccess, errors, loadMore } = useNearbyEvents(filter, {
+    lat: center.latitude,
+    lng: center.longitude,
+    radiusKm: radius,
+  })
 
-  const items: Item[] =
-    kind === 'official'
-      ? (concerts.data?.content ?? []).map((event) => ({ kind: 'official', event }))
-      : (indie.data?.content ?? []).map((event) => ({ kind: 'indie', event }))
-  const data = query.data
-  const hasMore = data !== undefined && data.page + 1 < data.totalPages
-  const zoom = query.isSuccess ? zoomForRadius(radius, center.latitude) : ITALY_ZOOM
+  // La mappa si avvicina quando le ricerche hanno risposto e almeno una è riuscita
+  const zoom = isSuccess && !isLoading ? zoomForRadius(radius, center.latitude) : ITALY_ZOOM
   const selected = items.find((item) => item.event.id === selectedId)
+  // Con un tipo non caricato il totale sarebbe sottostimato: il conteggio si mostra solo se è completo
+  const complete = isSuccess && !isLoading && errors.length === 0
 
   return (
     <section aria-label={title}>
       <h2 className="h4">{title}</h2>
-      {data && (
+      {complete && (
         <p className="text-body-secondary">
-          {data.totalElements === 1 ? '1 evento' : `${data.totalElements} eventi`} entro {radius} km
+          {totalElements === 1 ? '1 evento' : `${totalElements} eventi`} entro {radius} km
         </p>
       )}
 
@@ -194,7 +209,7 @@ function NearbyResults({ kind, center, radius, title }: NearbyResultsProps) {
         </div>
 
         <div className="rs-nearby__list">
-          {query.isLoading && (
+          {isLoading && (
             <Skeleton>
               {[0, 1, 2].map((row) => (
                 <div key={row} className="rs-event-card">
@@ -206,11 +221,24 @@ function NearbyResults({ kind, center, radius, title }: NearbyResultsProps) {
             </Skeleton>
           )}
 
-          {query.isSuccess && items.length === 0 && (
-            <EmptyState
-              title={`Nessun ${kind === 'official' ? 'evento ufficiale' : 'indie event'} entro ${radius} km`}
-              hint="Prova ad allargare il raggio."
-            />
+          {/* Gli avvisi stanno sopra le card: con un tipo non caricato l'elenco è lungo e in fondo non si vedrebbero */}
+          {errors.map(({ kind, error, retry }) => (
+            <div key={kind}>
+              {filter === 'all' && <p className="mb-1">{KIND_ERRORS[kind]}</p>}
+              <ErrorAlert error={error} />
+              <Button
+                variant="outline-light"
+                size="sm"
+                aria-label={filter === 'all' ? `Riprova: ${KIND_LABELS[kind]}` : undefined}
+                onClick={retry}
+              >
+                Riprova
+              </Button>
+            </div>
+          ))}
+
+          {complete && items.length === 0 && (
+            <EmptyState title={`${EMPTY_TITLES[filter]} entro ${radius} km`} hint="Prova ad allargare il raggio." />
           )}
 
           {items.map((item) =>
@@ -221,16 +249,7 @@ function NearbyResults({ kind, center, radius, title }: NearbyResultsProps) {
             ),
           )}
 
-          {query.error && (
-            <>
-              <ErrorAlert error={query.error} />
-              <Button variant="outline-light" size="sm" onClick={() => void query.refetch()}>
-                Riprova
-              </Button>
-            </>
-          )}
-
-          <LoadMore hasMore={hasMore} loading={query.isFetching} onClick={() => setPage(page + 1)} />
+          <LoadMore hasMore={hasMore} loading={isFetching} onClick={loadMore} />
         </div>
       </div>
     </section>

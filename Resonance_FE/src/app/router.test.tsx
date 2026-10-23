@@ -8,7 +8,7 @@ import { makeConcert, makeIndieEvent, makePage } from '@/test/fixtures/events'
 import { makeLoginResponse, makeMe, makePublicUser } from '@/test/fixtures/users'
 import { adminUsersFound, hiddenContentFound } from '@/test/handlers/admin'
 import { collabFound, collabPostFound } from '@/test/handlers/collab'
-import { concertFound, indieEventFound, nearbyConcertsFound } from '@/test/handlers/events'
+import { concertFound, indieEventFound, nearbyConcertsFound, nearbyIndieFound } from '@/test/handlers/events'
 import { feedFound } from '@/test/handlers/feed'
 import { publicUserFound } from '@/test/handlers/users'
 import { server } from '@/test/server'
@@ -36,8 +36,8 @@ function renderAt(path: string, { loggedIn = false, roles = ['FAN'] as Role[] } 
 }
 
 describe('router', () => {
-  // /eventi cerca i concerti vicini all'apertura: senza handler la richiesta farebbe fallire il test
-  beforeEach(() => server.use(nearbyConcertsFound([makePage([])])))
+  // /eventi cerca concerti e indie event vicini all'apertura: senza handler la richiesta farebbe fallire il test
+  beforeEach(() => server.use(nearbyConcertsFound([makePage([])]), nearbyIndieFound([makePage([])])))
 
   it('"/" porta agli eventi', async () => {
     const router = renderAt(ROUTES.home)

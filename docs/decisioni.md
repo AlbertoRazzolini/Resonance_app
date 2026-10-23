@@ -3483,3 +3483,31 @@ Gli amici sono una funzione centrale: con il badge è utile averli sempre a port
 - **Badge senza numero (pallino) o senza badge:** meno informativo; la scelta dello studente è con il numero.
 - **Query dedicata per il badge:** due richieste per lo stesso dato e numeri che possono differire dalla campanella.
 - **Badge che si aggiorna solo al ritorno sulla scheda e dopo le azioni:** una richiesta arrivata mentre l'app è aperta resterebbe fuori dal badge, mentre la campanella sale subito.
+
+
+## Decisione 104: scheda «Eventi» con ufficiali e indie insieme (card FE-18, decisioni 78 e 83, FE-05)
+
+Sostituisce la scheda iniziale «Ufficiali» di FE-05. Tutte le scelte sono dello studente, 23 ottobre.
+
+### Scelta
+
+- **Tre schede, «Eventi» prima:** «Eventi» (concerti ufficiali e indie event insieme) è aperta all'apertura; «Ufficiali» e «Indie» restano come filtri. Il raggio e il centro valgono per tutte.
+- **Due chiamate, nessun endpoint nuovo:** `GET /api/official-concerts/nearby` e `GET /api/indie-events/nearby` partono in parallelo e l'hook `useNearbyEvents` (`features/events/hooks`) unisce i risultati in un solo elenco **dal più vicino**: a pari distanza prima i concerti, senza distanza in fondo. Le query RTK Query e la loro cache restano quelle di FE-05; il backend non cambia.
+- **«Carica altri» per tipo:** ogni tipo ha la sua pagina; un clic chiede la pagina successiva solo dei tipi che ne hanno ancora. L'ordine può mescolarsi un po' quando arriva una pagina nuova (le pagine non sono confrontabili fra i due endpoint).
+- **Errore di un tipo solo:** l'elenco e la mappa mostrano ciò che è arrivato; sopra le card un avviso («Gli eventi ufficiali non si sono caricati.» o «Gli indie event non si sono caricati.») con l'errore e un «Riprova» che rifà solo quella chiamata (con due errori, due avvisi e due pulsanti). In questo caso il conteggio non si mostra (sarebbe sottostimato). Nelle schede Ufficiali e Indie l'errore resta come prima.
+- **Indirizzo:** nessun parametro = Eventi; `?tipo=ufficiali` e `?tipo=indie` per i filtri, come il raggio i valori iniziali non si scrivono; un valore sconosciuto apre «Eventi». `?tipo=indie` resta valido come prima; un indirizzo senza parametro, che apriva «Ufficiali», ora apre «Eventi» (su Render non esistono ancora eventi né link da proteggere).
+- **Testi e legenda:** legenda e marcatori invariati (stella per gli ufficiali, nota per gli indie); titolo del blocco invariato; conteggio «N eventi entro R km» somma dei due totali; vuoto «Nessun evento entro R km» («Nessun evento ufficiale…» e «Nessun indie event…» nei filtri).
+- **Mappa:** si avvicina al raggio quando le ricerche hanno risposto e almeno una è riuscita; con tutte le ricerche fallite resta sull'Italia.
+
+### Motivazione
+
+Chi apre la pagina vuole sapere cosa c'è nei dintorni, non scegliere prima il tipo. Le due chiamate riusano tutto il codice già provato e rispettano il vincolo di non toccare il backend a questo punto del piano; l'ordine per distanza è lo stesso dei due endpoint e della mappa. Mostrare un tipo anche se l'altro fallisce evita di perdere dati già arrivati per un guasto parziale.
+
+### Alternative scartate
+
+- **Un endpoint unico nel backend:** pagine e ordine esatti, ma tocca backend, test e Postman fuori dal piano della card.
+- **Ordine per data:** le altre schede e i due endpoint ordinano per distanza.
+- **Due elenchi uno sotto l'altro:** non è l'elenco unico approvato e ci sarebbero due «Carica altri».
+- **Errore unico se una chiamata fallisce:** l'utente perderebbe i dati già arrivati.
+- **`?tipo=eventi|ufficiali|indie` sempre scritto:** indirizzo più lungo e valore iniziale scritto, diversamente dal raggio.
+- **Legenda solo nella scheda «Eventi»:** cambierebbe le schede già approvate in FE-05 e servirebbe un test in più.
