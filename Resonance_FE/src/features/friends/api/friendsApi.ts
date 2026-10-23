@@ -3,6 +3,7 @@ import type { PageResponse } from '@/types/common'
 import type {
   FriendshipListArgs,
   FriendshipResponse,
+  FriendshipSummary,
   UserSearchArgs,
   UserSearchResult,
 } from '@/types/friends'
@@ -19,9 +20,16 @@ export const BELL_PAGE_SIZE = 10
 /**
  * Cosa si rilegge dopo ogni azione sulle amicizie: gli elenchi, il conteggio e il pannello della campanella e i risultati
  * di ricerca, che mostrano lo stato dell'amicizia (decisione 78: nessun polling, si ricarica dopo ogni azione), e le
- * notifiche salvate: accettare o rifiutare segna letta quella della richiesta (decisione 97).
+ * notifiche salvate: accettare o rifiutare segna letta quella della richiesta (decisione 97); lo stato mostrato sul
+ * profilo (decisione 102) si rilegge allo stesso modo.
  */
-export const FRIENDSHIP_TAGS = ['Friendship', 'FriendRequests', 'UserSearch', 'Notification'] as const
+export const FRIENDSHIP_TAGS = [
+  'Friendship',
+  'FriendshipState',
+  'FriendRequests',
+  'UserSearch',
+  'Notification',
+] as const
 
 /** Endpoint di ricerca utenti e amicizie (progettazione, sezioni 6.5 e 6.14). */
 export const friendsApi = api.injectEndpoints({
@@ -54,6 +62,15 @@ export const friendsApi = api.injectEndpoints({
     getPendingRequests: build.query<PageResponse<FriendshipResponse>, void>({
       query: () => ({ url: '/api/friendships', params: { type: 'INCOMING', page: 0, size: BELL_PAGE_SIZE } }),
       providesTags: ['FriendRequests'],
+    }),
+
+    /**
+     * `GET /api/friendships/with/{userId}`: lo stato dell'amicizia con una persona, per il pulsante sul profilo
+     * (decisione 102). Solo con la sessione; 400 sul proprio id, 404 per utenti non attivi, limite 60 al minuto.
+     */
+    getFriendshipWith: build.query<FriendshipSummary, string>({
+      query: (userId) => `/api/friendships/with/${encodeURIComponent(userId)}`,
+      providesTags: (_result, _error, userId) => [{ type: 'FriendshipState' as const, id: userId }],
     }),
 
     /** `POST /api/friendships` (201): chiede l'amicizia alla persona; il limite `FRIEND_REQUESTS` conta anche i fallimenti. */
@@ -92,6 +109,7 @@ export const {
   useSearchUsersQuery,
   useGetFriendshipsQuery,
   useGetPendingRequestsQuery,
+  useGetFriendshipWithQuery,
   useRequestFriendshipMutation,
   useAcceptFriendshipMutation,
   useDeclineFriendshipMutation,

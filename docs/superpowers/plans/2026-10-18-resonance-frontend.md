@@ -946,15 +946,19 @@ un annuncio).
 **Riferimenti:** FE-09a (amicizie e ricerca utenti), decisioni 78 e 91; pagina profilo degli altri utenti.
 **Scelta approvata (23 ottobre):** bottone che segue lo stato: «Aggiungi agli amici», «Richiesta inviata», «Accetta» e «Rifiuta» se la
 richiesta l'ha mandata l'altro, «Amici».
-**Punti aperti a inizio card:** se il backend dà già lo stato dell'amicizia nel profilo (altrimenti serve un campo nuovo o una
-chiamata in più, cioè una modifica al backend con Postman e una card o un sotto-task nuovo da concordare); testi e posizione del
-bottone; che cosa succede se il profilo è il proprio o se l'utente non è autenticato; aggiornamento della campanella.
+**Punti aperti (decisi dallo studente il 23 ottobre, decisione 102):** stato dell'amicizia con un endpoint nuovo `GET /api/friendships/with/{userId}`
+(solo con login, 400 sul proprio id, 404 per utenti non attivi, limite dedicato `FRIENDSHIP_STATE` di 60 al minuto, consumato per primo); pulsante
+`FriendshipButton` con tutti i suoi stati e «Aggiungi agli amici» sul profilo (prop `addLabel`), nell'intestazione sotto nome e città; sul proprio
+profilo niente, senza sessione il link «Accedi per aggiungere» con ritorno al profilo. **Eccezione ai Vincoli globali** (backend e Postman toccati,
+con test d'integrazione e richieste Postman nella cartella Friends).
 **Sotto-task:**
-- [ ] **1. Stato dell'amicizia.** Come il frontend lo ottiene; dati finti e handler MSW.
-- [ ] **2. Bottone sul profilo.** Quattro stati, errori, test.
-- [ ] **3. Chiusura.** Tre larghezze con Playwright; `npm run lint`, `npm test`, `npm run build`; piano e decisioni.
+- [x] **1. Stato dell'amicizia.** Come il frontend lo ottiene; dati finti e handler MSW. Con l'endpoint nuovo (backend, limite, test d'integrazione,
+  Postman, `progettazione.md` 6.14 e 8.8), `getFriendshipWith`, tag `FriendshipState` e handler MSW.
+- [x] **2. Bottone sul profilo.** Quattro stati, errori, test. `ProfileFriendship` nel `ProfileHeader`, `addLabel` su `FriendshipButton`.
+- [x] **3. Chiusura.** Tre larghezze con Playwright; `npm run lint`, `npm test`, `npm run build`; piano e decisioni.
 
 **Criterio:** da un profilo (anche arrivando dal nome dell'autore) si manda e si accetta una richiesta fra due account, senza doppioni.
+Provato con Playwright a 375, 768 e 1280 px fra due account su un database di prova separato.
 **Commit proposto:** `feat(fe-friends): aggiunge la richiesta di amicizia dal profilo`
 
 ### Card FE-17 · Amici nella navigazione laterale — stima 1,5 h (provvisoria)

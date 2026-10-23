@@ -1200,6 +1200,7 @@ richieste sono quelle della sezione 6.15 (decisione 97).
 |---|---|---|
 | `POST /api/friendships` | autenticato | `{userId}` → 201 `FriendshipResponse` |
 | `GET /api/friendships?type&page&size` | autenticato | `type` obbligatorio: `FRIENDS`, `INCOMING`, `OUTGOING`; per `updated_at desc, id desc` |
+| `GET /api/friendships/with/{userId}` | autenticato | 200 `{status, friendshipId}` (decisione 102) |
 | `POST /api/friendships/{id}/accept` | destinatario | 200 `FriendshipResponse` |
 | `POST /api/friendships/{id}/decline` | destinatario | 204 |
 | `POST /api/friendships/{id}/cancel` | richiedente | 204 |
@@ -1243,6 +1244,12 @@ con la riga della coppia sotto lock:
 resta); altrimenti 409 `FRIEND_REQUEST_NOT_PENDING`. **Rimuovi**: solo `ACCEPTED` (altrimenti 403
 `NOT_FRIENDS`) → `REMOVED`, `closed_by` = chi rimuove; la conversazione resta leggibile, i nuovi
 messaggi seguono il permesso di scrittura (6.9).
+
+**Stato con un utente** (`GET /api/friendships/with/{userId}`, decisione 102): serve al bottone sul profilo pubblico. Risponde
+con la stessa forma della ricerca (`FriendshipSummary`: `status` e `friendshipId`, presente solo per `OUTGOING`, `INCOMING` e
+`FRIENDS`), calcolata con le stesse regole della tabella sopra. Il limite `FRIENDSHIP_STATE` si consuma per primo e conta anche
+gli errori; poi se `userId` è il chiamante → 400 `CANNOT_FRIEND_SELF`; utente inesistente, non verificato o non `ACTIVE` → 404.
+Non modifica nulla. `GET /api/users/{id}` resta pubblico e senza stato dell'amicizia.
 
 Elenchi: `FRIENDS` = righe `ACCEPTED` di X; `INCOMING` = `PENDING` ricevute da X; `OUTGOING` = `PENDING`
 inviate da X più le `DECLINED` mascherate inviate da X. Gli utenti sospesi restano negli elenchi (non
@@ -1494,6 +1501,7 @@ riavvio: accettabile con una sola istanza). Valori in `application.yml` (`app.ra
 | `COLLAB_APPLICATIONS` | 10 in 24 ore | utente |
 | `FRIEND_REQUESTS` | 20 in 24 ore | utente |
 | `USER_SEARCH` | 30 al minuto | utente |
+| `FRIENDSHIP_STATE` | 60 al minuto | utente |
 | `EVENT_CONTACTS` | 10 in 24 ore | utente |
 | `EVENTS_CREATED` | 20 in 24 ore | utente |
 

@@ -10,6 +10,7 @@ import it.epicode.resonance.common.PageResponse;
 import it.epicode.resonance.common.RateLimitService;
 import it.epicode.resonance.friendship.dto.FriendshipListType;
 import it.epicode.resonance.friendship.dto.FriendshipResponse;
+import it.epicode.resonance.friendship.dto.FriendshipSummary;
 import it.epicode.resonance.notification.NotificationService;
 import it.epicode.resonance.notification.NotificationType;
 import it.epicode.resonance.user.User;
@@ -25,6 +26,7 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -204,6 +206,23 @@ public class FriendshipService {
             case OUTGOING -> friendships.findSentBy(me, FriendshipStatus.PENDING, FriendshipStatus.DECLINED, pageable);
         };
         return PageResponse.from(page.map(row -> FriendshipResponse.from(row, me)));
+    }
+
+    /**
+     * Lo stato dell'amicizia di {@code me} con {@code otherId}, per il bottone sul profilo (progettazione, sezione 6.14).
+     * Il limite si consuma per primo e conta anche gli errori (decisione 64); poi se stessi 400, utente inesistente,
+     * non verificato o non attivo 404 (come la richiesta). Non modifica niente.
+     */
+    @Transactional(readOnly = true)
+    public FriendshipSummary stateWith(UUID me, UUID otherId) {
+        rateLimits.consume(RateLimit.FRIENDSHIP_STATE, me.toString());
+        if (me.equals(otherId)) {
+            throw new AppException(ErrorCode.CANNOT_FRIEND_SELF, "Non puoi avere un'amicizia con te stesso");
+        }
+        if (userAccess.resolve(otherId).status() != AccessStatus.ACTIVE) {
+            throw new AppException(ErrorCode.NOT_FOUND, "Utente non trovato");
+        }
+        return FriendshipSummary.from(relationsFor(me, List.of(otherId)).getOrDefault(otherId, FriendshipRelation.NONE));
     }
 
     /**

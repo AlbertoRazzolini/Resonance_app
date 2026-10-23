@@ -6,6 +6,7 @@ import it.epicode.resonance.common.PageResponse;
 import it.epicode.resonance.friendship.dto.FriendRequest;
 import it.epicode.resonance.friendship.dto.FriendshipListType;
 import it.epicode.resonance.friendship.dto.FriendshipResponse;
+import it.epicode.resonance.friendship.dto.FriendshipSummary;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -54,6 +55,14 @@ public class FriendshipController {
                                                  @RequestParam FriendshipListType type,
                                                  @Valid PageParams params) {
         return friendshipService.list(user.id(), type, params);
+    }
+
+    /**
+     * Stato dell'amicizia del chiamante con un utente, per il bottone sul profilo: {@code {status, friendshipId}}.
+     */
+    @GetMapping("/with/{userId}")
+    public FriendshipSummary stateWith(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable UUID userId) {
+        return friendshipService.stateWith(user.id(), userId);
     }
 
     /**

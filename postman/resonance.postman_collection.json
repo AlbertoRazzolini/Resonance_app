@@ -5302,6 +5302,78 @@
           "response": []
         },
         {
+          "name": "Stato dell amicizia prima della richiesta (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 NONE senza friendshipId', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('NONE');",
+                  "    pm.expect(body.friendshipId).to.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships/with/{{friendUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships",
+                "with",
+                "{{friendUserId}}"
+              ]
+            },
+            "description": "Richiede il login (accessToken). Stato dell amicizia con friendUserId, per il bottone sul profilo: {status, friendshipId}. Prima della richiesta la coppia non ha una riga. Limite di 60 chiamate al minuto per utente."
+          },
+          "response": []
+        },
+        {
+          "name": "Stato dell amicizia con se stessi (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 CANNOT_FRIEND_SELF', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql('CANNOT_FRIEND_SELF');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships/with/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships",
+                "with",
+                "{{userId}}"
+              ]
+            },
+            "description": "Errore significativo. Sul proprio profilo il bottone non c e: userId e l utente di accessToken."
+          },
+          "response": []
+        },
+        {
           "name": "Chiedi amicizia a se stessi (400)",
           "event": [
             {
@@ -5386,6 +5458,80 @@
               "mode": "raw",
               "raw": "{\n  \"userId\": \"{{friendUserId}}\"\n}"
             }
+          },
+          "response": []
+        },
+        {
+          "name": "Stato dell amicizia dopo la richiesta (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OUTGOING con l id della richiesta', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('OUTGOING');",
+                  "    pm.expect(body.friendshipId).to.eql(pm.environment.get('friendshipId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships/with/{{friendUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships",
+                "with",
+                "{{friendUserId}}"
+              ]
+            },
+            "description": "Dopo la richiesta lo stato visto da chi l ha inviata e OUTGOING e porta l id che serve ad annullarla."
+          },
+          "response": []
+        },
+        {
+          "name": "Stato dell amicizia senza login (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 senza access token', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships/with/{{friendUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships",
+                "with",
+                "{{friendUserId}}"
+              ]
+            },
+            "description": "Errore significativo. Lo stato dell amicizia richiede il login: il profilo pubblico resta aperto, il bottone no."
           },
           "response": []
         },

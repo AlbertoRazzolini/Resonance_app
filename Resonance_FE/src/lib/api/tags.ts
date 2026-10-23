@@ -7,6 +7,7 @@ export const TAG_TYPES = [
   'FeedPost',
   'CollabPost',
   'Friendship',
+  'FriendshipState',
   'FriendRequests',
   'UserSearch',
   'Chat',

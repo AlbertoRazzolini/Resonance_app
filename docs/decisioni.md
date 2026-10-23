@@ -3425,3 +3425,32 @@ La campanella è a 64 px dal bordo destro (a destra c'è l'avatar), quindi con i
 - **Solo larghezza calcolata (`100vw` meno 76 px):** una riga di CSS, ma a 320 px il pannello sarebbe largo 244 px, con 64 px vuoti a destra.
 - **Margine di 1 rem o di 0,75 rem scelto a occhio:** non coincide per forza con quello che si vede a 460 px.
 - **Margine ridotto sotto i 360 px:** una regola in più da mantenere e da provare, senza vantaggio chiaro.
+
+## Decisione 102: richiesta di amicizia dal profilo (card FE-16, progettazione, sezioni 6.5 e 6.14)
+
+Sostituisce la parte della decisione 91 che escludeva il pulsante dell'amicizia dal profilo pubblico.
+
+### Scelta
+
+- **Endpoint nuovo `GET /api/friendships/with/{userId}`**, solo con login: risponde `{status, friendshipId}` (la stessa forma `FriendshipSummary` della ricerca, `friendshipId` solo per `OUTGOING`, `INCOMING` e `FRIENDS`) con le regole di stato della sezione 6.14. `GET /api/users/{id}` non cambia: resta pubblico e senza dati di chi guarda. Se `userId` è il chiamante: 400 `CANNOT_FRIEND_SELF`; utente inesistente, non verificato o non attivo: 404 (come la richiesta di amicizia). Non scrive nulla.
+- **Limite dedicato `FRIENDSHIP_STATE`:** 60 chiamate al minuto per utente (`app.rate-limits.friendship-state`), consumato per primo e valido anche per gli errori (decisione 64), separato da `FRIEND_REQUESTS` e da `USER_SEARCH`.
+- **Pulsante sul profilo:** il componente `FriendshipButton` della ricerca, con tutti i suoi stati (Aggiungi, Richiesta inviata con Annulla, Accetta e Rifiuta, Amici con Scrivi e Rimuovi, Non disponibile). Sul profilo l'etichetta è «Aggiungi agli amici» (prop opzionale `addLabel`, per default «Aggiungi»); la ricerca non cambia. Il pulsante sta nell'intestazione del profilo (`ProfileHeader`), sotto nome e città, a capo sul telefono.
+- **Profilo proprio e anonimo:** sul proprio profilo nessun pulsante e nessuna chiamata; chi non ha la sessione vede il link «Accedi per aggiungere», che porta a `/accesso` con `from` = percorso del profilo, così dopo l'accesso si torna lì (stesso meccanismo di `RequireAuth`) e senza chiamare l'endpoint.
+- **Aggiornamento:** dopo ogni azione si rileggono, con i tag già usati (`FRIENDSHIP_TAGS`), la campanella, gli elenchi e la ricerca, più il tag nuovo `FriendshipState` per lo stato del profilo.
+- **Eccezione ai vincoli globali del piano del frontend**, approvata dallo studente il 23 ottobre: la card FE-16 tocca il backend (endpoint, limite, test d'integrazione) e la collection Postman (cartella Friends: stato prima e dopo la richiesta, con se stessi 400, senza login 401).
+
+### Motivazione
+
+Il profilo non diceva nulla dell'amicizia e solo la ricerca la mostrava. Un endpoint a parte tiene il profilo pubblico uguale per tutti (nessun dato di chi guarda, nessun rischio se un giorno si mette in cache) e si può riusare altrove, per esempio vicino al nome dell'autore di un evento o di un post. Il limite dedicato e per primo ferma chi prova molti id per scoprire quali utenti esistono; 60 al minuto non si raggiungono aprendo profili a mano.
+
+### Alternative scartate
+
+- **Campo `friendship` dentro `GET /api/users/{id}`:** una chiamata sola, ma il profilo pubblico mescolerebbe dati pubblici e dati di chi guarda; scelta dello studente a favore dell'endpoint a parte.
+- **Ricerca per nome dal frontend:** fragile (nomi simili, limite della ricerca, minimo di 2 caratteri).
+- **Nessun limite, o quello della ricerca (`USER_SEARCH`):** il primo lascia scansionare gli id; il secondo conta insieme azioni diverse e un 429 sul profilo non ha senso.
+- **Soglie di 30 o 120 al minuto:** 30 si raggiunge sfogliando in fretta, 120 protegge poco.
+- **Limite dopo i controlli:** gli errori 404 non consumerebbero e la scansione di id non sarebbe fermata.
+- **Solo i quattro stati della card, senza Annulla, Scrivi e Rimuovi:** dal profilo non si potrebbe annullare né rimuovere e il pulsante si comporterebbe diversamente dalla ricerca.
+- **Etichetta «Aggiungi agli amici» anche nella ricerca:** cambia la decisione 91 e i suoi test, e la riga della ricerca è stretta sul telefono.
+- **Pulsante in una striscia sotto l'intestazione:** più lontano dal nome e più spazio verticale.
+- **Anonimo senza link, o link senza ritorno al profilo:** l'anonimo non sarebbe guidato, o perderebbe il profilo che stava guardando.

@@ -4,17 +4,19 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { ROUTES, userPath } from '@/app/routes'
 import { makeStore } from '@/app/store'
-import { sessionEnded } from '@/features/auth/authSlice'
-import { makePublicUser } from '@/test/fixtures/users'
+import { sessionEnded, sessionStarted } from '@/features/auth/authSlice'
+import { makeLoginResponse, makeMe, makePublicUser } from '@/test/fixtures/users'
+import { friendshipStateFound } from '@/test/handlers/friends'
 import { publicUserFound, publicUserRejected } from '@/test/handlers/users'
 import { server } from '@/test/server'
 import { Component as PublicProfilePage } from './PublicProfilePage'
 
 // Profilo di un altro utente: aperto anche a chi non ha la sessione (progettazione, sezione 6.5), senza email né
 // coordinate; un utente inesistente o non verificato dà «Utente non trovato.», un altro errore un avviso.
-function renderPublic(id: string) {
+function renderPublic(id: string, loggedInAs?: string) {
   const store = makeStore()
-  store.dispatch(sessionEnded())
+  if (loggedInAs) store.dispatch(sessionStarted(makeLoginResponse({ user: makeMe({ id: loggedInAs }) })))
+  else store.dispatch(sessionEnded())
   const router = createMemoryRouter(
     [
       { path: ROUTES.publicUser, element: <PublicProfilePage /> },
@@ -69,6 +71,40 @@ describe('PublicProfilePage', () => {
     await screen.findByRole('heading', { level: 1 })
     expect(screen.queryByRole('link', { name: 'Modifica profilo' })).not.toBeInTheDocument()
     expect(screen.queryByRole('tab')).not.toBeInTheDocument()
+  })
+
+  // Pulsante dell'amicizia (decisione 102): sotto nome e città, prima della bio.
+  it('con la sessione mostra «Aggiungi agli amici» sul profilo di un altro, prima della bio', async () => {
+    server.use(
+      publicUserFound(makePublicUser({ id: 'u-altro', bio: 'Suono dal vivo' })),
+      friendshipStateFound({ status: 'NONE', friendshipId: null }),
+    )
+
+    renderPublic('u-altro', 'u-io')
+
+    const button = await screen.findByRole('button', { name: /^Aggiungi agli amici/ })
+    expect(button.compareDocumentPosition(screen.getByTestId('profile-bio'))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+  })
+
+  it('senza sessione mostra «Accedi per aggiungere», non il pulsante', async () => {
+    server.use(publicUserFound(makePublicUser({ id: 'u-altro' })))
+
+    renderPublic('u-altro')
+
+    expect(await screen.findByRole('link', { name: 'Accedi per aggiungere' })).toBeInTheDocument()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('sul proprio profilo pubblico non c\'è né il pulsante né il link', async () => {
+    server.use(publicUserFound(makePublicUser({ id: 'u-io' })))
+
+    renderPublic('u-io', 'u-io')
+
+    await screen.findByRole('heading', { level: 1 })
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Accedi per aggiungere' })).not.toBeInTheDocument()
   })
 
   it('mostra la foto se il profilo ha un indirizzo', async () => {

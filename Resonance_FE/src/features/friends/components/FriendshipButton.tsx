@@ -25,6 +25,8 @@ type FriendshipButtonProps = {
   status: FriendshipView
   /** C'è per `OUTGOING`, `INCOMING` e `FRIENDS`: serve ad annullare, accettare, rifiutare e rimuovere. */
   friendshipId: string | null
+  /** Testo del pulsante dello stato `NONE`: «Aggiungi» nella ricerca, «Aggiungi agli amici» sul profilo (decisione 102). */
+  addLabel?: string
 }
 
 /** Etichetta con il nome della persona solo per i lettori di schermo, come «Candidati» nelle card collab. */
@@ -48,7 +50,13 @@ const isStale = (error: unknown) =>
  * nella riga. Una riuscita si conferma in cima alla pagina; un errore resta scritto nella riga. `FRIEND_REQUEST_ALREADY_RECEIVED` non è un errore: la ricerca si ricarica e mostra
  * «Accetta». Il componente non decide lo stato: arriva dal genitore e cambia quando gli elenchi si ricaricano.
  */
-export function FriendshipButton({ userId, displayName, status, friendshipId }: FriendshipButtonProps) {
+export function FriendshipButton({
+  userId,
+  displayName,
+  status,
+  friendshipId,
+  addLabel = 'Aggiungi',
+}: FriendshipButtonProps) {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const [openConversation] = useOpenConversationMutation()
@@ -107,7 +115,7 @@ export function FriendshipButton({ userId, displayName, status, friendshipId }: 
             disabled={busy}
             onClick={() => void run(() => request(userId).unwrap(), 'Richiesta inviata')}
           >
-            <Label text="Aggiungi" name={displayName} />
+            <Label text={addLabel} name={displayName} />
           </Button>
         )}
 

@@ -1,6 +1,11 @@
 import { http, HttpResponse } from 'msw'
 import type { PageResponse } from '@/types/common'
-import type { FriendshipListType, FriendshipResponse, UserSearchResult } from '@/types/friends'
+import type {
+  FriendshipListType,
+  FriendshipResponse,
+  FriendshipSummary,
+  UserSearchResult,
+} from '@/types/friends'
 import { errorResponse } from './auth'
 
 // Handler MSW degli endpoint di ricerca utenti e amicizie, condivisi dai test: ogni test li registra con server.use(...).
@@ -52,6 +57,19 @@ export function friendshipsFound(
 /** `GET /api/friendships` rifiutato con status e codice del backend. */
 export function friendshipsRejected(status: number, code: string) {
   return http.get(FRIENDSHIPS, () => HttpResponse.json(errorResponse(status, code), { status }))
+}
+
+/** `GET /api/friendships/with/{userId}` riuscito: risponde con lo stato indicato e registra le richieste. */
+export function friendshipStateFound(summary: FriendshipSummary, calls: Request[] = []) {
+  return http.get(`${FRIENDSHIPS}/with/:userId`, ({ request }) => {
+    calls.push(request.clone())
+    return HttpResponse.json(summary)
+  })
+}
+
+/** `GET /api/friendships/with/{userId}` rifiutato con status e codice del backend (es. 429 `TOO_MANY_REQUESTS`). */
+export function friendshipStateRejected(status: number, code: string) {
+  return http.get(`${FRIENDSHIPS}/with/:userId`, () => HttpResponse.json(errorResponse(status, code), { status }))
 }
 
 /** `POST /api/friendships` riuscito (201): risponde con l'amicizia indicata e registra le richieste. */

@@ -652,7 +652,140 @@ class FriendshipIntegrationTest extends IntegrationTest {
         assertThat(friendshipService.relationsFor(me.getId(), List.of(me.getId()))).isEmpty();
     }
 
+    // ---- stato con un utente (FE-16) ----
+
+    @Test
+    void stateWith_withoutRow_returnsNoneWithoutId() throws Exception {
+        User a = user("a@example.com", "Alice");
+        User b = user("b@example.com", "Bruno");
+
+        stateWith(a, b.getId())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("NONE"))
+                .andExpect(jsonPath("$.friendshipId").doesNotExist());
+    }
+
+    @Test
+    void stateWith_pendingRequest_isOutgoingForTheSenderAndIncomingForTheReceiver() throws Exception {
+        User a = user("a@example.com", "Alice");
+        User b = user("b@example.com", "Bruno");
+        Friendship row = row(a, b, FriendshipStatus.PENDING);
+
+        stateWith(a, b.getId())
+                .andExpect(jsonPath("$.status").value("OUTGOING"))
+                .andExpect(jsonPath("$.friendshipId").value(row.getId().toString()));
+        stateWith(b, a.getId())
+                .andExpect(jsonPath("$.status").value("INCOMING"))
+                .andExpect(jsonPath("$.friendshipId").value(row.getId().toString()));
+    }
+
+    @Test
+    void stateWith_acceptedRow_isFriendsForBothSides() throws Exception {
+        User a = user("a@example.com", "Alice");
+        User b = user("b@example.com", "Bruno");
+        Friendship row = row(a, b, FriendshipStatus.ACCEPTED);
+
+        stateWith(a, b.getId())
+                .andExpect(jsonPath("$.status").value("FRIENDS"))
+                .andExpect(jsonPath("$.friendshipId").value(row.getId().toString()));
+        stateWith(b, a.getId())
+                .andExpect(jsonPath("$.status").value("FRIENDS"))
+                .andExpect(jsonPath("$.friendshipId").value(row.getId().toString()));
+    }
+
+    // Come nell'elenco e nella ricerca: la rimozione fatta dall'altro e' UNAVAILABLE, la propria e' NONE.
+    @Test
+    void stateWith_removedRow_isUnavailableForTheOneWhoWasRemoved() throws Exception {
+        User a = user("a@example.com", "Alice");
+        User b = user("b@example.com", "Bruno");
+        closedRow(a, b, FriendshipStatus.REMOVED, b, false);
+
+        stateWith(a, b.getId())
+                .andExpect(jsonPath("$.status").value("UNAVAILABLE"))
+                .andExpect(jsonPath("$.friendshipId").doesNotExist());
+        stateWith(b, a.getId())
+                .andExpect(jsonPath("$.status").value("NONE"));
+    }
+
+    // Il rifiuto silenzioso: chi ha chiesto continua a vedere la richiesta come inviata.
+    @Test
+    void stateWith_maskedDecline_staysOutgoingForTheRequester() throws Exception {
+        User a = user("a@example.com", "Alice");
+        User b = user("b@example.com", "Bruno");
+        Friendship row = closedRow(a, b, FriendshipStatus.DECLINED, b, true);
+
+        stateWith(a, b.getId())
+                .andExpect(jsonPath("$.status").value("OUTGOING"))
+                .andExpect(jsonPath("$.friendshipId").value(row.getId().toString()));
+        stateWith(b, a.getId())
+                .andExpect(jsonPath("$.status").value("NONE"));
+    }
+
+    @Test
+    void stateWith_self_returns400() throws Exception {
+        User a = user("a@example.com", "Alice");
+
+        stateWith(a, a.getId())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("CANNOT_FRIEND_SELF"));
+    }
+
+    @Test
+    void stateWith_unknownUnverifiedOrSuspendedUser_returns404() throws Exception {
+        User a = user("a@example.com", "Alice");
+        User unverified = user("u@example.com", "Ugo");
+        unverified.setEmailVerified(false);
+        users.save(unverified);
+        User suspendedUser = suspended(user("s@example.com", "Sara"), a);
+
+        stateWith(a, UUID.randomUUID()).andExpect(status().isNotFound());
+        stateWith(a, unverified.getId()).andExpect(status().isNotFound());
+        stateWith(a, suspendedUser.getId()).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void stateWith_withoutToken_returns401() throws Exception {
+        User b = user("b@example.com", "Bruno");
+
+        mockMvc.perform(get("/api/friendships/with/{userId}", b.getId()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    }
+
+    // Limite dedicato FRIENDSHIP_STATE (60 al minuto per utente): e' separato da quello delle richieste di amicizia.
+    @Test
+    void stateWith_sixtyFirstInAMinute_returns429() throws Exception {
+        User a = user("a@example.com", "Alice");
+        User b = user("b@example.com", "Bruno");
+        for (int i = 0; i < 60; i++) {
+            stateWith(a, b.getId()).andExpect(status().isOk());
+        }
+
+        stateWith(a, b.getId())
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.code").value("TOO_MANY_REQUESTS"));
+        // Il limite e' per utente e non tocca quello delle richieste: un altro utente e la richiesta vanno avanti.
+        stateWith(b, a.getId()).andExpect(status().isOk());
+        request(a, b.getId()).andExpect(status().isCreated());
+        assertThat(friendships.count()).isEqualTo(1);
+    }
+
+    // Il limite si consuma per primo (decisione 64): la 61esima e' un 429 anche se sarebbe stata un 400.
+    @Test
+    void stateWith_errorsCountTowardsTheLimit() throws Exception {
+        User a = user("a@example.com", "Alice");
+        for (int i = 0; i < 60; i++) {
+            stateWith(a, a.getId()).andExpect(status().isBadRequest());
+        }
+
+        stateWith(a, a.getId()).andExpect(status().isTooManyRequests());
+    }
+
     // ---- supporto ----
+
+    private ResultActions stateWith(User caller, UUID targetId) throws Exception {
+        return mockMvc.perform(get("/api/friendships/with/{userId}", targetId).header("Authorization", bearer(caller)));
+    }
 
     private ResultActions request(User caller, UUID targetId) throws Exception {
         return mockMvc.perform(post("/api/friendships")

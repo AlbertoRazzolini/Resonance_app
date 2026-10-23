@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router'
 import { ROUTES } from '@/app/routes'
 import { ErrorAlert } from '@/components/ui/ErrorAlert'
+import { ProfileFriendship } from '@/features/friends/components/ProfileFriendship'
 import { useGetPublicUserQuery } from '../api/usersApi'
 import { ProfileHeader } from '../components/ProfileHeader'
 
@@ -39,6 +40,7 @@ export function Component() {
       city={data.city}
       bio={data.bio}
       roles={data.roles}
+      friendship={<ProfileFriendship userId={data.id} displayName={data.displayName} />}
     />
   )
 }

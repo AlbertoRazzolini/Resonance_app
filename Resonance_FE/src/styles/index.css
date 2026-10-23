@@ -823,6 +823,15 @@ textarea {
   color: var(--rs-color-text-muted);
 }
 
+/* Pulsante dell'amicizia sotto nome e città (decisione 102): a sinistra, a capo sul telefono, stesso spazio della bio */
+.rs-profile__friendship {
+  margin: var(--rs-space-4) 0 0;
+}
+
+.rs-profile__friendship .rs-person__actions {
+  margin-left: 0;
+}
+
 /* La bio non rompe il layout con una parola lunghissima (gli a capo li tiene UserText) */
 .rs-profile__bio {
   margin: var(--rs-space-4) 0;

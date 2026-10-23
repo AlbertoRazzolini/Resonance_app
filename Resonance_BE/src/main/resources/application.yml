@@ -72,6 +72,10 @@ app:
     user-search:
       max: 30
       window: 1m
+    # Stato dell'amicizia mostrato sul profilo (progettazione, sezione 6.14; decisione 102).
+    friendship-state:
+      max: 60
+      window: 1m
     event-contacts:
       max: 10
       window: 24h

@@ -53,6 +53,24 @@ describe('FriendshipButton · un’azione per stato', () => {
     expect(screen.queryByRole('button', { name: /^Accetta/ })).not.toBeInTheDocument()
   })
 
+  it('NONE con `addLabel`: cambia solo il testo del pulsante', () => {
+    render(
+      <Provider store={makeStore()}>
+        <MemoryRouter>
+          <FriendshipButton
+            userId="u-mario"
+            displayName="Mario Rossi"
+            status="NONE"
+            friendshipId={null}
+            addLabel="Aggiungi agli amici"
+          />
+        </MemoryRouter>
+      </Provider>,
+    )
+
+    expect(screen.getByRole('button', { name: /^Aggiungi agli amici/ })).toBeEnabled()
+  })
+
   it('OUTGOING: «Richiesta inviata» e «Annulla»', () => {
     renderButton('OUTGOING', 'f1')
 
