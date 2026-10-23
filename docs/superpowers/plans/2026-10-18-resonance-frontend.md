@@ -1007,11 +1007,12 @@ e inserisce l'emoji nel testo.
 dove sta il pulsante e come si apre su telefono e desktop; inserimento nel punto del cursore; accessibilità da tastiera; peso del
 bundle.
 **Sotto-task:**
-- [ ] **1. Libreria e pulsante.** Dipendenza scelta, pulsante e selettore nel tema scuro.
-- [ ] **2. Inserimento nel testo.** Nel punto del cursore, con il limite di lunghezza del messaggio; test.
-- [ ] **3. Chiusura.** Tre larghezze con Playwright, prova del peso; `npm run lint`, `npm test`, `npm run build`; piano e decisioni.
+- [x] **1. Libreria e pulsante.** Dipendenza scelta, pulsante e selettore nel tema scuro.
+- [x] **2. Inserimento nel testo.** Nel punto del cursore, con il limite di lunghezza del messaggio; test.
+- [x] **3. Chiusura.** Tre larghezze con Playwright, prova del peso; `npm run lint`, `npm test`, `npm run build`; piano e decisioni.
 
 **Criterio:** dalla chat si apre il selettore e l'emoji entra nel messaggio; test verdi; tre larghezze; bundle sotto controllo.
+**Esito (23 ottobre, decisione 105):** libreria `emoji-picker-element` con dati italiani locali, caricata solo all'apertura (chunk di 38 KB, bundle iniziale invariato); provato con Playwright a 375, 768 e 1280 px (risposte simulate) e con la CSP di `vite preview`.
 **Commit proposto:** `feat(fe-chat): aggiunge il selettore di emoji nella chat`
 
 ### Card FE-20 · Icone animate al tocco su tablet — stima 1 h (provvisoria)

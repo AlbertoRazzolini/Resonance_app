@@ -1984,6 +1984,48 @@ textarea {
   resize: none;
 }
 
+/* Selettore di emoji: si apre sopra la casella, a destra sopra il pulsante; su telefono quasi a tutta larghezza */
+.rs-composer {
+  position: relative;
+}
+
+.rs-composer__emoji-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rs-emoji-picker {
+  position: absolute;
+  right: var(--rs-space-3);
+  bottom: calc(100% + var(--rs-space-2));
+  z-index: 10;
+  width: min(22rem, calc(100% - 2 * var(--rs-space-3)));
+  overflow: hidden;
+  border: 1px solid var(--rs-color-border-strong);
+  border-radius: var(--rs-radius-lg);
+  background: var(--rs-color-surface);
+}
+
+/* Colori del web component (variabili CSS) allineati ai token: sfondo scuro, accento giallo */
+.rs-emoji-picker emoji-picker {
+  --background: var(--rs-color-surface);
+  --border-color: var(--rs-color-border);
+  --input-border-color: var(--rs-color-border-strong);
+  --input-font-color: var(--rs-color-text);
+  --input-placeholder-color: var(--rs-color-text-muted);
+  --category-font-color: var(--rs-color-text-muted);
+  --indicator-color: var(--rs-color-accent);
+  --outline-color: var(--rs-color-accent);
+  --button-hover-background: var(--rs-color-field);
+  --button-active-background: var(--rs-color-border);
+  --num-columns: 9;
+  --emoji-size: 1.15rem;
+  --emoji-padding: 0.3rem;
+  width: 100%;
+  height: 20rem;
+}
+
 .rs-composer__error {
   margin: 0;
 }

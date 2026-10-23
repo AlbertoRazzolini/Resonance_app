@@ -1,6 +1,9 @@
-import { useEffect, useRef, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { Alert, Button } from 'react-bootstrap'
 import type { StompStatus } from '@/lib/stomp/client'
+import { insertAtSelection } from '../emojiInsert'
+import { SmileIcon } from './ChatIcons'
+import { EmojiPicker } from './EmojiPicker'
 
 /** Lunghezza massima di un messaggio (progettazione, sezione 7.5: 1–2000). */
 export const MESSAGE_MAX = 2000
@@ -34,9 +37,16 @@ type MessageComposerProps = {
  * Casella di scrittura (progettazione, sezione 7.5): stato della connessione e contatore «n / 2000» sopra, casella e
  * «Invia» sotto. Invio manda, Maiusc+Invio va a capo; «Invia» resta spento senza testo o senza connessione. La casella
  * cresce col testo fino a 160 px. Con `canSend` falso è spenta e una nota neutra spiega che si può solo rileggere.
+ * Il pulsante con la faccina apre il selettore di emoji sopra la casella: l'emoji entra nel punto del cursore (o al posto
+ * della selezione) se il messaggio resta entro il limite, poi il selettore si chiude e il cursore torna nella casella;
+ * si chiude anche con Esc e con un clic fuori.
  */
 export function MessageComposer({ name, value, onChange, onSubmit, status, canSend, error }: MessageComposerProps) {
   const field = useRef<HTMLTextAreaElement>(null)
+  const emojiBox = useRef<HTMLDivElement>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  // Posizione del cursore da ripristinare dopo che React ha scritto il nuovo testo nella casella
+  const pendingCaret = useRef<number | null>(null)
   const trimmed = value.trim()
   const canSubmit = canSend && status === 'connected' && trimmed.length > 0 && value.length <= MESSAGE_MAX
 
@@ -47,6 +57,46 @@ export function MessageComposer({ name, value, onChange, onSubmit, status, canSe
     element.style.height = 'auto'
     element.style.height = `${Math.min(element.scrollHeight, MAX_HEIGHT_PX)}px`
   }, [value])
+
+  // Dopo un inserimento il cursore va subito dopo l'emoji
+  useEffect(() => {
+    const element = field.current
+    if (pendingCaret.current === null || !element) return
+    element.setSelectionRange(pendingCaret.current, pendingCaret.current)
+    pendingCaret.current = null
+  }, [value])
+
+  // Selettore aperto: Esc e clic fuori lo chiudono (il clic sul pulsante lo gestisce il pulsante stesso)
+  useEffect(() => {
+    if (!pickerOpen) return
+    function onKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key !== 'Escape') return
+      setPickerOpen(false)
+      field.current?.focus()
+    }
+    function onPointerDown(event: PointerEvent) {
+      if (!emojiBox.current?.contains(event.target as Node)) setPickerOpen(false)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('pointerdown', onPointerDown)
+    }
+  }, [pickerOpen])
+
+  /** Mette l'emoji nel punto del cursore, chiude il selettore e rimette il cursore nella casella. */
+  function insertEmoji(unicode: string) {
+    const element = field.current
+    setPickerOpen(false)
+    if (!element) return
+    const inserted = insertAtSelection(value, element.selectionStart, element.selectionEnd, unicode, MESSAGE_MAX)
+    if (inserted) {
+      pendingCaret.current = inserted.caret
+      onChange(inserted.value)
+    }
+    element.focus()
+  }
 
   function submit(event?: FormEvent) {
     event?.preventDefault()
@@ -87,6 +137,20 @@ export function MessageComposer({ name, value, onChange, onSubmit, status, canSe
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={onKeyDown}
         />
+        <div ref={emojiBox} className="rs-composer__emoji">
+          <Button
+            type="button"
+            variant="outline-secondary"
+            className="rs-composer__emoji-button"
+            disabled={!canSend}
+            aria-label="Inserisci emoji"
+            aria-expanded={pickerOpen}
+            onClick={() => setPickerOpen((open) => !open)}
+          >
+            <SmileIcon />
+          </Button>
+          {pickerOpen && <EmojiPicker onPick={insertEmoji} />}
+        </div>
         <Button type="submit" variant="primary" disabled={!canSubmit}>
           Invia
         </Button>

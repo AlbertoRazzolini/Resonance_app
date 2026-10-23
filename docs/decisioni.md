@@ -3511,3 +3511,31 @@ Chi apre la pagina vuole sapere cosa c'è nei dintorni, non scegliere prima il t
 - **Errore unico se una chiamata fallisce:** l'utente perderebbe i dati già arrivati.
 - **`?tipo=eventi|ufficiali|indie` sempre scritto:** indirizzo più lungo e valore iniziale scritto, diversamente dal raggio.
 - **Legenda solo nella scheda «Eventi»:** cambierebbe le schede già approvate in FE-05 e servirebbe un test in più.
+
+## Decisione 105: selettore di emoji nella chat (card FE-19, decisioni 76 e 84, FE-09b)
+
+Tutte le scelte sono dello studente, 23 ottobre.
+
+### Scelta
+
+- **Libreria `emoji-picker-element`** (web component, circa 38 KB, 13 KB compressi) con i dati di `emoji-picker-element-data`: nessun codice da CDN. Il selettore si carica solo all'apertura (chunk a parte), quindi il bundle iniziale non cambia (557,33 KB prima e dopo).
+- **Dati e testi in italiano, dalla nostra origine:** il file `it/cldr/data.json` del pacchetto (circa 480 KB) passa dal bundle di Vite (`?url`) e si scarica solo quando si apre il selettore; i testi dell'interfaccia sono quelli italiani della libreria. Nessuna richiesta fuori dall'origine (decisione 76), provato con la CSP di `vite preview`.
+- **Pulsante accanto a «Invia»:** faccina con etichetta «Inserisci emoji» e `aria-expanded`, spenta quando la casella è spenta. Il selettore si apre sopra la casella, a destra, a larghezza quasi piena su telefono, sempre in tema scuro.
+- **Chiusura:** a ogni scelta il selettore si chiude; si chiude anche con Esc, con un clic fuori o con un secondo clic sul pulsante. Il cursore torna nella casella, subito dopo l'emoji.
+- **Inserimento nel punto del cursore** (o al posto della selezione), contando le unità UTF-16 come il contatore e `maxLength`. Se il testo supera i 2000 caratteri l'emoji non si inserisce, senza messaggi (il contatore mostra già il limite).
+- **Memoria del browser:** si lascia il comportamento della libreria, che salva in IndexedDB le emoji e le «usate di recente». Nessun dato personale; le «recenti» restano sul dispositivo anche dopo il logout.
+- **Tastiera:** Esc chiude e riporta il focus nella casella; all'apertura il focus va alla ricerca del selettore.
+
+### Motivazione
+
+Una libreria già pronta evita di mantenere a mano elenchi, ricerca e categorie, e il peso resta fuori dal caricamento iniziale. I dati locali rispettano la CSP e non dipendono da servizi esterni; i testi italiani coerenti con il resto dell'interfaccia. Le emoji nei messaggi sono già ammesse dalla decisione 84.
+
+### Alternative scartate
+
+- **`emoji-mart`:** più funzioni ma molto più pesante e con un wrapper React poco mantenuto.
+- **Griglia scritta a mano:** peso zero ma senza ricerca né categorie, da mantenere a mano e in contrasto con la scelta di usare una libreria.
+- **Dati in inglese:** la ricerca per nome funzionerebbe solo in inglese.
+- **Faccina dentro la casella, o pulsante solo da 768 px:** si sovrappone al testo lungo e al contatore; il telefono resterebbe con un'esperienza diversa.
+- **Selettore sempre aperto fino a Esc:** sul telefono coprirebbe la conversazione.
+- **Avviso quando l'emoji non entra nel limite:** testo nuovo e altro stato per un caso già visibile dal contatore.
+- **Database in memoria al posto di IndexedDB:** apertura più lenta e nessuna sezione «recenti».
