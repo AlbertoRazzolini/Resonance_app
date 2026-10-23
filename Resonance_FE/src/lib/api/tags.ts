@@ -13,4 +13,5 @@ export const TAG_TYPES = [
   'Messages',
   'AdminUser',
   'HiddenContent',
+  'Notification',
 ] as const

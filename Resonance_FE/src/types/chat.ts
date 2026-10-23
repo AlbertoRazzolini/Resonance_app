@@ -1,4 +1,5 @@
 import type { AuthorSummary } from './common'
+import type { SavedNotificationType } from './notifications'
 
 // Tipi della chat e delle notifiche live, dai DTO del backend (progettazione, sezioni 6.9 e 7.4).
 
@@ -41,11 +42,12 @@ export type MessagesArgs = {
   before?: string
 }
 
-/** Tipi di notifica live (sezione 7.4); il significato di `targetId` dipende dal tipo. */
-export type NotificationType = 'NEW_LIKE' | 'NEW_MESSAGE' | 'COLLAB_APPLICATION'
+/** Tipi di notifica live (sezione 7.4): quelli salvati più `NEW_MESSAGE`; il significato di `targetId` dipende dal tipo. */
+export type NotificationType = SavedNotificationType | 'NEW_MESSAGE'
 
-/** Payload di `/user/queue/notifications`: `preview` c'è solo per `NEW_MESSAGE`. */
+/** Payload di `/user/queue/notifications`: `id` è quello della notifica salvata (nullo per `NEW_MESSAGE`), `preview` c'è solo per `NEW_MESSAGE`. */
 export type LiveNotification = {
+  id: string | null
   type: NotificationType
   createdAt: string
   actor: AuthorSummary

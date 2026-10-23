@@ -2029,6 +2029,25 @@ textarea {
   text-decoration: none;
 }
 
+.rs-notification__dot {
+  flex: none;
+  align-self: center;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--rs-color-accent);
+}
+
+/* Accetta e Rifiuta stanno sopra il collegamento steso sulla riga, così restano cliccabili */
+.rs-notification__actions {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rs-space-2);
+  margin-top: var(--rs-space-2);
+}
+
 .rs-notification__preview {
   margin-top: var(--rs-space-1);
   color: var(--rs-color-text-muted);

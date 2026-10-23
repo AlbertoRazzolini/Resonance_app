@@ -1,70 +1,96 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { makeStore } from '@/app/store'
-import type { LiveNotification } from '@/types/chat'
-import { received, selectNotifications, selectUnreadNotificationCount } from '../notificationsSlice'
+import { sessionStarted } from '@/features/auth/authSlice'
+import { makeNotification } from '@/test/fixtures/notifications'
+import { makeLoginResponse } from '@/test/fixtures/users'
+import { notificationReadSucceeds } from '@/test/handlers/notifications'
+import { server } from '@/test/server'
+import type { NotificationResponse } from '@/types/notifications'
 import { NotificationItem } from './NotificationItem'
 
-// Una voce di notifica nella campanella: testo e destinazione per tipo, anteprima da UserText, segno «non letta» e il
-// clic che la segna letta.
-const base: LiveNotification = {
-  type: 'NEW_LIKE',
-  createdAt: '2026-10-22T10:00:00Z',
-  actor: { id: 'u1', displayName: 'Giulia Rossi', avatarUrl: null },
-  targetId: 'post-1',
-  preview: null,
-}
-
-function renderItem(notification: LiveNotification) {
+// Una voce di notifica salvata nella campanella: testo e destinazione per tipo, segno «non letta» (accento giallo e
+// pallino), azioni facoltative e il clic che la segna letta sul server solo se non lo è già.
+function renderItem(notification: NotificationResponse, actions?: React.ReactNode) {
   const store = makeStore()
-  store.dispatch(received(notification))
-  const [item] = selectNotifications(store.getState())
-  render(
+  store.dispatch(sessionStarted(makeLoginResponse()))
+  const { container } = render(
     <Provider store={store}>
       <MemoryRouter>
         <ul>
-          <NotificationItem notification={item} />
+          <NotificationItem notification={notification} actions={actions} />
         </ul>
       </MemoryRouter>
     </Provider>,
   )
-  return { store, user: userEvent.setup() }
+  return { user: userEvent.setup(), container }
 }
 
 describe('NotificationItem', () => {
   it('mostra il testo della notifica come collegamento verso il bersaglio', () => {
-    renderItem({ ...base, type: 'COLLAB_APPLICATION', targetId: 'annuncio-3' })
+    renderItem(makeNotification({ type: 'COLLAB_APPLICATION', targetId: 'annuncio-3' }))
     expect(screen.getByRole('link', { name: 'Giulia Rossi si è candidato al tuo annuncio' })).toHaveAttribute(
       'href',
       '/collab/annuncio-3',
     )
   })
 
-  it('per un messaggio mostra anche l’anteprima', () => {
-    renderItem({ ...base, type: 'NEW_MESSAGE', targetId: 'c1', preview: 'Ci vediamo alle 20' })
-    expect(screen.getByText('Ci vediamo alle 20')).toBeInTheDocument()
+  it('una richiesta accettata porta al profilo di chi ha accettato', () => {
+    renderItem(makeNotification({ type: 'FRIEND_ACCEPTED', actor: { id: 'u9', displayName: 'Anna Neri', avatarUrl: null } }))
+    expect(screen.getByRole('link', { name: 'Anna Neri ha accettato la tua richiesta di amicizia' })).toHaveAttribute(
+      'href',
+      '/utenti/u9',
+    )
   })
 
-  it('un indirizzo nell’anteprima resta un pulsante con conferma, non un collegamento nel collegamento', () => {
-    renderItem({ ...base, type: 'NEW_MESSAGE', targetId: 'c1', preview: 'Guarda https://esempio.it/x' })
-    expect(screen.getByRole('button', { name: 'https://esempio.it/x' })).toBeInTheDocument()
-    expect(screen.getAllByRole('link')).toHaveLength(1)
-  })
+  it('una notifica non letta ha l’accento, il pallino e lo dice ai lettori di schermo', () => {
+    const { container } = renderItem(makeNotification({ read: false }))
 
-  it('una notifica non letta lo dice ai lettori di schermo', () => {
-    renderItem(base)
     expect(screen.getByText('Non letta')).toHaveClass('visually-hidden')
+    expect(container.querySelector('.rs-notification--unread')).not.toBeNull()
+    expect(container.querySelector('.rs-notification__dot')).not.toBeNull()
   })
 
-  it('il clic sul collegamento la segna letta', async () => {
-    const { store, user } = renderItem(base)
+  it('una notifica letta non ha né accento né pallino né avviso', () => {
+    const { container } = renderItem(makeNotification({ read: true }))
+
+    expect(screen.queryByText('Non letta')).not.toBeInTheDocument()
+    expect(container.querySelector('.rs-notification--unread')).toBeNull()
+    expect(container.querySelector('.rs-notification__dot')).toBeNull()
+  })
+
+  it('mostra l’ora della notifica', () => {
+    const { container } = renderItem(makeNotification({ createdAt: '2026-10-23T10:00:00Z' }))
+    expect(container.querySelector('time')).toHaveAttribute('datetime', '2026-10-23T10:00:00Z')
+  })
+
+  it('il clic su una non letta la segna letta sul server', async () => {
+    const calls: Request[] = []
+    server.use(notificationReadSucceeds(calls))
+    const { user } = renderItem(makeNotification({ id: 'n-7', read: false }))
 
     await user.click(screen.getByRole('link', { name: /mi piace/ }))
 
-    expect(selectUnreadNotificationCount(store.getState())).toBe(0)
-    expect(screen.queryByText('Non letta')).not.toBeInTheDocument()
+    await waitFor(() => expect(calls).toHaveLength(1))
+    expect(new URL(calls[0].url).pathname).toBe('/api/notifications/n-7/read')
+  })
+
+  it('il clic su una già letta non chiama il server', async () => {
+    const calls: Request[] = []
+    server.use(notificationReadSucceeds(calls))
+    const { user } = renderItem(makeNotification({ read: true }))
+
+    await user.click(screen.getByRole('link', { name: /mi piace/ }))
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    expect(calls).toHaveLength(0)
+  })
+
+  it('mostra le azioni passate dal genitore (Accetta e Rifiuta di una richiesta in attesa)', () => {
+    renderItem(makeNotification({ type: 'FRIEND_REQUEST' }), <button type="button">Accetta</button>)
+    expect(screen.getByRole('button', { name: 'Accetta' })).toBeInTheDocument()
   })
 })

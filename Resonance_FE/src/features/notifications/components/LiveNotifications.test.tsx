@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router'
@@ -11,13 +11,17 @@ import { confirmationShown } from '@/lib/notices/confirmationSlice'
 import { QUEUES } from '@/lib/stomp/destinations'
 import { makeConversation, makeMessage } from '@/test/fixtures/chat'
 import { makeLoginResponse, makeMe } from '@/test/fixtures/users'
+import { makeNotifications } from '@/test/fixtures/notifications'
 import { conversationsFound } from '@/test/handlers/chat'
-import { server } from '@/test/server'
 import {
-  selectNotifications,
-  selectToasts,
-  selectUnreadNotificationCount,
-} from '../notificationsSlice'
+  notificationPage,
+  notificationReadSucceeds,
+  notificationsFound,
+  unreadCountFound,
+} from '@/test/handlers/notifications'
+import { server } from '@/test/server'
+import { notificationsApi } from '../api/notificationsApi'
+import { selectToasts } from '../notificationsSlice'
 import { LiveNotifications } from './LiveNotifications'
 
 // Il client STOMP è simulato: qui si guarda cosa fa il componente (avvia e ferma la connessione, applica i messaggi in
@@ -153,10 +157,24 @@ describe('LiveNotifications · messaggi in arrivo', () => {
     act(() => reconnected.current())
     await vi.waitFor(() => expect(calls).toHaveLength(2))
   })
+
+  it('dopo una riconnessione rilegge anche notifiche salvate e numero: quelle arrivate a connessione caduta', async () => {
+    const counts: Request[] = []
+    server.use(notificationsFound([notificationPage(makeNotifications(2))]), unreadCountFound(2, counts))
+    const { store } = await setup()
+    await store.dispatch(notificationsApi.endpoints.getUnreadCount.initiate()).unwrap()
+    await store.dispatch(notificationsApi.endpoints.getNotifications.initiate(0)).unwrap()
+    expect(counts).toHaveLength(1)
+
+    act(() => reconnected.current())
+
+    await vi.waitFor(() => expect(counts).toHaveLength(2))
+  })
 })
 
 describe('LiveNotifications · notifiche', () => {
   const notification = (overrides = {}) => ({
+    id: 'n-1',
     type: 'NEW_LIKE',
     createdAt: '2026-10-22T10:00:00Z',
     actor: { id: 'u1', displayName: 'Giulia Rossi', avatarUrl: null },
@@ -179,47 +197,68 @@ describe('LiveNotifications · notifiche', () => {
     return { store, push }
   }
 
-  it('una notifica arrivata entra nella campanella e nei toast, non letta', () => {
+  it('una notifica salvata va al toast e, con elenco e numero in cache, entra in cima e alza il numero', async () => {
+    server.use(notificationsFound([notificationPage(makeNotifications(2))]), unreadCountFound(2))
     const { store, push } = setup()
-    push(notification())
+    await store.dispatch(notificationsApi.endpoints.getNotifications.initiate(0)).unwrap()
+    await store.dispatch(notificationsApi.endpoints.getUnreadCount.initiate()).unwrap()
 
-    expect(selectNotifications(store.getState())).toHaveLength(1)
+    push(notification({ id: 'live-1' }))
+
     expect(selectToasts(store.getState())).toHaveLength(1)
-    expect(selectUnreadNotificationCount(store.getState())).toBe(1)
+    const list = notificationsApi.endpoints.getNotifications.select(0)(store.getState()).data
+    expect(list?.content[0]).toMatchObject({ id: 'live-1', type: 'NEW_LIKE', read: false })
+    expect(notificationsApi.endpoints.getUnreadCount.select()(store.getState()).data).toBe(3)
   })
 
-  it('un nuovo messaggio fuori dalla sua conversazione entra come le altre', () => {
+  it('un nuovo messaggio fuori dalla sua conversazione ha il toast ma non entra nell’elenco salvato né nel numero', async () => {
+    server.use(notificationsFound([notificationPage(makeNotifications(2))]), unreadCountFound(2))
     const { store, push } = setup('/feed')
-    push(notification({ type: 'NEW_MESSAGE', targetId: 'c1', preview: 'Ciao' }))
+    await store.dispatch(notificationsApi.endpoints.getNotifications.initiate(0)).unwrap()
+    await store.dispatch(notificationsApi.endpoints.getUnreadCount.initiate()).unwrap()
+
+    push(notification({ id: null, type: 'NEW_MESSAGE', targetId: 'c1', preview: 'Ciao' }))
 
     expect(selectToasts(store.getState())).toHaveLength(1)
+    expect(notificationsApi.endpoints.getNotifications.select(0)(store.getState()).data?.content).toHaveLength(2)
+    expect(notificationsApi.endpoints.getUnreadCount.select()(store.getState()).data).toBe(2)
   })
 
-  it('un nuovo messaggio nella conversazione già aperta non crea né toast né voce', () => {
+  it('un nuovo messaggio nella conversazione già aperta non crea il toast', () => {
     const { store, push } = setup('/chat/c1')
-    push(notification({ type: 'NEW_MESSAGE', targetId: 'c1', preview: 'Ciao' }))
+    push(notification({ id: null, type: 'NEW_MESSAGE', targetId: 'c1', preview: 'Ciao' }))
 
-    expect(selectNotifications(store.getState())).toEqual([])
     expect(selectToasts(store.getState())).toEqual([])
   })
 
   it('un nuovo messaggio di un’altra conversazione, con una aperta, entra', () => {
     const { store, push } = setup('/chat/c1')
-    push(notification({ type: 'NEW_MESSAGE', targetId: 'c2', preview: 'Ciao' }))
+    push(notification({ id: null, type: 'NEW_MESSAGE', targetId: 'c2', preview: 'Ciao' }))
 
     expect(selectToasts(store.getState())).toHaveLength(1)
+  })
+
+  it('una richiesta di amicizia ricevuta ha il toast con il testo e il collegamento alle richieste', () => {
+    const { push } = setup()
+    push(notification({ type: 'FRIEND_REQUEST', targetId: 'f-1' }))
+
+    expect(screen.getByRole('link', { name: 'Giulia Rossi ti ha inviato una richiesta di amicizia' })).toHaveAttribute(
+      'href',
+      '/amici?scheda=ricevute',
+    )
   })
 
   it('un corpo non valido (senza tipo) viene ignorato', () => {
     const { store, push } = setup()
     push({ foo: 'bar' })
 
-    expect(selectNotifications(store.getState())).toEqual([])
+    expect(selectToasts(store.getState())).toEqual([])
   })
 })
 
 describe('LiveNotifications · toast', () => {
   const like = {
+    id: 'n-1',
     type: 'NEW_LIKE',
     createdAt: '2026-10-22T10:00:00Z',
     actor: { id: 'u1', displayName: 'Giulia Rossi', avatarUrl: null },
@@ -263,7 +302,7 @@ describe('LiveNotifications · toast', () => {
 
   it('un nuovo messaggio mostra l’anteprima e porta alla conversazione', () => {
     const { push } = setup()
-    push({ ...like, type: 'NEW_MESSAGE', targetId: 'c1', preview: 'Ci vediamo alle 20' })
+    push({ ...like, id: null, type: 'NEW_MESSAGE', targetId: 'c1', preview: 'Ci vediamo alle 20' })
 
     expect(screen.getByRole('link', { name: 'Nuovo messaggio da Giulia Rossi' })).toHaveAttribute('href', '/chat/c1')
     expect(screen.getByText('Ci vediamo alle 20')).toBeInTheDocument()
@@ -271,31 +310,49 @@ describe('LiveNotifications · toast', () => {
 
   it('l’anteprima passa da UserText: un indirizzo resta un pulsante di conferma, non un collegamento nel collegamento', () => {
     const { push } = setup()
-    push({ ...like, type: 'NEW_MESSAGE', targetId: 'c1', preview: 'Guarda https://esempio.it/x' })
+    push({ ...like, id: null, type: 'NEW_MESSAGE', targetId: 'c1', preview: 'Guarda https://esempio.it/x' })
 
     expect(screen.getByRole('button', { name: 'https://esempio.it/x' })).toBeInTheDocument()
     expect(screen.getAllByRole('link')).toHaveLength(1)
   })
 
-  it('la X chiude il toast ma la notifica resta nella campanella', async () => {
+  it('la X chiude il toast senza segnare letta la notifica', async () => {
+    const reads: Request[] = []
+    server.use(notificationReadSucceeds(reads))
     const { store, push } = setup()
     push(like)
 
     await userEvent.setup().click(screen.getByRole('button', { name: 'Chiudi' }))
+    await new Promise((resolve) => setTimeout(resolve, 100))
 
     expect(selectToasts(store.getState())).toEqual([])
-    expect(selectNotifications(store.getState())).toHaveLength(1)
+    expect(reads).toHaveLength(0)
     expect(screen.queryByRole('link', { name: /mi piace/ })).not.toBeInTheDocument()
   })
 
-  it('il clic sul collegamento segna letta quella notifica e chiude il toast', async () => {
+  it('il clic sul collegamento segna letta quella notifica sul server e chiude il toast', async () => {
+    const reads: Request[] = []
+    server.use(notificationReadSucceeds(reads))
     const { store, push } = setup()
     push(like)
 
     await userEvent.setup().click(screen.getByRole('link', { name: /mi piace/ }))
 
-    expect(selectUnreadNotificationCount(store.getState())).toBe(0)
+    await waitFor(() => expect(reads).toHaveLength(1))
+    expect(new URL(reads[0].url).pathname).toBe('/api/notifications/n-1/read')
     expect(selectToasts(store.getState())).toEqual([])
+  })
+
+  it('il clic sul toast di un nuovo messaggio non chiama il server: non è una notifica salvata', async () => {
+    const reads: Request[] = []
+    server.use(notificationReadSucceeds(reads))
+    const { push } = setup()
+    push({ ...like, id: null, type: 'NEW_MESSAGE', targetId: 'c1', preview: 'Ciao' })
+
+    await userEvent.setup().click(screen.getByRole('link', { name: 'Nuovo messaggio da Giulia Rossi' }))
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    expect(reads).toHaveLength(0)
   })
 
   it('si chiude da solo dopo 6 secondi', () => {
@@ -315,7 +372,7 @@ describe('LiveNotifications · toast', () => {
 
   it('i toast sono al massimo tre insieme', () => {
     const { push } = setup()
-    for (let i = 1; i <= 4; i++) push({ ...like, targetId: `p${i}`, actor: { ...like.actor, displayName: `Persona ${i}` } })
+    for (let i = 1; i <= 4; i++) push({ ...like, id: `n${i}`, targetId: `p${i}`, actor: { ...like.actor, displayName: `Persona ${i}` } })
 
     expect(screen.getAllByRole('link', { name: /mi piace/ })).toHaveLength(3)
     expect(screen.queryByText(/Persona 1 ha messo/)).not.toBeInTheDocument()
@@ -361,6 +418,7 @@ describe('LiveNotifications · conferme', () => {
     act(() => {
       store.dispatch(confirmationShown('Richiesta inviata'))
       handlers[QUEUES.notifications]({
+        id: 'n-1',
         type: 'NEW_LIKE',
         createdAt: '2026-10-22T10:00:00Z',
         actor: { id: 'u1', displayName: 'Giulia Rossi', avatarUrl: null },

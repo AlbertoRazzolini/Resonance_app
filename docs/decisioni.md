@@ -3300,3 +3300,63 @@ della progettazione teneva fra le funzioni Post-V1.
 - **Filtrare in lettura senza cancellare:** la tabella cresce comunque.
 - **Salvataggio con evento Spring e listener `BEFORE_COMMIT`:** più indiretto da seguire e da testare.
 - **`PATCH` per segnare lette:** nessuna differenza pratica rispetto a `POST`.
+
+## Decisione 98: notifiche persistenti nella campanella (card FE-13, progettazione, sezioni 6.15 e 7.4)
+
+Ogni punto è stato proposto allo studente con alternative, pro, contro e raccomandazione, e approvato il 23 ottobre. **Sostituisce** in parte la
+decisione 91 (la campanella mostrava le richieste in attesa da `GET /api/friendships`) e la decisione 92 (le notifiche della campanella erano solo
+in memoria, al massimo 20); i toast della 92 restano.
+
+### Scelta
+
+- **Elenco unico a pagine:** il pannello mostra le notifiche salvate (`GET /api/notifications`), dalla più recente, **10 per pagina** (uguale su
+  telefono e tablet), con «Carica altri» (`LoadMore`). Niente schede «Tutte / Non lette» né gruppi «Recenti / Precedenti». Una voce di cache per
+  pagina (come amici e feed): un'invalidazione rilegge tutte le pagine aperte. Il pannello monta l'elenco solo quando è aperto e a ogni apertura
+  rilegge la pagina.
+- **Segno «non letta»:** accento giallo sulla riga (già presente) più un **pallino giallo** a destra; ai lettori di schermo «Non letta».
+- **Numero sull'icona:** le non lette del server (`GET /api/notifications/unread-count`), da 1 a «9+»; nome accessibile «Notifiche: N non lette»
+  (al singolare «1 non letta»). Scende solo segnando lette le notifiche (niente «vista», decisione 97). Si rilegge ad apertura dell'app, apertura del
+  pannello, ritorno sulla scheda e riconnessione STOMP; mai a intervalli.
+- **Clic su una notifica:** `POST /api/notifications/{id}/read` (solo se non è già letta) e apertura del bersaglio: `FRIEND_REQUEST` → `/amici?scheda=ricevute`,
+  `FRIEND_ACCEPTED` → profilo di chi ha accettato (`targetId` è l'amicizia, che non ha una pagina), `NEW_LIKE` → feed, `COLLAB_APPLICATION` → annuncio.
+  La riga diventa letta e il numero scende **a risposta arrivata**, senza richiamare il server; con un errore resta non letta. Se la notifica non è in
+  nessuna pagina caricata (la apre un toast) si rilegge dal server.
+- **«Segna come lette»:** `POST /api/notifications/read-all`, visibile solo con non lette; tutte le righe caricate diventano lette e il numero va a zero.
+- **Richieste di amicizia:** niente più righe a parte. La notifica `FRIEND_REQUEST` è una riga dell'elenco e, **finché la richiesta è in attesa e tra le
+  10 più recenti** che la campanella già legge (`GET /api/friendships?type=INCOMING&size=10`, chiesta solo con il pannello aperto), ha «Accetta» e
+  «Rifiuta» (`FriendshipButton`, trovata per id dell'amicizia = `targetId`). Una richiesta già gestita, o in attesa ma fuori dalle 10, è una riga senza
+  pulsanti. Accettare, rifiutare, annullare o rimuovere invalidano anche le notifiche (il backend segna letta quella della richiesta). Il numero non
+  somma più le richieste in attesa: le richieste anteriori alla migrazione non sono notifiche e si trovano in `/amici` (decisione 97).
+- **Notifiche live:** un toast per ogni notifica (3 in vista, 6 secondi, come in decisione 92). Una notifica con `id` (salvata) entra anche in cima alla
+  prima pagina in cache, non letta, e alza il numero di uno, **senza richiamare il server** (`receiveLiveNotification`); se arriva due volte (stesso `id`)
+  entra e conta una volta sola. Con la prima pagina piena toglie l'ultima riga, così resta uguale a quella del server; se sono aperte altre pagine si
+  rileggono, perché le righe si sono spostate. Senza elenco o numero in cache non fa nulla: la prima lettura li porta. `NEW_MESSAGE` resta solo toast,
+  non entra in campanella né nel numero (ha il badge della chat); il suo toast non chiama il server al clic. Dopo una riconnessione si rileggono anche
+  notifiche e numero.
+- **Toast:** il clic su un toast di una notifica salvata la segna letta sul server e chiude il toast; la X chiude il toast e lascia la notifica non letta.
+- **Stato in memoria:** `notificationsSlice` tiene solo i toast (`toasts`, al massimo 3, id della notifica salvata o nuovo per un messaggio); spariscono
+  `markRead`, `markAllRead`, `selectNotifications` e `selectUnreadNotificationCount`. Le notifiche salvate vivono nella cache di RTK Query
+  (nuovo tag `Notification`, aggiunto anche a `FRIENDSHIP_TAGS`).
+- **Testi:** `FRIEND_REQUEST` «NOME ti ha inviato una richiesta di amicizia», `FRIEND_ACCEPTED` «NOME ha accettato la tua richiesta di amicizia»; restano
+  quelli di mi piace e candidatura. Vuoto «Nessuna notifica.»; errore con `ErrorAlert` e «Riprova».
+
+### Motivazione
+
+- Il backend salva già le notifiche (decisione 97): con un elenco unico il frontend ha una sola fonte e il numero non può contraddire le righe.
+- Il numero dal server resta giusto anche con più non lette di quante ne mostri la prima pagina, dopo un ricarico e su più dispositivi.
+- Aggiornare la cache alla risposta (non prima) evita di mostrare «letta» una notifica che il server non ha segnato; la notifica live entra in cache
+  per non spendere due chiamate per ogni notifica sul piano gratuito di Render.
+- Accetta e Rifiuta nella riga evitano un passo a chi risponde e non duplicano la stessa richiesta (riga della richiesta più notifica).
+
+### Alternative scartate
+
+- **Schede «Tutte / Non lette» o «Recenti / Precedenti»:** più liste e più test per un elenco che dura 30 giorni.
+- **Numero contato sulle righe già caricate:** sbagliato oltre la prima pagina.
+- **Clic che apre senza segnare letta:** il numero non scenderebbe mai da solo.
+- **Solo notifiche, «Accetta» in `/amici`:** un passo in più e si perde quanto costruito in FE-09a.
+- **Righe di richiesta e notifiche separate:** la stessa richiesta due volte e numero doppio.
+- **Notifica `NEW_MESSAGE` anche in campanella, solo in memoria:** sparirebbe al ricarico e il numero sommerebbe due fonti diverse.
+- **Togliere i toast:** non richiesto; si perde l'avviso immediato scelto in FE-09b.
+- **Rileggere elenco e numero a ogni notifica live:** due chiamate per notifica e lampi nel pannello aperto.
+- **Caricare tutte le richieste in attesa (`size=100`):** risposta più grossa a ogni apertura per un caso quasi inesistente.
+- **Controllo periodico del numero:** contraddice «nessun polling» (decisione 91) e pesa sul piano gratuito.

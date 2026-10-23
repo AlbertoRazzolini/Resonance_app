@@ -146,7 +146,7 @@ Regole della struttura (decisione 78):
 | Tipo | Firma | Card che lo crea |
 |---|---|---|
 | `api` | `createApi({ reducerPath: 'api', baseQuery: baseQueryWithReauth, tagTypes })`; ogni area usa `api.injectEndpoints` | FE-02 |
-| `tagTypes` | `Me, PublicUser, Concert, IndieEvent, FeedPost, CollabPost, Friendship, FriendRequests, UserSearch, Chat, Messages, AdminUser, HiddenContent` | FE-02 |
+| `tagTypes` | `Me, PublicUser, Concert, IndieEvent, FeedPost, CollabPost, Friendship, FriendRequests, UserSearch, Chat, Messages, AdminUser, HiddenContent, Notification` (l'ultimo da FE-13) | FE-02 |
 | `baseQueryWithReauth` | `fetchBaseQuery` con Bearer dallo store; su 401 `UNAUTHENTICATED`: refresh condiviso (una sola promessa), poi un nuovo tentativo; su 409 un secondo tentativo del refresh | FE-02 |
 | `authSlice` | stato `{status: 'unknown' \| 'authenticated' \| 'anonymous', accessToken, accessTokenExpiresAt, user: MeResponse \| null, suspension: SuspensionDetails \| null}`; azioni `sessionStarted(LoginResponse)`, `tokenRefreshed(LoginResponse)`, `userUpdated(MeResponse)`, `sessionEnded(reason?)`; selettori `selectCurrentUser`, `selectHasRole(role)` | FE-02 |
 | `onTokenRefreshed` | `(listener: () => void) => () => void` (registrazione e annullamento); lo usa il client STOMP per riconnettersi | FE-02 |
@@ -162,7 +162,8 @@ Regole della struttura (decisione 78):
 | `ConfirmDialog` | `<ConfirmDialog show title body confirmLabel onConfirm onCancel withReason? />` | FE-06 |
 | `UserText` | `<UserText text />`: testo con l'escape di React, a capo con CSS, URL `http`/`https` come `ExternalLink` | FE-07 |
 | `stomp` | `startStomp(store)`, `stopStomp()`, `subscribe<T>(queue, callback) => unsubscribe`, `send(destination, body): boolean`, `onStompReconnected(listener)`, `useStompStatus()` (decisione 92: lo store è un parametro) | FE-09b |
-| `notificationsSlice` | notifiche della sessione `{id, type, createdAt, actor, targetId, preview, read}`; azioni `received`, `markRead`, `markAllRead`, `toastDismissed`; solo in memoria, al massimo 20 | FE-09b |
+| `notificationsSlice` | toast delle notifiche live `{id, type, createdAt, actor, targetId, preview}`; azioni `received`, `toastDismissed`; solo in memoria, al massimo 3 (da FE-13: la lettura e l'elenco sono nella cache di `notificationsApi`) | FE-09b, FE-13 |
+| `notificationsApi` | `getNotifications(page)` (10 per pagina), `getUnreadCount()`, `markNotificationRead(id)`, `markAllNotificationsRead()`, `receiveLiveNotification(dispatch, getState, live)` | FE-13 |
 
 ---
 
@@ -247,8 +248,8 @@ scritto con Tailwind: ridisegnarlo può costare più del previsto (FE-05, FE-09b
   del backend approvato il 13 ottobre.
 - FE-09 divisa in FE-09a e FE-09b, card nuova FE-12: §14 e Trello aggiornati.
 - Frontend dal 18 (il brief diceva dal 20): già registrato in §14.
-- Richieste di amicizia senza notifica live (decisione 59, Post-V1): il conteggio della campanella si
-  ricarica ad apertura, ritorno sulla scheda e dopo ogni azione, senza polling. Da spiegare nella demo.
+- Richieste di amicizia senza notifica live (decisione 59, Post-V1): **superato** da F7-06 e FE-13 (decisioni 97 e 98): le richieste sono
+  notifiche salvate, con live; il numero della campanella si rilegge ad apertura, ritorno sulla scheda e riconnessione, senza polling.
 
 **Demo.** Su Render i codici arrivano via Brevo, con quota giornaliera: poche registrazioni di prova.
 La mappa si apre a 15 km: in demo si sceglie il livello di raggio adatto agli eventi di prova.
@@ -801,20 +802,22 @@ decisione 78; **Playwright** (decisione 94) per il controllo a tre larghezze.
 **File (da confermare a inizio card):** `features/notifications/` (api, componenti, slice), `components/layout/NotificationBell.tsx`,
 test accanto ai file, handler e dati finti in `test/`, `types/`.
 
-**Punti aperti da porre allo studente a inizio card (nessuno è deciso):**
-- **Aspetto del pannello:** non lette evidenziate (con quale segno), schede «Tutte / Non lette» oppure un solo elenco; separazione fra recenti e
-  precedenti; pagine o «Carica altri».
-- **Il numero sull'icona:** conta le non lette, oppure si azzera all'apertura (distinzione «vista» e «letta»).
-- **Il clic su una notifica:** la segna letta e porta al bersaglio (profilo, annuncio, chat, richieste).
-- **Richieste di amicizia in attesa:** restano con «Accetta» e «Rifiuta» dentro la campanella come oggi, o diventano notifiche come le altre.
-- **Notifiche solo in memoria di oggi:** vengono sostituite dall'elenco salvato; i toast restano o cambiano.
-- **«Segna tutte come lette»** e vuoto del pannello; testi di ogni tipo di notifica.
+**Scelte approvate a inizio card (23 ottobre, decisione 98):**
+- **Elenco:** unico, dalla più recente, 10 per pagina con «Carica altri»; non lette con accento giallo e pallino giallo.
+- **Numero sull'icona:** le non lette del server, da 1 a «9+»; scende solo segnandole lette.
+- **Clic:** segna letta sul server e porta al bersaglio (richieste ricevute, profilo di chi ha accettato, feed, annuncio).
+- **Richieste in attesa:** riga della notifica con Accetta e Rifiuta finché in attesa e tra le 10 più recenti; fuori dalle 10 nessun pulsante,
+  il clic porta a `/amici?scheda=ricevute`.
+- **Toast e messaggi:** i toast restano; `NEW_MESSAGE` solo toast, non in campanella né nel numero.
+- **Live:** la notifica con `id` entra in cima alla prima pagina in cache e alza il numero senza chiamare il server; dopo una riconnessione si
+  rilegge. Rilettura anche ad apertura dell'app, apertura del pannello e ritorno sulla scheda; nessun polling.
+- **Testi:** bozza proposta («NOME ti ha inviato una richiesta di amicizia», «NOME ha accettato la tua richiesta di amicizia», «Nessuna notifica.»).
 
-**Sotto-task (bozza, da dettagliare con lo studente a inizio card):**
-- [ ] **1. Tipi e API.** Endpoint di F7-06 con RTK Query, tag di cache, dati finti e handler MSW.
-- [ ] **2. Campanella.** Elenco salvato nel pannello, non lette evidenziate, numero, «Segna come lette», vuoto ed errore.
-- [ ] **3. Notifiche live.** Una notifica in arrivo si unisce all'elenco e al numero; riconnessione.
-- [ ] **4. Test, responsive e chiusura.** Test mirati; tre larghezze con Playwright; `npm run lint`, `npm test`, `npm run build`;
+**Sotto-task:**
+- [x] **1. Tipi e API.** Endpoint di F7-06 con RTK Query, tag di cache, dati finti e handler MSW.
+- [x] **2. Campanella.** Elenco salvato nel pannello, non lette evidenziate, numero, «Segna come lette», vuoto ed errore.
+- [x] **3. Notifiche live.** Una notifica in arrivo si unisce all'elenco e al numero; riconnessione.
+- [x] **4. Test, responsive e chiusura.** Test mirati; tre larghezze con Playwright; `npm run lint`, `npm test`, `npm run build`;
   decisioni e questo piano.
 
 **Criterio:** campanella con notifiche che restano finché non sono lette, anche dopo il ricarico e fra due account (richiesta mandata,

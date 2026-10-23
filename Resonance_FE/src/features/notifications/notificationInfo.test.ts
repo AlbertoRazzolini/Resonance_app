@@ -4,6 +4,7 @@ import type { LiveNotification } from '@/types/chat'
 
 // Testo e destinazione di ogni tipo di notifica live, uguali in toast e campanella (testi approvati in FE-09b).
 const base: LiveNotification = {
+  id: 'n-1',
   type: 'NEW_LIKE',
   createdAt: '2026-10-22T10:00:00Z',
   actor: { id: 'u1', displayName: 'Giulia Rossi', avatarUrl: null },
@@ -22,8 +23,20 @@ describe('notificationText', () => {
     )
   })
 
+  it('FRIEND_REQUEST: «NOME ti ha inviato una richiesta di amicizia»', () => {
+    expect(notificationText({ ...base, type: 'FRIEND_REQUEST' })).toBe(
+      'Giulia Rossi ti ha inviato una richiesta di amicizia',
+    )
+  })
+
+  it('FRIEND_ACCEPTED: «NOME ha accettato la tua richiesta di amicizia»', () => {
+    expect(notificationText({ ...base, type: 'FRIEND_ACCEPTED' })).toBe(
+      'Giulia Rossi ha accettato la tua richiesta di amicizia',
+    )
+  })
+
   it('NEW_MESSAGE: «Nuovo messaggio da NOME»', () => {
-    expect(notificationText({ ...base, type: 'NEW_MESSAGE', preview: 'Ciao' })).toBe('Nuovo messaggio da Giulia Rossi')
+    expect(notificationText({ ...base, type: 'NEW_MESSAGE' })).toBe('Nuovo messaggio da Giulia Rossi')
   })
 })
 
@@ -34,6 +47,14 @@ describe('notificationPath', () => {
 
   it('COLLAB_APPLICATION porta all’annuncio', () => {
     expect(notificationPath({ ...base, type: 'COLLAB_APPLICATION' })).toBe('/collab/target-1')
+  })
+
+  it('FRIEND_REQUEST porta alle richieste ricevute', () => {
+    expect(notificationPath({ ...base, type: 'FRIEND_REQUEST' })).toBe('/amici?scheda=ricevute')
+  })
+
+  it('FRIEND_ACCEPTED porta al profilo di chi ha accettato, non all’amicizia (targetId)', () => {
+    expect(notificationPath({ ...base, type: 'FRIEND_ACCEPTED' })).toBe('/utenti/u1')
   })
 
   it('NEW_MESSAGE porta alla conversazione', () => {

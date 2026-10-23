@@ -18,9 +18,10 @@ export const BELL_PAGE_SIZE = 10
 
 /**
  * Cosa si rilegge dopo ogni azione sulle amicizie: gli elenchi, il conteggio e il pannello della campanella e i risultati
- * di ricerca, che mostrano lo stato dell'amicizia (decisione 78: nessun polling, si ricarica dopo ogni azione).
+ * di ricerca, che mostrano lo stato dell'amicizia (decisione 78: nessun polling, si ricarica dopo ogni azione), e le
+ * notifiche salvate: accettare o rifiutare segna letta quella della richiesta (decisione 97).
  */
-export const FRIENDSHIP_TAGS = ['Friendship', 'FriendRequests', 'UserSearch'] as const
+export const FRIENDSHIP_TAGS = ['Friendship', 'FriendRequests', 'UserSearch', 'Notification'] as const
 
 /** Endpoint di ricerca utenti e amicizie (progettazione, sezioni 6.5 e 6.14). */
 export const friendsApi = api.injectEndpoints({

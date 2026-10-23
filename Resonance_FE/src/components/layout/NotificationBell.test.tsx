@@ -5,36 +5,32 @@ import { http, HttpResponse } from 'msw'
 import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it } from 'vitest'
-import { friendsPath } from '@/app/routes'
 import { makeStore } from '@/app/store'
 import { sessionStarted } from '@/features/auth/authSlice'
-import { markAllRead, received, selectUnreadNotificationCount } from '@/features/notifications/notificationsSlice'
-import type { LiveNotification } from '@/types/chat'
+import { receiveLiveNotification } from '@/features/notifications/api/notificationsApi'
 import { makePage } from '@/test/fixtures/events'
 import { makeFriendship } from '@/test/fixtures/friends'
+import { makeNotification, makeNotifications } from '@/test/fixtures/notifications'
 import { makeLoginResponse } from '@/test/fixtures/users'
 import { friendshipActionSucceeds, friendshipsFound } from '@/test/handlers/friends'
+import {
+  notificationPage,
+  notificationReadSucceeds,
+  notificationsFound,
+  notificationsRejected,
+  readAllSucceeds,
+  unreadCountFound,
+  unreadCountRejected,
+} from '@/test/handlers/notifications'
 import { server } from '@/test/server'
-import { setViewportWidth } from '@/test/viewport'
-import type { FriendshipResponse } from '@/types/friends'
+import type { LiveNotification } from '@/types/chat'
+import type { NotificationResponse } from '@/types/notifications'
 import { NotificationBell } from './NotificationBell'
 
-// Campanella: il numero delle richieste di amicizia in attesa (da 1 a «9+») viene da una sola chiamata, si ricarica ad
-// apertura, al ritorno sulla scheda e dopo ogni azione, mai a intervalli. Il pannello mostra 5 righe sotto i 768 px e
-// 10 da tablet in su, con «Vedi tutte» solo se ce ne sono di più.
-function request(n: number): FriendshipResponse {
-  return makeFriendship({
-    id: `f${n}`,
-    status: 'INCOMING',
-    otherUser: { id: `u${n}`, displayName: `Persona ${n}`, avatarUrl: null },
-  })
-}
-
-const requests = (count: number) => Array.from({ length: count }, (_, i) => request(i + 1))
-
-/** Pagina di richieste in attesa: il conteggio vero è `total`, anche se le righe sono meno. */
-const pending = (rows: FriendshipResponse[], total = rows.length) =>
-  makePage(rows, { totalElements: total })
+// Campanella: il numero sull'icona sono le notifiche non lette del server (da 1 a «9+»), riletto ad apertura dell'app,
+// all'apertura del pannello e al ritorno sulla scheda, mai a intervalli. Il pannello è un elenco unico dalla più recente,
+// a pagine di 10 con «Carica altri», con le non lette evidenziate; il clic segna letta e porta al bersaglio.
+// Una richiesta di amicizia ancora in attesa ha Accetta e Rifiuta nella sua riga.
 
 // `setupListeners` si attiva una volta sola per modulo: va staccato a fine prova, o il prossimo store non ascolterebbe
 let stopListening: () => void = () => {}
@@ -55,11 +51,21 @@ function renderBell() {
 }
 
 const bell = () => screen.getByRole('button', { name: /^Notifiche/ })
+const panel = () => screen.findByRole('region', { name: 'Notifiche' })
+
+/** Registra elenco e numero: `rows` è la prima pagina, `unread` il numero delle non lette. */
+function serve(rows: NotificationResponse[], unread: number, calls: { list?: Request[]; count?: Request[] } = {}) {
+  server.use(
+    notificationsFound([notificationPage(rows)], calls.list),
+    unreadCountFound(unread, calls.count),
+    friendshipsFound({}),
+  )
+}
 
 describe('NotificationBell · numero', () => {
-  it('senza richieste non mostra nessun numero', async () => {
+  it('senza non lette non mostra nessun numero', async () => {
     const calls: Request[] = []
-    server.use(friendshipsFound({ INCOMING: [pending([])] }, calls))
+    serve([], 0, { count: calls })
     renderBell()
 
     await waitFor(() => expect(calls).toHaveLength(1))
@@ -67,46 +73,50 @@ describe('NotificationBell · numero', () => {
     expect(screen.queryByTestId('bell-count')).not.toBeInTheDocument()
   })
 
-  it('con 3 richieste mostra 3 e lo dice anche ai lettori di schermo', async () => {
-    server.use(friendshipsFound({ INCOMING: [pending(requests(3))] }))
+  it('con 3 non lette mostra 3 e lo dice anche ai lettori di schermo', async () => {
+    serve([], 3)
     renderBell()
 
     expect(await screen.findByTestId('bell-count')).toHaveTextContent('3')
-    expect(bell()).toHaveAccessibleName('Notifiche: 3 richieste di amicizia in attesa')
+    expect(bell()).toHaveAccessibleName('Notifiche: 3 non lette')
   })
 
-  it('con più di 9 richieste mostra «9+»', async () => {
-    server.use(friendshipsFound({ INCOMING: [pending(requests(10), 12)] }))
+  it('con una sola non letta il nome accessibile è al singolare', async () => {
+    serve([], 1)
+    renderBell()
+
+    await screen.findByTestId('bell-count')
+    expect(bell()).toHaveAccessibleName('Notifiche: 1 non letta')
+  })
+
+  it('con più di 9 non lette mostra «9+» ma ai lettori di schermo dice il numero vero', async () => {
+    serve([], 12)
     renderBell()
 
     expect(await screen.findByTestId('bell-count')).toHaveTextContent('9+')
-    expect(bell()).toHaveAccessibleName('Notifiche: 12 richieste di amicizia in attesa')
+    expect(bell()).toHaveAccessibleName('Notifiche: 12 non lette')
   })
 
-  it('con 9 richieste mostra 9, senza il più', async () => {
-    server.use(friendshipsFound({ INCOMING: [pending(requests(9))] }))
+  it('con 9 non lette mostra 9, senza il più', async () => {
+    serve([], 9)
     renderBell()
 
     expect(await screen.findByTestId('bell-count')).toHaveTextContent(/^9$/)
   })
 
-  it('chiede una sola volta le richieste ricevute, 10 righe, senza polling', async () => {
+  it('chiede una sola volta il numero all’apertura dell’app, senza polling', async () => {
     const calls: Request[] = []
-    server.use(friendshipsFound({ INCOMING: [pending(requests(2))] }, calls))
+    serve([], 2, { count: calls })
     renderBell()
 
     await screen.findByTestId('bell-count')
     await new Promise((resolve) => setTimeout(resolve, 600))
 
     expect(calls).toHaveLength(1)
-    const params = new URL(calls[0].url).searchParams
-    expect(params.get('type')).toBe('INCOMING')
-    expect(params.get('size')).toBe('10')
-    expect(params.get('page')).toBe('0')
   })
 
   it('un errore del server non lascia un numero sbagliato: nessun numero', async () => {
-    server.use(http.get('*/api/friendships', () => HttpResponse.json({}, { status: 500 })))
+    server.use(unreadCountRejected(500, 'INTERNAL_ERROR'))
     renderBell()
 
     await new Promise((resolve) => setTimeout(resolve, 200))
@@ -115,20 +125,22 @@ describe('NotificationBell · numero', () => {
 })
 
 describe('NotificationBell · ricarica', () => {
-  it('apre il pannello e rilegge le richieste', async () => {
-    const calls: Request[] = []
-    server.use(friendshipsFound({ INCOMING: [pending(requests(1))] }, calls))
+  it('apre il pannello e rilegge il numero e la prima pagina', async () => {
+    const counts: Request[] = []
+    const lists: Request[] = []
+    serve(makeNotifications(2), 2, { count: counts, list: lists })
     const { user } = renderBell()
     await screen.findByTestId('bell-count')
 
     await user.click(bell())
 
-    await waitFor(() => expect(calls).toHaveLength(2))
+    await waitFor(() => expect(counts).toHaveLength(2))
+    await waitFor(() => expect(lists).toHaveLength(1))
   })
 
-  it('al ritorno sulla scheda del browser rilegge le richieste', async () => {
+  it('al ritorno sulla scheda del browser rilegge il numero', async () => {
     const calls: Request[] = []
-    server.use(friendshipsFound({ INCOMING: [pending(requests(1))] }, calls))
+    serve([], 1, { count: calls })
     renderBell()
     await screen.findByTestId('bell-count')
 
@@ -138,41 +150,47 @@ describe('NotificationBell · ricarica', () => {
 
     await waitFor(() => expect(calls).toHaveLength(2))
   })
-
-  it('dopo aver accettato una richiesta il numero scende', async () => {
-    let remaining = requests(2)
-    server.use(
-      http.get('*/api/friendships', () => HttpResponse.json(pending(remaining))),
-      friendshipActionSucceeds('accept', [], makeFriendship()),
-    )
-    const { user } = renderBell()
-    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('2'))
-
-    await user.click(bell())
-    remaining = [request(2)]
-    await user.click(await screen.findByRole('button', { name: 'Accetta: Persona 1' }))
-
-    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('1'))
-  })
 })
 
 describe('NotificationBell · pannello', () => {
-  it('ha il titolo «Notifiche» e una riga per richiesta con nome, Accetta e Rifiuta', async () => {
-    server.use(friendshipsFound({ INCOMING: [pending(requests(2))] }))
+  it('ha il titolo «Notifiche» e una riga per notifica, con testo, ora e collegamento', async () => {
+    serve(makeNotifications(2), 2)
     const { user } = renderBell()
     await screen.findByTestId('bell-count')
 
     await user.click(bell())
 
-    const panel = await screen.findByRole('region', { name: 'Notifiche' })
-    expect(within(panel).getByRole('heading', { name: 'Notifiche' })).toBeInTheDocument()
-    expect(within(panel).getByRole('link', { name: 'Persona 1' })).toHaveAttribute('href', '/utenti/u1')
-    expect(within(panel).getByRole('button', { name: 'Accetta: Persona 1' })).toBeInTheDocument()
-    expect(within(panel).getByRole('button', { name: 'Rifiuta: Persona 2' })).toBeInTheDocument()
+    const region = await panel()
+    expect(within(region).getByRole('heading', { name: 'Notifiche' })).toBeInTheDocument()
+    expect(await within(region).findAllByRole('listitem')).toHaveLength(2)
+    expect(within(region).getByRole('link', { name: 'Persona 1 ha messo mi piace al tuo post' })).toHaveAttribute(
+      'href',
+      '/feed',
+    )
   })
 
-  it('senza richieste né notifiche dice «Nessuna notifica.»', async () => {
-    server.use(friendshipsFound({ INCOMING: [pending([])] }))
+  it('mostra le righe nell’ordine del server (la più recente in cima)', async () => {
+    serve(makeNotifications(3), 0)
+    const { user } = renderBell()
+    await user.click(bell())
+
+    const region = await panel()
+    const names = (await within(region).findAllByRole('listitem')).map((item) => item.textContent?.match(/Persona \d/)?.[0])
+    expect(names).toEqual(['Persona 1', 'Persona 2', 'Persona 3'])
+  })
+
+  it('le non lette hanno l’accento, le lette no', async () => {
+    serve([makeNotification({ id: 'a', read: false }), makeNotification({ id: 'b', read: true })], 1)
+    const { user } = renderBell()
+    await user.click(bell())
+
+    const items = await within(await panel()).findAllByRole('listitem')
+    expect(items[0]).toHaveClass('rs-notification--unread')
+    expect(items[1]).not.toHaveClass('rs-notification--unread')
+  })
+
+  it('senza notifiche dice «Nessuna notifica.»', async () => {
+    serve([], 0)
     const { user } = renderBell()
     await waitFor(() => expect(bell()).toBeEnabled())
 
@@ -181,196 +199,218 @@ describe('NotificationBell · pannello', () => {
     expect(await screen.findByText('Nessuna notifica.')).toBeInTheDocument()
   })
 
-  it('da tablet in su mostra fino a 10 righe e «Vedi tutte» se ce ne sono di più', async () => {
-    setViewportWidth(1280)
-    server.use(friendshipsFound({ INCOMING: [pending(requests(10), 12)] }))
+  it('se l’elenco non si carica mostra l’errore e non «Nessuna notifica.»', async () => {
+    server.use(notificationsRejected(500, 'INTERNAL_ERROR'), unreadCountFound(0), friendshipsFound({}))
     const { user } = renderBell()
-    await screen.findByTestId('bell-count')
+    await waitFor(() => expect(bell()).toBeEnabled())
 
     await user.click(bell())
 
-    const panel = await screen.findByRole('region', { name: 'Notifiche' })
-    expect(within(panel).getAllByRole('listitem')).toHaveLength(10)
-    expect(within(panel).getByRole('link', { name: 'Vedi tutte' })).toHaveAttribute('href', friendsPath('ricevute'))
+    expect(await within(await panel()).findByRole('alert')).toBeInTheDocument()
+    expect(screen.queryByText('Nessuna notifica.')).not.toBeInTheDocument()
   })
 
-  it('sotto i 768 px mostra solo le 5 più recenti', async () => {
-    setViewportWidth(375)
-    server.use(friendshipsFound({ INCOMING: [pending(requests(10), 12)] }))
+  it('«Carica altri» aggiunge la pagina successiva e sparisce all’ultima', async () => {
+    const lists: Request[] = []
+    const secondPage = makeNotifications(2).map((row, i) => ({ ...row, id: `p${i}` }))
+    server.use(
+      notificationsFound(
+        [
+          notificationPage(makeNotifications(10), { totalPages: 2, totalElements: 12 }),
+          notificationPage(secondPage, { page: 1, totalPages: 2, totalElements: 12 }),
+        ],
+        lists,
+      ),
+      unreadCountFound(0),
+      friendshipsFound({}),
+    )
     const { user } = renderBell()
-    await screen.findByTestId('bell-count')
-
     await user.click(bell())
+    const region = await panel()
+    await within(region).findAllByRole('listitem')
+    expect(within(region).getAllByRole('listitem')).toHaveLength(10)
 
-    const panel = await screen.findByRole('region', { name: 'Notifiche' })
-    const names = within(panel)
-      .getAllByRole('listitem')
-      .map((item) => within(item).getByRole('link', { name: /^Persona/ }).textContent)
-    expect(names).toEqual(['Persona 1', 'Persona 2', 'Persona 3', 'Persona 4', 'Persona 5'])
-    expect(within(panel).getByRole('link', { name: 'Vedi tutte' })).toBeInTheDocument()
+    await user.click(within(region).getByRole('button', { name: 'Carica altri' }))
+
+    await waitFor(() => expect(within(region).getAllByRole('listitem')).toHaveLength(12))
+    expect(new URL(lists.at(-1)!.url).searchParams.get('page')).toBe('1')
+    expect(within(region).queryByRole('button', { name: 'Carica altri' })).not.toBeInTheDocument()
   })
 
-  it('con 5 richieste su telefono mostra tutte e cinque senza «Vedi tutte»', async () => {
-    setViewportWidth(375)
-    server.use(friendshipsFound({ INCOMING: [pending(requests(5))] }))
+  it('con una sola pagina non c’è «Carica altri»', async () => {
+    serve(makeNotifications(3), 0)
     const { user } = renderBell()
-    await screen.findByTestId('bell-count')
-
     await user.click(bell())
 
-    const panel = await screen.findByRole('region', { name: 'Notifiche' })
-    expect(within(panel).getAllByRole('listitem')).toHaveLength(5)
-    expect(within(panel).queryByRole('link', { name: 'Vedi tutte' })).not.toBeInTheDocument()
+    await within(await panel()).findAllByRole('listitem')
+    expect(screen.queryByRole('button', { name: 'Carica altri' })).not.toBeInTheDocument()
+  })
+
+  it('il clic su una notifica la segna letta sul server, abbassa il numero e chiude il pannello', async () => {
+    const reads: Request[] = []
+    server.use(
+      notificationsFound([notificationPage(makeNotifications(2))]),
+      unreadCountFound(2),
+      friendshipsFound({}),
+      notificationReadSucceeds(reads),
+    )
+    const { user } = renderBell()
+    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('2'))
+    await user.click(bell())
+
+    await user.click(await screen.findByRole('link', { name: 'Persona 2 ha messo mi piace al tuo post' }))
+
+    await waitFor(() => expect(reads).toHaveLength(1))
+    expect(new URL(reads[0].url).pathname).toBe('/api/notifications/n2/read')
+    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('1'))
+    await waitFor(() => expect(bell()).toHaveAttribute('aria-expanded', 'false'))
   })
 })
 
-// Lista unica (scelta dello studente, FE-09b): richieste di amicizia e notifiche della sessione mescolate, dalla più
-// recente. Il numero conta le richieste in attesa più le notifiche non lette; «Segna come lette» tocca solo le
-// notifiche (le richieste restano finché non si accettano o si rifiutano).
-function liveNotification(n: number, overrides: Partial<LiveNotification> = {}): LiveNotification {
-  return {
-    type: 'NEW_LIKE',
-    createdAt: '2026-10-22T10:00:00Z',
-    actor: { id: 'a' + n, displayName: 'Autore ' + n, avatarUrl: null },
-    targetId: 'post-' + n,
-    preview: null,
-    ...overrides,
-  }
-}
-
-describe('NotificationBell · notifiche della sessione', () => {
-  /** Richieste con data `updatedAt` e notifiche già ricevute (la più vecchia per prima: si accodano in cima). */
-  function renderMixed(friendRows: FriendshipResponse[], live: LiveNotification[], total = friendRows.length) {
-    server.use(friendshipsFound({ INCOMING: [pending(friendRows, total)] }))
-    const view = renderBell()
-    live.forEach((notification) => view.store.dispatch(received(notification)))
-    return view
-  }
-
-  const dated = (n: number, updatedAt: string) => ({ ...request(n), updatedAt })
-
-  it('il numero somma le richieste in attesa e le notifiche non lette', async () => {
-    renderMixed(requests(2), [liveNotification(1), liveNotification(2), liveNotification(3)])
-
-    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('5'))
-    expect(bell()).toHaveAccessibleName('Notifiche: 2 richieste di amicizia in attesa e 3 notifiche non lette')
-  })
-
-  it('con sole notifiche non lette il numero e il nome accessibile le contano', async () => {
-    renderMixed([], [liveNotification(1)])
-
-    expect(await screen.findByTestId('bell-count')).toHaveTextContent('1')
-    expect(bell()).toHaveAccessibleName('Notifiche: 1 notifiche non lette')
-  })
-
-  it('oltre 9 in tutto scrive «9+»', async () => {
-    renderMixed(requests(6), Array.from({ length: 5 }, (_, i) => liveNotification(i)))
-
-    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('9+'))
-  })
-
-  it("nel pannello richieste e notifiche stanno in un’unica lista, dalla più recente", async () => {
-    const { user } = renderMixed(
-      [dated(1, '2026-10-22T09:00:00Z'), dated(2, '2026-10-22T11:00:00Z')],
-      [liveNotification(1, { createdAt: '2026-10-22T10:00:00Z' }), liveNotification(2, { createdAt: '2026-10-22T12:00:00Z' })],
-    )
-    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('4'))
-
+describe('NotificationBell · segna come lette', () => {
+  it('c’è solo se ci sono non lette', async () => {
+    serve(makeNotifications(1, { read: true }), 0)
+    const { user } = renderBell()
     await user.click(bell())
 
-    const panel = await screen.findByRole('region', { name: 'Notifiche' })
-    const order = within(panel)
-      .getAllByRole('listitem')
-      .map((item) => item.textContent?.match(/Autore \d|Persona \d/)?.[0])
-    // 12:00 notifica 2, 11:00 richiesta 2, 10:00 notifica 1, 09:00 richiesta 1
-    expect(order).toEqual(['Autore 2', 'Persona 2', 'Autore 1', 'Persona 1'])
-  })
-
-  it('«Segna come lette» azzera le notifiche, non le richieste, e poi sparisce', async () => {
-    const { user, store } = renderMixed(requests(1), [liveNotification(1), liveNotification(2)])
-    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('3'))
-    await user.click(bell())
-
-    await user.click(await screen.findByRole('button', { name: 'Segna come lette' }))
-
-    expect(selectUnreadNotificationCount(store.getState())).toBe(0)
-    expect(screen.getByTestId('bell-count')).toHaveTextContent('1')
-    expect(screen.queryByRole('button', { name: 'Segna come lette' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Accetta: Persona 1' })).toBeInTheDocument()
-  })
-
-  it("senza notifiche non lette «Segna come lette» non c’è", async () => {
-    const { user, store } = renderMixed(requests(1), [liveNotification(1)])
-    store.dispatch(markAllRead())
-    await user.click(bell())
-
-    await screen.findByRole('region', { name: 'Notifiche' })
+    await within(await panel()).findAllByRole('listitem')
     expect(screen.queryByRole('button', { name: 'Segna come lette' })).not.toBeInTheDocument()
   })
 
-  it('il clic su una notifica la segna letta e chiude il pannello', async () => {
-    const { user, store } = renderMixed([], [liveNotification(1), liveNotification(2)])
-    await user.click(bell())
-
-    await user.click(await screen.findByRole('link', { name: 'Autore 2 ha messo mi piace al tuo post' }))
-
-    expect(selectUnreadNotificationCount(store.getState())).toBe(1)
-    await waitFor(() => expect(bell()).toHaveAttribute('aria-expanded', 'false'))
-  })
-
-  it('da tablet in su la lista unica mostra al massimo 10 righe e «Vedi tutte» se restano richieste fuori', async () => {
-    setViewportWidth(1280)
-    const { user } = renderMixed(requests(10), Array.from({ length: 4 }, (_, i) => liveNotification(i)), 12)
-    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('9+'))
-
-    await user.click(bell())
-
-    const panel = await screen.findByRole('region', { name: 'Notifiche' })
-    expect(within(panel).getAllByRole('listitem')).toHaveLength(10)
-    expect(within(panel).getByRole('link', { name: 'Vedi tutte' })).toBeInTheDocument()
-  })
-
-  it('sotto i 768 px mostra al massimo 5 righe', async () => {
-    setViewportWidth(375)
-    const { user } = renderMixed(requests(3), Array.from({ length: 4 }, (_, i) => liveNotification(i)))
-    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('7'))
-
-    await user.click(bell())
-
-    const panel = await screen.findByRole('region', { name: 'Notifiche' })
-    expect(within(panel).getAllByRole('listitem')).toHaveLength(5)
-  })
-
-  it('se tutte le richieste sono in vista non mostra «Vedi tutte», anche se le notifiche restano fuori', async () => {
-    setViewportWidth(375)
-    // Le richieste sono più recenti delle notifiche: le due righe in cima, poi tre notifiche
-    const { user } = renderMixed(
-      [dated(1, '2026-10-23T10:00:00Z'), dated(2, '2026-10-23T09:00:00Z')],
-      Array.from({ length: 8 }, (_, i) => liveNotification(i)),
+  it('chiama read-all, porta il numero a zero, segna lette le righe e il pulsante sparisce', async () => {
+    const calls: Request[] = []
+    server.use(
+      notificationsFound([notificationPage(makeNotifications(2))]),
+      unreadCountFound(2),
+      friendshipsFound({}),
+      readAllSucceeds(calls),
     )
-    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('9+'))
-
+    const { user } = renderBell()
+    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('2'))
     await user.click(bell())
+    await within(await panel()).findAllByRole('listitem')
 
-    const panel = await screen.findByRole('region', { name: 'Notifiche' })
-    expect(within(panel).getByRole('button', { name: 'Accetta: Persona 2' })).toBeInTheDocument()
-    expect(within(panel).queryByRole('link', { name: 'Vedi tutte' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Segna come lette' }))
+
+    await waitFor(() => expect(screen.queryByTestId('bell-count')).not.toBeInTheDocument())
+    expect(new URL(calls[0].url).pathname).toBe('/api/notifications/read-all')
+    expect(screen.queryByRole('button', { name: 'Segna come lette' })).not.toBeInTheDocument()
+    for (const item of screen.getAllByRole('listitem')) expect(item).not.toHaveClass('rs-notification--unread')
+  })
+})
+
+describe('NotificationBell · richieste di amicizia', () => {
+  const requestNotification = makeNotification({
+    id: 'nr1',
+    type: 'FRIEND_REQUEST',
+    targetId: 'f-attesa',
+    actor: { id: 'u-mario', displayName: 'Mario Bianchi', avatarUrl: null },
+  })
+  const pendingFriendship = makeFriendship({
+    id: 'f-attesa',
+    status: 'INCOMING',
+    otherUser: { id: 'u-mario', displayName: 'Mario Bianchi', avatarUrl: null },
   })
 
-  it('se troppe notifiche recenti spingono fuori vista una richiesta compare «Vedi tutte»', async () => {
-    setViewportWidth(375)
-    // Le notifiche sono più recenti delle richieste: cinque righe di notifiche e le richieste restano fuori
-    const { user } = renderMixed(
-      [dated(1, '2026-10-20T10:00:00Z'), dated(2, '2026-10-20T09:00:00Z')],
-      Array.from({ length: 6 }, (_, i) => liveNotification(i)),
+  it('una richiesta ancora in attesa ha Accetta e Rifiuta nella sua riga', async () => {
+    server.use(
+      notificationsFound([notificationPage([requestNotification])]),
+      unreadCountFound(1),
+      friendshipsFound({ INCOMING: [makePage([pendingFriendship])] }),
     )
-    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('8'))
-
+    const { user } = renderBell()
     await user.click(bell())
 
-    const panel = await screen.findByRole('region', { name: 'Notifiche' })
-    expect(within(panel).queryByRole('button', { name: /^Accetta/ })).not.toBeInTheDocument()
-    expect(within(panel).getByRole('link', { name: 'Vedi tutte' })).toHaveAttribute('href', friendsPath('ricevute'))
+    const region = await panel()
+    expect(await within(region).findByRole('button', { name: 'Accetta: Mario Bianchi' })).toBeInTheDocument()
+    expect(within(region).getByRole('button', { name: 'Rifiuta: Mario Bianchi' })).toBeInTheDocument()
+    expect(
+      within(region).getByRole('link', { name: 'Mario Bianchi ti ha inviato una richiesta di amicizia' }),
+    ).toHaveAttribute('href', '/amici?scheda=ricevute')
+  })
+
+  it('una richiesta già gestita (non più in attesa) è una riga come le altre, senza pulsanti', async () => {
+    server.use(
+      notificationsFound([notificationPage([{ ...requestNotification, read: true }])]),
+      unreadCountFound(0),
+      friendshipsFound({ INCOMING: [makePage([])] }),
+    )
+    const { user } = renderBell()
+    await user.click(bell())
+
+    const region = await panel()
+    await within(region).findByRole('link', { name: /ti ha inviato una richiesta/ })
+    expect(within(region).queryByRole('button', { name: /^Accetta/ })).not.toBeInTheDocument()
+  })
+
+  it('una richiesta in attesa fuori dalle 10 più recenti non ha i pulsanti: il clic porta a /amici', async () => {
+    const others = Array.from({ length: 10 }, (_, i) =>
+      makeFriendship({
+        id: `altra-${i}`,
+        status: 'INCOMING',
+        otherUser: { id: `x${i}`, displayName: `Altro ${i}`, avatarUrl: null },
+      }),
+    )
+    server.use(
+      notificationsFound([notificationPage([requestNotification])]),
+      unreadCountFound(1),
+      friendshipsFound({ INCOMING: [makePage(others, { totalElements: 11 })] }),
+    )
+    const { user } = renderBell()
+    await user.click(bell())
+
+    const region = await panel()
+    await within(region).findByRole('link', { name: /ti ha inviato una richiesta/ })
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect(within(region).queryByRole('button', { name: /^Accetta/ })).not.toBeInTheDocument()
+  })
+
+  it('dopo aver accettato rilegge elenco e numero: la notifica diventa letta, senza pulsanti', async () => {
+    // Le risposte dipendono dall'esito: prima in attesa, poi gestita e letta (come fa il backend)
+    let handled = false
+    server.use(
+      http.get('*/api/notifications', () =>
+        HttpResponse.json(notificationPage([handled ? { ...requestNotification, read: true } : requestNotification])),
+      ),
+      unreadCountFound(() => (handled ? 0 : 1)),
+      http.get('*/api/friendships', () => HttpResponse.json(makePage(handled ? [] : [pendingFriendship]))),
+      friendshipActionSucceeds('accept', [], makeFriendship({ id: 'f-attesa' })),
+    )
+    const { user } = renderBell()
+    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('1'))
+    await user.click(bell())
+    const accept = await screen.findByRole('button', { name: 'Accetta: Mario Bianchi' })
+    handled = true
+    await user.click(accept)
+
+    await waitFor(() => expect(screen.queryByRole('button', { name: /^Accetta/ })).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByTestId('bell-count')).not.toBeInTheDocument())
+    expect(screen.getByRole('listitem')).not.toHaveClass('rs-notification--unread')
+  })
+})
+
+describe('NotificationBell · notifiche live', () => {
+  it('una notifica live con pannello aperto entra in cima e alza il numero', async () => {
+    serve(makeNotifications(2), 2)
+    const { user, store } = renderBell()
+    await waitFor(() => expect(screen.getByTestId('bell-count')).toHaveTextContent('2'))
+    await user.click(bell())
+    await within(await panel()).findAllByRole('listitem')
+
+    const live: LiveNotification = {
+      id: 'live-1',
+      type: 'FRIEND_ACCEPTED',
+      createdAt: '2026-10-23T12:00:00Z',
+      actor: { id: 'u-anna', displayName: 'Anna Neri', avatarUrl: null },
+      targetId: 'f-9',
+      preview: null,
+    }
+    act(() => receiveLiveNotification(store.dispatch, store.getState, live))
+
+    await waitFor(() => expect(within(screen.getByRole('region', { name: 'Notifiche' })).getAllByRole('listitem')).toHaveLength(3))
+    const items = within(screen.getByRole('region', { name: 'Notifiche' })).getAllByRole('listitem')
+    expect(items[0]).toHaveTextContent('Anna Neri ha accettato la tua richiesta di amicizia')
+    expect(screen.getByTestId('bell-count')).toHaveTextContent('3')
   })
 })
 
@@ -380,7 +420,7 @@ describe('NotificationBell · animazione', () => {
   const iconStyles = () => [...bell().querySelectorAll('svg *')].map((node) => node.getAttribute('style') ?? '').join('|')
 
   it("l'animazione parte con il mouse sul pulsante, non solo sull'icona", async () => {
-    server.use(friendshipsFound({ INCOMING: [pending([])] }))
+    serve([], 0)
     const { user } = renderBell()
     const before = iconStyles()
 
@@ -390,7 +430,7 @@ describe('NotificationBell · animazione', () => {
   })
 
   it("l'animazione parte toccando il pulsante", async () => {
-    server.use(friendshipsFound({ INCOMING: [pending([])] }))
+    serve([], 0)
     const { user } = renderBell()
     const before = iconStyles()
 
@@ -401,7 +441,7 @@ describe('NotificationBell · animazione', () => {
   })
 
   it('con il pulsante intatto: il nome accessibile e l’apertura del pannello non cambiano', async () => {
-    server.use(friendshipsFound({ INCOMING: [pending(requests(2))] }))
+    serve(makeNotifications(2), 2)
     const { user } = renderBell()
     await screen.findByTestId('bell-count')
 
