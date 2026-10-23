@@ -22,6 +22,12 @@ describe('CookiePolicyPage', () => {
     expect(screen.getByText(/10 giorni/)).toBeInTheDocument()
   })
 
+  it('avvisa che il testo è dimostrativo e non è stato scritto da un avvocato', () => {
+    render(<CookiePolicyPage />)
+
+    expect(screen.getByText(/non è stato scritto da un avvocato/)).toBeInTheDocument()
+  })
+
   it('dice che non ci sono cookie di pubblicità, statistiche o tracciamento', () => {
     render(<CookiePolicyPage />)
 

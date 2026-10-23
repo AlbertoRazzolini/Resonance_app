@@ -9,6 +9,9 @@ export function Component() {
     <article className="rs-legal">
       <h1>Informativa sulla privacy</h1>
       <p className="text-body-secondary">Aggiornata il 20 ottobre 2026</p>
+      <p className="text-body-secondary">
+        Questo testo è dimostrativo: non è stato scritto da un avvocato e non ha valore legale.
+      </p>
 
       <h2>Chi siamo</h2>
       <p>

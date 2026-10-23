@@ -58,6 +58,12 @@ describe('PrivacyPolicyPage', () => {
     )
   })
 
+  it('avvisa che il testo è dimostrativo e non è stato scritto da un avvocato', () => {
+    renderPage()
+
+    expect(screen.getByText(/non è stato scritto da un avvocato/)).toBeInTheDocument()
+  })
+
   it('non parla di cookie: ha una pagina sua', () => {
     renderPage()
 

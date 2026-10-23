@@ -1083,6 +1083,7 @@ altrove va riscritta. Richiesta dello studente durante FE-09a, rimandata a FE-12
 solo a fine frontend, con il calendario davanti. Le altre funzioni emerse (suggerimento degli indirizzi, elenco di generi
 a chip, carosello degli eventi, filtri della bacheca, candidature con accettazione) sono in `progettazione.md`, sezione 15.
 
+**Esito parziale (23 ottobre, decisione 107):** fatti il sotto-task 1 e i testi di copyright e termini (pagine vere, avviso «dimostrativo» in tutte e quattro le pagine legali); la password di `/verifica` non si chiede più due volte, solo frontend (opzione b); restano i sotto-task 2, 3 e 4.
 **Commit proposto:** `style(fe-ui): rifinisce l'interfaccia e aggiunge componenti animati`
 
 ### Card FE-11 · Deploy integrato, CSP e prova della demo — stima 4 h

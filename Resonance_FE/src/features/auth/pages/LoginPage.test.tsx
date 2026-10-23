@@ -3,12 +3,13 @@ import userEvent from '@testing-library/user-event'
 import { delay, http, HttpResponse } from 'msw'
 import { Provider } from 'react-redux'
 import { createMemoryRouter, RouterProvider } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { makeStore } from '@/app/store'
 import { ROUTES } from '@/app/routes'
 import { RedirectIfAuthenticated } from '@/components/guards/RedirectIfAuthenticated'
 import { APPEAL_CONTACT } from '@/config'
 import { sessionEnded, sessionStarted } from '@/features/auth/authSlice'
+import { forgetPassword, recallPassword, rememberPassword } from '@/features/auth/pendingPassword'
 import { makeLoginResponse, makeMe } from '@/test/fixtures/users'
 import { loginRejected, loginSucceeds, refreshSucceeds } from '@/test/handlers/auth'
 import { server } from '@/test/server'
@@ -270,5 +271,41 @@ describe('LoginPage', () => {
 
     await screen.findByText('Home')
     expect((await calls[0].json()).password).toBe(password)
+  })
+})
+
+// Se l'email non è verificata la password appena scritta resta in memoria per la verifica, non nello stato del router.
+describe('LoginPage · password per la verifica', () => {
+  afterEach(forgetPassword)
+
+  it("con EMAIL_NOT_VERIFIED tiene la password in memoria per quell'email", async () => {
+    server.use(loginRejected(403, 'EMAIL_NOT_VERIFIED'))
+    const { user } = renderLogin()
+
+    await fillAndSubmit(user, 'nuovo@example.com', 'password-lunga')
+    await screen.findByRole('link', { name: 'Inserisci il codice' })
+
+    expect(recallPassword('nuovo@example.com')).toBe('password-lunga')
+  })
+
+  it('con una password sbagliata non tiene nulla', async () => {
+    server.use(loginRejected(401, 'INVALID_CREDENTIALS'))
+    const { user } = renderLogin()
+
+    await fillAndSubmit(user, 'nuovo@example.com', 'password-lunga')
+    await screen.findByText('Email o password non corrette.')
+
+    expect(recallPassword('nuovo@example.com')).toBeUndefined()
+  })
+
+  it('un nuovo tentativo di accesso cancella la password rimasta in memoria', async () => {
+    rememberPassword('vecchio@example.com', 'vecchia-password')
+    server.use(loginRejected(401, 'INVALID_CREDENTIALS'))
+    const { user } = renderLogin()
+
+    await fillAndSubmit(user, 'nuovo@example.com', 'password-lunga')
+    await screen.findByText('Email o password non corrette.')
+
+    expect(recallPassword('vecchio@example.com')).toBeUndefined()
   })
 })

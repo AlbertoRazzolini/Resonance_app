@@ -8,6 +8,7 @@ import { getErrorCode, getFieldErrors } from '@/lib/errors/getErrorMessage'
 import { useRegisterMutation } from '../api/authApi'
 import { AuthCard } from '../components/AuthCard'
 import { PasswordField } from '../components/PasswordField'
+import { forgetPassword, rememberPassword } from '../pendingPassword'
 import { readAuthState } from '../locationState'
 import { validateRegister, type RegisterValues } from '../validation'
 
@@ -40,12 +41,15 @@ export function Component() {
     setSubmitted(true)
     if (Object.keys(validateRegister(values)).length > 0) return
     const email = values.email.trim()
+    forgetPassword()
     try {
       await register({
         email,
         password: values.password,
         displayName: values.displayName.trim(),
       }).unwrap()
+      // La verifica non richiede di nuovo la password (decisione 107): resta in memoria, non nello stato del router
+      rememberPassword(email, values.password)
       navigate(ROUTES.verify, { state: { email, codeSent: true, ...(from ? { from } : {}) } })
     } catch {
       // L'errore lo mostra la pagina, dallo stato della mutazione

@@ -12,6 +12,7 @@ import { OtpField } from '../components/OtpField'
 import { PasswordField } from '../components/PasswordField'
 import { ResendCode } from '../components/ResendCode'
 import { SuspendedNotice } from '../components/SuspendedNotice'
+import { forgetPassword, recallPassword } from '../pendingPassword'
 import { readAuthState } from '../locationState'
 import { validateVerify, type VerifyValues } from '../validation'
 
@@ -20,7 +21,7 @@ const CODE_ERRORS = ['CODE_INVALID', 'CODE_EXPIRED']
 
 /**
  * Pagina di verifica dell'email (progettazione, sezione 4.5): email (già scritta se si arriva dalla registrazione o
- * dall'accesso, ma modificabile), codice a 6 cifre e password. Gli errori del codice stanno sotto le caselle, che
+ * dall'accesso, ma modificabile), codice a 6 cifre e password (che non si chiede se è già stata scritta in registrazione o accesso per quell'email, decisione 107). Gli errori del codice stanno sotto le caselle, che
  * restano riempite e diventano rosse; la sospensione ha la sua scheda. A sessione aperta il ritorno alla pagina
  * richiesta lo fa `RedirectIfAuthenticated`.
  */
@@ -35,7 +36,11 @@ export function Component() {
   })
   const [submitted, setSubmitted] = useState(false)
 
-  const clientErrors = submitted ? validateVerify(values) : {}
+  // Password già scritta in registrazione o accesso, per questa email: il campo non serve (decisione 107)
+  const remembered = recallPassword(values.email)
+  const toSend = { ...values, password: remembered ?? values.password }
+
+  const clientErrors = submitted ? validateVerify(toSend) : {}
   const backendCode = getErrorCode(error)
   const serverFields = getFieldErrors(error)
   const codeError =
@@ -51,8 +56,9 @@ export function Component() {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     setSubmitted(true)
-    if (Object.keys(validateVerify(values)).length > 0) return
-    await verify({ email: values.email.trim(), code: values.code, password: values.password })
+    if (Object.keys(validateVerify(toSend)).length > 0) return
+    const result = await verify({ email: toSend.email.trim(), code: toSend.code, password: toSend.password })
+    if ('data' in result) forgetPassword()
   }
 
   return (
@@ -95,13 +101,15 @@ export function Component() {
             />
           </Form.Group>
           <OtpField value={values.code} onChange={set('code')} error={codeError} />
-          <PasswordField
-            label="Password"
-            value={values.password}
-            onChange={set('password')}
-            autoComplete="current-password"
-            error={clientErrors.password ?? serverFields.password}
-          />
+          {remembered === undefined && (
+            <PasswordField
+              label="Password"
+              value={values.password}
+              onChange={set('password')}
+              autoComplete="current-password"
+              error={clientErrors.password ?? serverFields.password}
+            />
+          )}
           <Button
             type="submit"
             variant="primary"

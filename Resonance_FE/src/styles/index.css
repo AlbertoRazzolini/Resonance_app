@@ -382,15 +382,9 @@ textarea {
   color: var(--rs-color-accent);
 }
 
-/* Segnaposto senza indirizzo (copyright e termini, fino a FE-12): si vedono ma non si possono usare */
-.rs-footer__list a[aria-disabled='true'] {
-  cursor: default;
-  color: var(--rs-color-text-muted);
-  opacity: 0.6;
-}
-
 @media (min-width: 768px) {
-  .rs-footer {
+  /* Solo dove c'è la colonna: le pagine di accesso non l'hanno e il footer parte dal bordo (FE-12) */
+  .rs-app--side > .rs-footer {
     left: 4.5rem;
   }
 
@@ -403,7 +397,7 @@ textarea {
 }
 
 @media (min-width: 1200px) {
-  .rs-footer {
+  .rs-app--side > .rs-footer {
     left: 15rem;
   }
 }
@@ -906,6 +900,11 @@ textarea {
   max-width: 36rem;
 }
 
+/* Titolo della pagina di creazione o modifica: respiro prima del primo campo */
+.rs-edit > h1 {
+  margin-bottom: var(--rs-space-4);
+}
+
 .rs-edit__back {
   display: inline-block;
   margin-bottom: var(--rs-space-3);
@@ -1154,6 +1153,11 @@ textarea {
 .rs-empty__hint {
   margin: var(--rs-space-2) 0 0;
   color: var(--rs-color-text-muted);
+}
+
+/* Azione sotto il testo (es. «Cerca persone»): separata dal titolo, non attaccata */
+.rs-empty .btn {
+  margin-top: var(--rs-space-3);
 }
 
 /* Fumetto del marker aperto sulla mappa */
@@ -1575,6 +1579,16 @@ textarea {
 
 .rs-bell::after {
   display: none;
+}
+
+/* Schermi touch: la campanella arriva a 40 px, come i pulsanti piccoli */
+@media (pointer: coarse) {
+  .rs-bell {
+    min-height: 2.5rem;
+    min-width: 2.5rem;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 .rs-bell__count {

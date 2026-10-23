@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { ROUTES } from '@/app/routes'
 import { Footer } from './Footer'
 
-// Footer a comparsa (decisione 83): quattro voci (due pagine vere, due segnaposto vuoti) che salgono dal basso solo
+// Footer a comparsa (decisione 83): quattro voci (le due informative, copyright e termini di servizio) che salgono dal basso solo
 // quando la pagina è scrollata in fondo, o subito se la pagina non scorre; nascosto non si raggiunge con la tastiera.
 function setScroll({
   scrollY,
@@ -40,7 +40,7 @@ function renderFooter() {
 }
 
 describe('Footer', () => {
-  it('ha le due informative come collegamenti veri', () => {
+  it('ha le due informative come collegamenti', () => {
     renderFooter()
 
     expect(screen.getByRole('link', { name: 'Informativa privacy', hidden: true })).toHaveAttribute(
@@ -53,14 +53,18 @@ describe('Footer', () => {
     )
   })
 
-  it('ha copyright e termini di servizio come segnaposto vuoti: collegamenti disattivati senza indirizzo', () => {
+  it('ha copyright e termini di servizio come collegamenti veri, non più segnaposto', () => {
     renderFooter()
 
-    for (const name of ['Copyright', 'Termini di servizio']) {
-      const placeholder = screen.getByRole('link', { name, hidden: true })
-      expect(placeholder).not.toHaveAttribute('href')
-      expect(placeholder).toHaveAttribute('aria-disabled', 'true')
-    }
+    expect(screen.getByRole('link', { name: 'Copyright', hidden: true })).toHaveAttribute(
+      'href',
+      ROUTES.copyright,
+    )
+    expect(screen.getByRole('link', { name: 'Termini di servizio', hidden: true })).toHaveAttribute(
+      'href',
+      ROUTES.terms,
+    )
+    expect(document.querySelector('.rs-footer [aria-disabled]')).toBeNull()
   })
 
   it('resta nascosto e fuori dalla tastiera finché la pagina non è scrollata in fondo', () => {

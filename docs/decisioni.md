@@ -3561,3 +3561,39 @@ Tutte le scelte sono dello studente, 23 ottobre.
 - **Animare anche al focus da tastiera:** la libreria non lo offre e servirebbe codice nostro.
 - **`MotionConfig reducedMotion="user"` nella radice (scelta in un primo momento):** annullata, perché la libreria gestisce già la riduzione.
 - **`useReducedMotion` nei componenti di navigazione:** codice ripetuto in tre punti per un effetto già garantito.
+
+
+## Decisione 107: rifinitura grafica e pagine legali (card FE-12, decisioni 83 e 85)
+
+Tutte le scelte sono dello studente, 23 ottobre.
+
+### Scelta
+
+- **Revisione di tutte le schermate a 375, 768 e 1280 px**, con l'account SUPERADMIN di prova, più focus da tastiera, stato di caricamento (scheletri) ed errore del feed. Corretti solo difetti di stile, senza cambiare il comportamento:
+  - **Footer nelle pagine senza colonna** (accesso, registrazione, verifica, password): lo spostamento a destra (`left: 4,5 rem` da 768 px, `15 rem` da 1200 px) vale solo con `.rs-app--side > .rs-footer`; senza colonna il footer parte dal bordo.
+  - **Bersagli di tocco:** su schermi touch (`pointer: coarse`) i pulsanti piccoli (`.btn-sm`) e la campanella arrivano a 40 px; col mouse non cambia nulla. Restano fuori i pulsanti di zoom della mappa (libreria) e l'avatar (36 px).
+  - **Stati vuoti:** il pulsante sotto il testo ha un margine sopra (`.rs-empty .btn`).
+  - **Titolo delle pagine di creazione e modifica** (`.rs-edit > h1`): spazio sotto, prima del primo campo.
+- **Copyright e Termini di servizio come pagine vere:** `/copyright` e `/termini-di-servizio`, nel footer al posto dei due segnaposto (tolto lo stile `aria-disabled`). Titolare «© 2026 Alberto Razzolini» e «Tutti i diritti sono riservati»; i contenuti degli utenti restano loro e danno il permesso di mostrarli nell'app. I contatti per ricorsi e cancellazione sono quelli di `config.ts`, che restano segnaposto `.example` (scelta di consegna come demo).
+- **Avviso in tutte e quattro le pagine legali** (privacy, cookie, copyright, termini): «Questo testo è dimostrativo: non è stato scritto da un avvocato e non ha valore legale.»
+- **`PRODUCT.md` per impeccable:** nella radice, non versionato (`.gitignore`), come `riepilogo.md`.
+- **Password non richiesta due volte (solo frontend):** la registrazione, e l'accesso con email non verificata (`EMAIL_NOT_VERIFIED`), tengono la password in una variabile in memoria del modulo (`features/auth/pendingPassword.ts`), non nello stato del router. Vale solo per l'email con cui è stata scritta: in `/verifica` il campo password non si mostra se c'è per quell'email e non c'è nessun avviso al suo posto; se l'email cambia, dopo un ricarico o con un link aperto altrove il campo ricompare. La password si cancella dopo una verifica riuscita e a ogni nuovo invio di registrazione o accesso; con un codice sbagliato resta per il nuovo tentativo. Il backend è invariato: la verifica continua a ricevere e a controllare la password (progettazione, sezione 4.5).
+
+### Motivazione
+
+- Il difetto del footer l'aveva segnalato lo studente in FE-09a; limitarlo a `.rs-app--side` è la correzione più piccola, senza una regola per ogni pagina.
+- Il minimo WCAG AA è 24 px e i pulsanti stavano a 29-31 px; i 40 px per il dito non toccano chi usa il mouse.
+- Le pagine legali descrivono solo regole che l'app applica (messaggi, moderazione, sospensione); l'avviso dice onestamente cosa sono.
+- La variabile in memoria non lascia tracce su disco né nella cronologia; lo stato del router, che sopravvive al ricarico, avrebbe salvato la password in chiaro nella cronologia del browser.
+- Toccare il backend per togliere il controllo avrebbe richiesto una modifica di API, test e Postman fuori dal perimetro di FE-12.
+
+### Alternative scartate
+
+- **Una regola del footer per ogni pagina di accesso:** più codice per lo stesso effetto.
+- **44 px per tutti i bersagli di tocco:** avrebbe cambiato l'altezza delle barre; 40 px bastano.
+- **Firmare il copyright «Resonance» senza nome:** firma vaga, non dice chi ha i diritti.
+- **Email reali nei contatti legali:** non servono a una demo e finirebbero nel codice su GitHub.
+- **Password nello stato del router:** sopravvive al ricarico, ma finisce nella cronologia del browser.
+- **Password nello store Redux:** visibile negli strumenti di sviluppo e più duratura, per lo stesso risultato.
+- **Togliere il controllo della password dal backend:** modifica di API e Postman fuori dal perimetro del frontend.
+- **Usare la password in memoria anche con un'email diversa da quella scritta:** il backend risponderebbe con un errore poco comprensibile.

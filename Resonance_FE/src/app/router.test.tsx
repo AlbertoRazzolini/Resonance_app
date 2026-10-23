@@ -90,6 +90,8 @@ describe('router', () => {
   it.each([
     [ROUTES.privacy, 'Informativa sulla privacy'],
     [ROUTES.cookies, 'Informativa sui cookie'],
+    [ROUTES.copyright, 'Copyright'],
+    [ROUTES.terms, 'Termini di servizio'],
   ])("%s è aperta all'anonimo", async (path, title) => {
     const router = renderAt(path)
     expect(await screen.findByRole('heading', { level: 1, name: title })).toBeInTheDocument()

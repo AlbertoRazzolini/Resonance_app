@@ -194,6 +194,16 @@ export const routes: RouteObject[] = [
         handle: titled('Informativa cookie'),
         lazy: () => import('@/features/legal/pages/CookiePolicyPage'),
       },
+      {
+        path: ROUTES.copyright,
+        handle: titled('Copyright'),
+        lazy: () => import('@/features/legal/pages/CopyrightPage'),
+      },
+      {
+        path: ROUTES.terms,
+        handle: titled('Termini di servizio'),
+        lazy: () => import('@/features/legal/pages/TermsPage'),
+      },
       { path: '*', lazy: () => import('./NotFoundPage') },
     ],
   },

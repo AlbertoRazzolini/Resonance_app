@@ -29,6 +29,8 @@ export const ROUTES = {
   adminContent: '/admin/contenuti',
   privacy: '/informativa-privacy',
   cookies: '/informativa-cookie',
+  copyright: '/copyright',
+  terms: '/termini-di-servizio',
   login: '/accesso',
   register: '/registrazione',
   verify: '/verifica',

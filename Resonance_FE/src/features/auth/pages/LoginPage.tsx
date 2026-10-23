@@ -11,6 +11,7 @@ import { useLoginMutation } from '../api/authApi'
 import { AuthCard } from '../components/AuthCard'
 import { PasswordField } from '../components/PasswordField'
 import { SuspendedNotice } from '../components/SuspendedNotice'
+import { forgetPassword, rememberPassword } from '../pendingPassword'
 import { readAuthState } from '../locationState'
 
 /**
@@ -39,7 +40,12 @@ export function Component() {
     const trimmed = email.trim()
     if (!trimmed || !password) return
     setSentEmail(trimmed)
-    await login({ email: trimmed, password })
+    forgetPassword()
+    const result = await login({ email: trimmed, password })
+    // Email non verificata: la verifica usa la password appena scritta, senza chiederla di nuovo (decisione 107)
+    if ('error' in result && getErrorCode(result.error) === 'EMAIL_NOT_VERIFIED') {
+      rememberPassword(trimmed, password)
+    }
   }
 
   const code = getErrorCode(error)

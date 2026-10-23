@@ -3,11 +3,12 @@ import userEvent from '@testing-library/user-event'
 import { delay, http, HttpResponse } from 'msw'
 import { Provider } from 'react-redux'
 import { createMemoryRouter, RouterProvider } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { makeStore } from '@/app/store'
 import { ROUTES } from '@/app/routes'
 import { RedirectIfAuthenticated } from '@/components/guards/RedirectIfAuthenticated'
 import { sessionEnded } from '@/features/auth/authSlice'
+import { forgetPassword, recallPassword } from '@/features/auth/pendingPassword'
 import { registerRejected, registerSucceeds } from '@/test/handlers/auth'
 import { server } from '@/test/server'
 import { Component as RegisterPage } from './RegisterPage'
@@ -283,5 +284,33 @@ describe('RegisterPage', () => {
 
     expect(await screen.findByText('Pagina di accesso')).toBeInTheDocument()
     expect(router.state.location.state).toEqual({ from: '/riservata' })
+  })
+})
+
+// La password scritta passa alla verifica in memoria, non nello stato del router (che finirebbe nella cronologia).
+describe('RegisterPage · password per la verifica', () => {
+  afterEach(forgetPassword)
+
+  it("a registrazione riuscita la password resta in memoria per l'email scritta, non nello stato del router", async () => {
+    server.use(registerSucceeds())
+    const { user, router } = renderRegister()
+
+    await fill(user, GOOD)
+    await submit(user)
+
+    expect(await screen.findByText('Pagina di verifica')).toBeInTheDocument()
+    expect(recallPassword(GOOD.email)).toBe(GOOD.password)
+    expect(JSON.stringify(router.state.location.state)).not.toContain(GOOD.password)
+  })
+
+  it('se la registrazione fallisce non tiene nessuna password', async () => {
+    server.use(registerRejected(409, 'EMAIL_ALREADY_REGISTERED'))
+    const { user } = renderRegister()
+
+    await fill(user, GOOD)
+    await submit(user)
+
+    await screen.findByText('Esiste già un account con questa email.')
+    expect(recallPassword(GOOD.email)).toBeUndefined()
   })
 })

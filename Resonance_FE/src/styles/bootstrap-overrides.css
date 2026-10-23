@@ -80,6 +80,13 @@ a {
   --bs-btn-hover-color: var(--rs-color-text);
 }
 
+/* Schermi touch: i pulsanti piccoli arrivano a 40 px di altezza, abbastanza per il dito; col mouse non cambia nulla */
+@media (pointer: coarse) {
+  .btn-sm {
+    min-height: 2.5rem;
+  }
+}
+
 /* Schede a pillola (es. Ufficiali / Indie): la scheda attiva in giallo, l'accento dello stato attivo */
 .nav-pills {
   --bs-nav-pills-link-active-bg: var(--rs-color-accent);

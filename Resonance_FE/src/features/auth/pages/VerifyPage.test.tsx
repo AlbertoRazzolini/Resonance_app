@@ -8,6 +8,7 @@ import { makeStore } from '@/app/store'
 import { ROUTES } from '@/app/routes'
 import { RedirectIfAuthenticated } from '@/components/guards/RedirectIfAuthenticated'
 import { sessionEnded } from '@/features/auth/authSlice'
+import { forgetPassword, recallPassword, rememberPassword } from '@/features/auth/pendingPassword'
 import { makeLoginResponse } from '@/test/fixtures/users'
 import {
   resendRejected,
@@ -73,6 +74,7 @@ function useFakeClock() {
 
 afterEach(() => {
   vi.useRealTimers()
+  forgetPassword()
 })
 
 describe('VerifyPage', () => {
@@ -347,5 +349,66 @@ describe('VerifyPage · reinvio del codice', () => {
       await screen.findByText('Server non raggiungibile: controlla la connessione e riprova.'),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: RESEND })).toBeEnabled()
+  })
+})
+
+// Password portata dalla registrazione o dall'accesso (in memoria, mai nello stato del router): se c'è per l'email
+// scritta, il campo non si mostra e la verifica la usa da sola.
+describe('VerifyPage · password già scritta', () => {
+  it("con la password in memoria per quell'email il campo password non si mostra", () => {
+    rememberPassword(GOOD.email, GOOD.password)
+    renderVerify({ email: GOOD.email })
+
+    expect(screen.queryByLabelText('Password')).not.toBeInTheDocument()
+  })
+
+  it('basta il codice: la verifica manda la password in memoria e poi la dimentica', async () => {
+    const calls: Request[] = []
+    server.use(verifySucceeds(makeLoginResponse(), calls))
+    rememberPassword(GOOD.email, GOOD.password)
+    const { user } = renderVerify({ email: GOOD.email })
+
+    await fillCode(user)
+    await submit(user)
+
+    expect(await screen.findByText('Home')).toBeInTheDocument()
+    expect(await calls[0].json()).toEqual({ email: GOOD.email, code: CODE, password: GOOD.password })
+    expect(recallPassword(GOOD.email)).toBeUndefined()
+  })
+
+  it('con un codice sbagliato la password resta in memoria per il nuovo tentativo', async () => {
+    server.use(verifyRejected(400, 'CODE_INVALID'))
+    rememberPassword(GOOD.email, GOOD.password)
+    const { user } = renderVerify({ email: GOOD.email })
+
+    await fillCode(user)
+    await submit(user)
+    await screen.findByText("Il codice non è corretto. Controlla l'email e riprova.")
+
+    expect(recallPassword(GOOD.email)).toBe(GOOD.password)
+    expect(screen.queryByLabelText('Password')).not.toBeInTheDocument()
+  })
+
+  it("se l'email in memoria è un'altra il campo password si mostra", () => {
+    rememberPassword('altro@example.com', GOOD.password)
+    renderVerify({ email: GOOD.email })
+
+    expect(screen.getByLabelText('Password')).toBeInTheDocument()
+  })
+
+  it("se si cambia l'email il campo password ricompare e senza password non si invia", async () => {
+    const calls: Request[] = []
+    server.use(verifySucceeds(makeLoginResponse(), calls))
+    rememberPassword(GOOD.email, GOOD.password)
+    const { user } = renderVerify({ email: GOOD.email })
+
+    await user.clear(screen.getByLabelText('Email'))
+    await user.type(screen.getByLabelText('Email'), 'corretta@example.com')
+    await fillCode(user)
+    await submit(user)
+
+    expect(screen.getByLabelText('Password')).toBeInTheDocument()
+    expect(await screen.findByText('Scrivi la password.')).toBeInTheDocument()
+    expect(calls).toHaveLength(0)
   })
 })
