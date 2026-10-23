@@ -5,6 +5,7 @@ import { selectCurrentUser } from '@/features/auth/authSlice'
 import { wasCollabDeleted } from '@/features/collab/collabForm'
 import { wasEventDeleted } from '@/features/events/eventForm'
 import { useAppSelector } from '@/hooks/redux'
+import DesktopMagnet from '@/components/motion/DesktopMagnet'
 import { AreaTabs } from '../components/AreaTabs'
 import { ProfileHeader } from '../components/ProfileHeader'
 import { wasProfileUpdated } from '../profilePatch'
@@ -44,9 +45,11 @@ export function Component() {
         bio={user.bio}
         roles={user.roles}
       >
-        <Link to={ROUTES.profileEdit} className="btn btn-primary">
-          Modifica profilo
-        </Link>
+        <DesktopMagnet>
+          <Link to={ROUTES.profileEdit} className="btn btn-primary">
+            Modifica profilo
+          </Link>
+        </DesktopMagnet>
       </ProfileHeader>
       <AreaTabs />
     </>

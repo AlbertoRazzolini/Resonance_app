@@ -7,6 +7,7 @@ import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import { LoadMore } from '@/components/ui/LoadMore'
 import { Skeleton, SkeletonLine } from '@/components/ui/Skeleton'
 import type { CollabPostResponse } from '@/types/collab'
+import DesktopMagnet from '@/components/motion/DesktopMagnet'
 import {
   useCloseCollabPostMutation,
   useDeleteCollabPostMutation,
@@ -50,9 +51,11 @@ function MyCollabPage({ page, isLast, busy, onLoadMore, onClose, onDelete }: MyC
 
       {query.isSuccess && page === 0 && data?.content.length === 0 && (
         <EmptyState title="Non hai ancora pubblicato annunci.">
-          <Link className="btn btn-primary" to={ROUTES.newCollab}>
-            Pubblica annuncio
-          </Link>
+          <DesktopMagnet>
+            <Link className="btn btn-primary" to={ROUTES.newCollab}>
+              Pubblica annuncio
+            </Link>
+          </DesktopMagnet>
         </EmptyState>
       )}
 

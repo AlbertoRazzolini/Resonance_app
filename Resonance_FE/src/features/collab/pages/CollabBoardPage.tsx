@@ -3,6 +3,7 @@ import { ROUTES } from '@/app/routes'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { selectHasRole } from '@/features/auth/authSlice'
 import { useAppSelector } from '@/hooks/redux'
+import DesktopMagnet from '@/components/motion/DesktopMagnet'
 import { CollabPages } from '../components/CollabPages'
 
 /**
@@ -21,9 +22,11 @@ export function Component() {
           <p className="text-body-secondary">Annunci per progetti, musicisti e collaborazioni.</p>
         </div>
         {isMusician && (
-          <Link className="btn btn-outline-light" to={ROUTES.newCollab}>
-            Pubblica annuncio
-          </Link>
+          <DesktopMagnet>
+            <Link className="btn btn-outline-light" to={ROUTES.newCollab}>
+              Pubblica annuncio
+            </Link>
+          </DesktopMagnet>
         )}
       </div>
 

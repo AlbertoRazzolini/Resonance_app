@@ -6,6 +6,7 @@ import type { LoginRedirectState } from '@/components/guards/RequireAuth'
 import { selectCurrentUser } from '@/features/auth/authSlice'
 import { useAppSelector } from '@/hooks/redux'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
+import DesktopMagnet from '@/components/motion/DesktopMagnet'
 import { NewPostForm } from './NewPostForm'
 
 type NewPostPanelProps = {
@@ -47,9 +48,11 @@ export function NewPostPanel({ onPublished }: NewPostPanelProps) {
 
   return (
     <div className="rs-new-post-panel">
-      <Button variant="primary" onClick={() => setOpen(true)}>
-        Nuovo post
-      </Button>
+      <DesktopMagnet>
+        <Button variant="primary" onClick={() => setOpen(true)}>
+          Nuovo post
+        </Button>
+      </DesktopMagnet>
       <Modal show={open} onHide={() => setOpen(false)} centered aria-labelledby={titleId}>
         <Modal.Header closeButton>
           <Modal.Title id={titleId}>Nuovo post</Modal.Title>

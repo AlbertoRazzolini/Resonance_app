@@ -51,7 +51,14 @@ a {
   text-underline-offset: 0.2em;
 }
 
-/* Pulsante primario: grigio chiaro con testo scuro; l'accento giallo resta per gli stati attivi */
+/* Tutti i pulsanti con gli angoli a 8 px (FE-12, decisione 107), anche piccoli e grandi */
+.btn,
+.btn-sm,
+.btn-lg {
+  --bs-btn-border-radius: var(--rs-radius-lg);
+}
+
+/* Pulsante primario: giallo dell'accento con testo scuro (token --rs-color-button, FE-12, decisione 107) */
 .btn-primary {
   --bs-btn-color: var(--rs-color-button-ink);
   --bs-btn-bg: var(--rs-color-button);
@@ -84,6 +91,10 @@ a {
 @media (pointer: coarse) {
   .btn-sm {
     min-height: 2.5rem;
+    /* Senza il flex la scritta di un collegamento (inline-block) resterebbe in alto nei 40 px */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 

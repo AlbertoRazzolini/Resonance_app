@@ -5,6 +5,7 @@ import { indieEventPath, ROUTES } from '@/app/routes'
 import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import type { IndieEventStatus } from '@/types/events'
 import { useFocusFirstInvalid } from '@/hooks/useFocusFirstInvalid'
+import DesktopMagnet from '@/components/motion/DesktopMagnet'
 import { useCreateIndieEventMutation } from '../api/eventsApi'
 import { buildIndieEventRequest, useEventFormState } from '../eventForm'
 import { EventFormFields } from './EventFormFields'
@@ -53,9 +54,11 @@ export function IndieEventForm() {
         >
           {isLoading && submitting === 'DRAFT' ? waiting : 'Salva come bozza'}
         </Button>
-        <Button type="submit" variant="primary" disabled={isLoading} aria-busy={isLoading}>
-          {isLoading && submitting === 'PUBLISHED' ? waiting : 'Pubblica'}
-        </Button>
+        <DesktopMagnet>
+          <Button type="submit" variant="primary" disabled={isLoading} aria-busy={isLoading}>
+            {isLoading && submitting === 'PUBLISHED' ? waiting : 'Pubblica'}
+          </Button>
+        </DesktopMagnet>
       </div>
     </Form>
   )

@@ -22,10 +22,10 @@
   --rs-color-accent-ink: #0a0a0a;
   --rs-color-accent-rgb: 255, 214, 10;
 
-  /* Pulsante primario grigio chiaro con testo scuro (come nel mock-up di accesso) */
-  --rs-color-button: #d9d9d9;
-  --rs-color-button-hover: #ffffff;
-  --rs-color-button-ink: #0a0a0a;
+  /* Pulsante primario: giallo dell'accento con testo scuro (FE-12, decisione 107; prima grigio chiaro, decisione 80) */
+  --rs-color-button: var(--rs-color-accent);
+  --rs-color-button-hover: var(--rs-color-accent-hover);
+  --rs-color-button-ink: var(--rs-color-accent-ink);
 
   /* Esiti */
   --rs-color-danger: #ff6b6b;

@@ -6,6 +6,7 @@ import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import { FieldError } from '@/components/ui/FieldError'
 import { getFieldErrors } from '@/lib/errors/getErrorMessage'
 import type { MeResponse } from '@/types/users'
+import DesktopMagnet from '@/components/motion/DesktopMagnet'
 import { useUpdateProfileMutation } from '../api/usersApi'
 import {
   BIO_MAX,
@@ -100,9 +101,11 @@ export function ProfileForm({ user }: { user: MeResponse }) {
         <Link to={ROUTES.profile} className="btn btn-outline-light">
           Annulla
         </Link>
-        <Button type="submit" variant="primary" disabled={!dirty || isLoading}>
-          Salva modifiche
-        </Button>
+        <DesktopMagnet>
+          <Button type="submit" variant="primary" disabled={!dirty || isLoading}>
+            Salva modifiche
+          </Button>
+        </DesktopMagnet>
       </div>
     </Form>
   )

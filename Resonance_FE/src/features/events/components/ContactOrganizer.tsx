@@ -9,6 +9,7 @@ import { selectCurrentUser } from '@/features/auth/authSlice'
 import { useAppSelector } from '@/hooks/redux'
 import { getFieldErrors } from '@/lib/errors/getErrorMessage'
 import type { ContactResponse, IndieEventResponse, OfficialConcertResponse } from '@/types/events'
+import DesktopMagnet from '@/components/motion/DesktopMagnet'
 import { useContactConcertHostMutation, useContactIndieEventMusicianMutation } from '../api/eventsApi'
 import { CONTACT_MESSAGE_MAX, validateContactMessage } from '../eventForm'
 
@@ -103,9 +104,11 @@ export function ContactOrganizer(props: ContactOrganizerProps) {
             <FieldError id="contact-message-error" message={fieldError} />
           </Form.Group>
         </fieldset>
-        <Button type="submit" variant="primary" disabled={isLoading} aria-busy={isLoading}>
-          Invia messaggio
-        </Button>
+        <DesktopMagnet>
+          <Button type="submit" variant="primary" disabled={isLoading} aria-busy={isLoading}>
+            Invia messaggio
+          </Button>
+        </DesktopMagnet>
       </Form>
     </section>
   )

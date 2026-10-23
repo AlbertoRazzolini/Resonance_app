@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router'
 import { concertPath, ROUTES } from '@/app/routes'
 import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import { useFocusFirstInvalid } from '@/hooks/useFocusFirstInvalid'
+import DesktopMagnet from '@/components/motion/DesktopMagnet'
 import { useCreateConcertMutation } from '../api/eventsApi'
 import { buildConcertRequest, useEventFormState } from '../eventForm'
 import { EventFormFields } from './EventFormFields'
@@ -41,9 +42,11 @@ export function ConcertForm() {
         <Link to={ROUTES.profile} className="btn btn-outline-light">
           Annulla
         </Link>
-        <Button type="submit" variant="primary" disabled={isLoading} aria-busy={isLoading}>
-          {isLoading ? "Sto cercando l'indirizzo…" : 'Pubblica concerto'}
-        </Button>
+        <DesktopMagnet>
+          <Button type="submit" variant="primary" disabled={isLoading} aria-busy={isLoading}>
+            {isLoading ? "Sto cercando l'indirizzo…" : 'Pubblica concerto'}
+          </Button>
+        </DesktopMagnet>
       </div>
     </Form>
   )

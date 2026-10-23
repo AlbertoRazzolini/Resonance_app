@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Alert, Button, Nav } from 'react-bootstrap'
 import { Link, useSearchParams } from 'react-router'
+import DesktopMagnet from '@/components/motion/DesktopMagnet'
 import { concertPath, indieEventPath } from '@/app/routes'
 import { Map, MarkerLegend, type EventKind } from '@/components/map'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -112,18 +113,20 @@ export function Component() {
       )}
 
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-        <Nav as="nav" variant="pills" aria-label="Tipo di evento">
+        <Nav as="nav" variant="pills" className="rs-event-tabs" aria-label="Tipo di evento">
           {FILTER_TABS.map(({ filter: tab, label }) => (
             <Nav.Item key={tab}>
-              <Nav.Link
-                as={Link}
-                to={{ search: searchFor(tab, radius).toString() }}
-                replace
-                active={filter === tab}
-                aria-current={filter === tab ? 'page' : undefined}
-              >
-                {label}
-              </Nav.Link>
+              <DesktopMagnet>
+                <Nav.Link
+                  as={Link}
+                  to={{ search: searchFor(tab, radius).toString() }}
+                  replace
+                  active={filter === tab}
+                  aria-current={filter === tab ? 'page' : undefined}
+                >
+                  {label}
+                </Nav.Link>
+              </DesktopMagnet>
             </Nav.Item>
           ))}
         </Nav>

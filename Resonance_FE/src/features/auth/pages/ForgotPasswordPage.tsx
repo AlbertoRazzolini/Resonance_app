@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router'
 import { ROUTES } from '@/app/routes'
 import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import { FieldError } from '@/components/ui/FieldError'
+import DesktopMagnet from '@/components/motion/DesktopMagnet'
 import { useForgotPasswordMutation } from '../api/authApi'
 import { AuthCard } from '../components/AuthCard'
 import { validateForgot } from '../validation'
@@ -65,14 +66,16 @@ export function Component() {
           />
           <FieldError id="forgot-email-error" message={emailError} />
         </Form.Group>
-        <Button
-          type="submit"
-          variant="primary"
-          className="rs-auth-submit w-100"
-          disabled={isLoading}
-        >
-          <span className="rs-auth-submit__label">Invia il codice</span>
-        </Button>
+        <DesktopMagnet fullWidth>
+          <Button
+            type="submit"
+            variant="primary"
+            className="rs-auth-submit w-100"
+            disabled={isLoading}
+          >
+            <span className="rs-auth-submit__label">Invia il codice</span>
+          </Button>
+        </DesktopMagnet>
       </Form>
     </AuthCard>
   )

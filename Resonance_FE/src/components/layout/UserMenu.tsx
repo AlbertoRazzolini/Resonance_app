@@ -1,6 +1,8 @@
 import { Dropdown } from 'react-bootstrap'
 import { Link } from 'react-router'
 import { ROUTES } from '@/app/routes'
+import StarBorder from '@/components/motion/StarBorder'
+import { STAR_BORDER_LOOK } from '@/components/motion/starBorderLook'
 import { Avatar } from '@/components/ui/Avatar'
 import { selectCurrentUser, selectHasRole } from '@/features/auth/authSlice'
 import { useLogoutMutation } from '@/features/auth/api/authApi'
@@ -26,9 +28,17 @@ export function UserMenu() {
   if (!user) {
     return (
       <div className="d-flex align-items-center gap-2">
-        <Link to={ROUTES.login} className="btn btn-outline-light btn-sm">
+        <StarBorder
+          {...STAR_BORDER_LOOK}
+          as={Link}
+          to={ROUTES.login}
+          className="rs-nav-login"
+          backgroundColor="transparent"
+          textColor="var(--rs-color-text)"
+          borderColor="var(--rs-color-border-strong)"
+        >
           Accedi
-        </Link>
+        </StarBorder>
         <Link to={ROUTES.register} className="btn btn-primary btn-sm">
           Registrati
         </Link>

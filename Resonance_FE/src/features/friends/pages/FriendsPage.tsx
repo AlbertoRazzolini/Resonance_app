@@ -2,6 +2,7 @@ import { Nav, Tab } from 'react-bootstrap'
 import { Link, useSearchParams } from 'react-router'
 import { ROUTES } from '@/app/routes'
 import type { FriendshipListType } from '@/types/friends'
+import DesktopMagnet from '@/components/motion/DesktopMagnet'
 import { FriendshipPages } from '../components/FriendshipPages'
 
 /** Schede in ordine: la chiave è il valore di `?scheda=` (nessun parametro = «Amici»). */
@@ -28,9 +29,11 @@ export function Component() {
           <h1>Amici</h1>
           <p className="text-body-secondary">Le persone con cui puoi scrivere e le richieste in attesa.</p>
         </div>
-        <Link className="btn btn-outline-light" to={ROUTES.userSearch}>
-          Cerca persone
-        </Link>
+        <DesktopMagnet>
+          <Link className="btn btn-outline-light" to={ROUTES.userSearch}>
+            Cerca persone
+          </Link>
+        </DesktopMagnet>
       </div>
 
       <Tab.Container

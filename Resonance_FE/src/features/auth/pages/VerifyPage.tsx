@@ -6,6 +6,7 @@ import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import { FieldError } from '@/components/ui/FieldError'
 import { suspensionOf } from '@/lib/api/apiSlice'
 import { getErrorCode, getErrorMessage, getFieldErrors } from '@/lib/errors/getErrorMessage'
+import DesktopMagnet from '@/components/motion/DesktopMagnet'
 import { useVerifyMutation } from '../api/authApi'
 import { AuthCard } from '../components/AuthCard'
 import { OtpField } from '../components/OtpField'
@@ -110,14 +111,16 @@ export function Component() {
               error={clientErrors.password ?? serverFields.password}
             />
           )}
-          <Button
-            type="submit"
-            variant="primary"
-            className="rs-auth-submit w-100"
-            disabled={isLoading}
-          >
-            <span className="rs-auth-submit__label">Verifica</span>
-          </Button>
+          <DesktopMagnet fullWidth>
+            <Button
+              type="submit"
+              variant="primary"
+              className="rs-auth-submit w-100"
+              disabled={isLoading}
+            >
+              <span className="rs-auth-submit__label">Verifica</span>
+            </Button>
+          </DesktopMagnet>
         </Form>
         <ResendCode email={values.email} initiallyWaiting={Boolean(codeSent)} />
       </AuthCard>

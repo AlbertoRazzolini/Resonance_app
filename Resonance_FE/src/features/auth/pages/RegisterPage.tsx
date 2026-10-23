@@ -5,6 +5,7 @@ import { ROUTES } from '@/app/routes'
 import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import { FieldError } from '@/components/ui/FieldError'
 import { getErrorCode, getFieldErrors } from '@/lib/errors/getErrorMessage'
+import DesktopMagnet from '@/components/motion/DesktopMagnet'
 import { useRegisterMutation } from '../api/authApi'
 import { AuthCard } from '../components/AuthCard'
 import { PasswordField } from '../components/PasswordField'
@@ -119,14 +120,16 @@ export function Component() {
           error={errorOf('password')}
           showByteCount
         />
-        <Button
-          type="submit"
-          variant="primary"
-          className="rs-auth-submit w-100"
-          disabled={isLoading}
-        >
-          <span className="rs-auth-submit__label">Registrati</span>
-        </Button>
+        <DesktopMagnet fullWidth>
+          <Button
+            type="submit"
+            variant="primary"
+            className="rs-auth-submit w-100"
+            disabled={isLoading}
+          >
+            <span className="rs-auth-submit__label">Registrati</span>
+          </Button>
+        </DesktopMagnet>
       </Form>
     </AuthCard>
   )

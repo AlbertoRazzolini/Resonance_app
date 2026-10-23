@@ -7,6 +7,7 @@ import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import { LoadMore } from '@/components/ui/LoadMore'
 import { Skeleton, SkeletonLine } from '@/components/ui/Skeleton'
 import type { FriendshipListType } from '@/types/friends'
+import DesktopMagnet from '@/components/motion/DesktopMagnet'
 import { useGetFriendshipsQuery } from '../api/friendsApi'
 import { FriendshipButton } from './FriendshipButton'
 import { PersonRow } from './PersonRow'
@@ -39,9 +40,11 @@ function FriendshipPage({ type, page, isLast, onLoadMore }: PageProps) {
 
       {query.isSuccess && page === 0 && data?.content.length === 0 && (
         <EmptyState title={EMPTY_TEXT[type]}>
-          <Link className="btn btn-outline-light btn-sm" to={ROUTES.userSearch}>
-            Cerca persone
-          </Link>
+          <DesktopMagnet>
+            <Link className="btn btn-outline-light btn-sm" to={ROUTES.userSearch}>
+              Cerca persone
+            </Link>
+          </DesktopMagnet>
         </EmptyState>
       )}
 

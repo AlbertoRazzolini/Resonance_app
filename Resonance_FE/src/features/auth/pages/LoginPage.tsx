@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react'
-import { Alert, Button, Form } from 'react-bootstrap'
+import { Alert, Form } from 'react-bootstrap'
 import { Link, useLocation } from 'react-router'
 import { ROUTES } from '@/app/routes'
+import StarBorder from '@/components/motion/StarBorder'
+import { STAR_BORDER_LOOK_LARGE } from '@/components/motion/starBorderLook'
 import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import { FieldError } from '@/components/ui/FieldError'
 import { useAppSelector } from '@/hooks/redux'
@@ -111,15 +113,18 @@ export function Component() {
             error={passwordError}
             aside={<Link to={ROUTES.forgotPassword}>Password dimenticata?</Link>}
           />
-          <Button
+          <StarBorder
+            {...STAR_BORDER_LOOK_LARGE}
             type="submit"
-            variant="primary"
-            className="rs-auth-submit w-100"
+            className="rs-auth-submit"
+            backgroundColor="var(--rs-color-button)"
+            textColor="var(--rs-color-button-ink)"
+            borderColor="rgba(var(--rs-color-accent-rgb), 0.3)"
             disabled={isLoading}
           >
             <span className="rs-auth-submit__label">Entra</span>
-            <span className="rs-auth-submit__hint">…nella Zona</span>
-          </Button>
+            <span className="rs-auth-submit__hint">…nella scena</span>
+          </StarBorder>
         </Form>
       </AuthCard>
     </>

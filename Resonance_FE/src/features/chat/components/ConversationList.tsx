@@ -11,6 +11,7 @@ import { selectCurrentUser } from '@/features/auth/authSlice'
 import { useAppSelector } from '@/hooks/redux'
 import { formatChatListTime } from '@/lib/format/dates'
 import type { ConversationResponse } from '@/types/chat'
+import DesktopMagnet from '@/components/motion/DesktopMagnet'
 import { useGetConversationsQuery } from '../api/chatApi'
 import { filterConversations } from '../chatCache'
 import { LockIcon } from './ChatIcons'
@@ -108,9 +109,11 @@ export function ConversationList({ activeId }: { activeId?: string }) {
 
       {data && data.length === 0 && (
         <EmptyState title="Non hai ancora conversazioni.">
-          <Link className="btn btn-outline-light" to={ROUTES.userSearch}>
-            Cerca persone
-          </Link>
+          <DesktopMagnet>
+            <Link className="btn btn-outline-light" to={ROUTES.userSearch}>
+              Cerca persone
+            </Link>
+          </DesktopMagnet>
         </EmptyState>
       )}
 

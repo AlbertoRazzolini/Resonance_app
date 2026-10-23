@@ -679,12 +679,44 @@ textarea {
   color: var(--rs-color-danger);
 }
 
-/* Pulsante "Entra": titolo e microtesto su due righe */
-.rs-auth-submit {
+/*
+ * Pulsante "Entra": titolo e microtesto su due righe. Ha il bordo animato (StarBorder, FE-12): riprende lo stile del
+ * pulsante primario (maiuscole, tracking, grigio spento da disattivato) senza le classi di Bootstrap.
+ */
+.star-border.rs-auth-submit {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 0;
+  width: 100%;
   padding: var(--rs-space-3) var(--rs-space-4);
+  font-weight: var(--rs-weight-heading);
+  letter-spacing: var(--rs-tracking-label);
+  text-transform: uppercase;
+}
+
+.star-border.rs-auth-submit:hover:not(:disabled) {
+  background: var(--rs-color-button-hover);
+}
+
+.star-border.rs-auth-submit:disabled {
+  background: var(--rs-color-border);
+  color: var(--rs-color-text-muted);
+  opacity: 1;
+}
+
+/* «Accedi» nella barra: pulsante piccolo con bordo animato, come il vecchio btn-outline-light btn-sm */
+.star-border.rs-nav-login {
+  padding: 0.25rem 0.5rem;
+  font-size: var(--rs-text-sm);
+  font-weight: var(--rs-weight-regular);
+  line-height: 1.5;
+}
+
+@media (pointer: coarse) {
+  .star-border.rs-nav-login {
+    min-height: 2.5rem;
+  }
 }
 
 .rs-auth-submit__label {
@@ -836,12 +868,18 @@ textarea {
 }
 
 /* Senza bio il pulsante segue direttamente il cerchio: stesso spazio che la bio mette sopra e sotto di sé */
-.rs-profile__head + .btn {
+.rs-profile__head + .btn,
+.rs-profile__head + .rs-magnet {
   margin-top: var(--rs-space-4);
 }
 
-/* «Modifica profilo»: a tutta larghezza sul telefono, della misura del testo da 768 px */
-.rs-profile > .btn {
+/*
+ * «Modifica profilo»: a tutta larghezza sul telefono, della misura del testo da 768 px. Col mouse il pulsante sta
+ * dentro l'involucro di Magnet (`.rs-magnet`): le stesse regole valgono per l'involucro e per il pulsante al suo interno.
+ */
+.rs-profile > .btn,
+.rs-profile > .rs-magnet,
+.rs-profile > .rs-magnet .btn {
   display: block;
   width: 100%;
 }
@@ -851,7 +889,13 @@ textarea {
     padding: var(--rs-space-5);
   }
 
-  .rs-profile > .btn {
+  .rs-profile > .rs-magnet {
+    display: inline-block;
+    width: auto;
+  }
+
+  .rs-profile > .btn,
+  .rs-profile > .rs-magnet .btn {
     display: inline-block;
     width: auto;
     padding-inline: var(--rs-space-6);
@@ -1453,6 +1497,17 @@ textarea {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--rs-space-3);
+  /* Lo spazio sotto sta qui e non sul sottotitolo: se il pulsante va a capo (telefono) non tocca ciò che segue */
+  margin-bottom: var(--rs-space-5);
+}
+
+.rs-collab-head p {
+  margin-bottom: 0;
+}
+
+/* Schede Eventi / Ufficiali / Indie: 16 px tra l'una e l'altra, così con Magnet (scala 1,15 e spostamento) non si toccano */
+.rs-event-tabs {
+  gap: var(--rs-space-4);
 }
 
 .rs-collab-list {

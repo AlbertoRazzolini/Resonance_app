@@ -37,6 +37,8 @@ describe('UserMenu', () => {
     renderMenu(null)
 
     expect(screen.getByRole('link', { name: 'Accedi' })).toHaveAttribute('href', ROUTES.login)
+    // «Accedi» ha il bordo animato (FE-12, decisione 107)
+    expect(screen.getByRole('link', { name: 'Accedi' })).toHaveClass('star-border')
     expect(screen.getByRole('link', { name: 'Registrati' })).toHaveAttribute(
       'href',
       ROUTES.register,

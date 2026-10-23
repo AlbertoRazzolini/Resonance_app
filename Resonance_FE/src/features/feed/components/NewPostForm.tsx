@@ -6,6 +6,7 @@ import { selectCurrentUser } from '@/features/auth/authSlice'
 import { useAppSelector } from '@/hooks/redux'
 import { useBrowserPosition } from '@/hooks/useBrowserPosition'
 import { getFieldErrors } from '@/lib/errors/getErrorMessage'
+import DesktopMagnet from '@/components/motion/DesktopMagnet'
 import { useCreatePostMutation } from '../api/feedApi'
 import { buildPostRequest, POST_BODY_MAX, validatePost, type PostValues } from '../postForm'
 import { ImageLoadWarning } from './ImageLoadWarning'
@@ -110,9 +111,11 @@ export function NewPostForm({ onPublished }: NewPostFormProps) {
         onChange={(event) => setWithPosition(event.target.checked)}
       />
       <div className="rs-form-actions">
-        <Button type="submit" variant="primary" disabled={busy} aria-busy={busy}>
-          {busy ? 'Pubblico…' : 'Pubblica'}
-        </Button>
+        <DesktopMagnet>
+          <Button type="submit" variant="primary" disabled={busy} aria-busy={busy}>
+            {busy ? 'Pubblico…' : 'Pubblica'}
+          </Button>
+        </DesktopMagnet>
       </div>
     </Form>
   )

@@ -309,3 +309,20 @@ describe('LoginPage · password per la verifica', () => {
     expect(recallPassword('vecchio@example.com')).toBeUndefined()
   })
 })
+
+describe('LoginPage · bordo animato', () => {
+  it('il pulsante Entra è di tipo submit e ha il bordo animato (FE-12, decisione 107)', () => {
+    renderLogin()
+
+    const button = screen.getByRole('button', { name: /entra/i })
+    expect(button).toHaveAttribute('type', 'submit')
+    expect(button).toHaveClass('star-border')
+  })
+
+  it('il microtesto del pulsante dice «…nella scena»', () => {
+    renderLogin()
+
+    expect(screen.getByText('…nella scena')).toBeInTheDocument()
+    expect(screen.queryByText(/nella zona/i)).not.toBeInTheDocument()
+  })
+})

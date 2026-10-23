@@ -9,6 +9,7 @@ import { selectCurrentUser } from '@/features/auth/authSlice'
 import { useAppSelector } from '@/hooks/redux'
 import { getErrorMessage, getFieldErrors } from '@/lib/errors/getErrorMessage'
 import type { ApplicationResponse, CollabPostResponse } from '@/types/collab'
+import DesktopMagnet from '@/components/motion/DesktopMagnet'
 import { isAlreadyApplied, useApplyToCollabPostMutation } from '../api/collabApi'
 import { MESSAGE_MAX, validateApplication } from '../collabForm'
 
@@ -92,9 +93,11 @@ export function ApplyForm({ post }: { post: CollabPostResponse }) {
           <FieldError id="apply-message-error" message={fieldError} />
         </Form.Group>
       </fieldset>
-      <Button type="submit" variant="primary" disabled={isLoading} aria-busy={isLoading}>
-        Invia candidatura
-      </Button>
+      <DesktopMagnet>
+        <Button type="submit" variant="primary" disabled={isLoading} aria-busy={isLoading}>
+          Invia candidatura
+        </Button>
+      </DesktopMagnet>
     </Form>
   )
 }

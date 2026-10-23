@@ -9,6 +9,7 @@ import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import { LoadMore } from '@/components/ui/LoadMore'
 import { Skeleton, SkeletonLine } from '@/components/ui/Skeleton'
 import type { IndieEventResponse } from '@/types/events'
+import DesktopMagnet from '@/components/motion/DesktopMagnet'
 import {
   useDeleteConcertMutation,
   useDeleteIndieEventMutation,
@@ -62,9 +63,11 @@ function MyEventsPage({ kind, page, isLast, now, busy, onLoadMore, onPublish, on
 
       {query.isSuccess && page === 0 && items.length === 0 && (
         <EmptyState title="Non sono ancora presenti eventi pubblicati.">
-          <Link className="btn btn-primary" to={kind === 'official' ? ROUTES.newConcert : ROUTES.newIndieEvent}>
-            Pubblica evento
-          </Link>
+          <DesktopMagnet>
+            <Link className="btn btn-primary" to={kind === 'official' ? ROUTES.newConcert : ROUTES.newIndieEvent}>
+              Pubblica evento
+            </Link>
+          </DesktopMagnet>
         </EmptyState>
       )}
 

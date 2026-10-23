@@ -6,6 +6,7 @@ import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import { FieldError } from '@/components/ui/FieldError'
 import { GenreInput } from '@/components/ui/GenreInput'
 import { useFocusFirstInvalid } from '@/hooks/useFocusFirstInvalid'
+import DesktopMagnet from '@/components/motion/DesktopMagnet'
 import { useCreateCollabPostMutation } from '../api/collabApi'
 import {
   buildCollabRequest,
@@ -116,9 +117,11 @@ export function CollabForm() {
         <Link to={ROUTES.collab} className="btn btn-outline-light">
           Annulla
         </Link>
-        <Button type="submit" variant="primary" disabled={isLoading} aria-busy={isLoading}>
-          Pubblica
-        </Button>
+        <DesktopMagnet>
+          <Button type="submit" variant="primary" disabled={isLoading} aria-busy={isLoading}>
+            Pubblica
+          </Button>
+        </DesktopMagnet>
       </div>
     </Form>
   )
