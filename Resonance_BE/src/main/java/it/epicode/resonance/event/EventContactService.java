@@ -75,7 +75,7 @@ public class EventContactService {
         ChatConversation conversation = saved.getConversation();
         User caller = conversation.otherThan(organizer.getId());
         events.publishEvent(new LiveNotificationEvent(organizer.getId(), new LiveNotification(
-                NotificationType.NEW_MESSAGE, saved.getSentAt(), AuthorSummary.from(caller), conversation.getId(),
+                null, NotificationType.NEW_MESSAGE, saved.getSentAt(), AuthorSummary.from(caller), conversation.getId(),
                 ChatService.preview(saved.getBody()))));
         return new ContactResponse(conversation.getId(), saved.getId());
     }

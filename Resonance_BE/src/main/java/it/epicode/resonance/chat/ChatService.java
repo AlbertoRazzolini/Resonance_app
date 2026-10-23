@@ -213,7 +213,7 @@ public class ChatService {
         User recipient = conversation.otherThan(user.id());
         events.publishEvent(new ChatMessageEvent(user.id(), recipient.getId(), ChatMessageResponse.from(message)));
         events.publishEvent(new LiveNotificationEvent(recipient.getId(), new LiveNotification(
-                NotificationType.NEW_MESSAGE, message.getSentAt(), AuthorSummary.from(conversation.otherThan(recipient.getId())),
+                null, NotificationType.NEW_MESSAGE, message.getSentAt(), AuthorSummary.from(conversation.otherThan(recipient.getId())),
                 conversation.getId(), preview(message.getBody()))));
     }
 

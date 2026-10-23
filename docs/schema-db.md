@@ -19,8 +19,9 @@ creato e si aggiorna a ogni migrazione che modifica lo schema, nello stesso sott
 | `V8__friendships` | F4-04 | enum `friendship_status`; tabella `friendships` | Applicata |
 | `V9__chat` | F5-02 | enum `chat_unlock_source`; tabelle `chat_conversations`, `chat_messages`, `chat_unlocks` | Applicata |
 | `V10__unique_display_name` | F7-08 | indice unico `uq_users_display_name_lower` su `lower(display_name)` | Applicata |
+| `V11__notifications` | F7-06 | enum `notification_type`; tabella `notifications` | Applicata |
 
-Le migrazioni V1–V9 sono quelle previste dalla progettazione, sezione 3.6; V10 nasce dalla card F7-08 (decisione 96).
+Le migrazioni V1–V9 sono quelle previste dalla progettazione, sezione 3.6; V10 nasce dalla card F7-08 (decisione 96) e V11 dalla card F7-06 (decisione 97).
 
 ## Convenzioni
 
@@ -43,6 +44,7 @@ Le migrazioni V1–V9 sono quelle previste dalla progettazione, sezione 3.6; V10
 | `indie_event_status` | `DRAFT`, `PUBLISHED` | `IndieEventStatus` |
 | `friendship_status` | `PENDING`, `ACCEPTED`, `DECLINED`, `CANCELLED`, `REMOVED` | `FriendshipStatus` |
 | `chat_unlock_source` | `COLLAB_POST`, `OFFICIAL_CONCERT`, `INDIE_EVENT` | `ChatUnlockSource` |
+| `notification_type` | `NEW_LIKE`, `COLLAB_APPLICATION`, `FRIEND_REQUEST`, `FRIEND_ACCEPTED` | `NotificationType` (che ha in più `NEW_MESSAGE`, solo live e mai salvato) |
 
 ## Tabelle
 
@@ -299,6 +301,29 @@ Indici: `uq_friendships_pair` univoco su `(LEAST(requester_id, addressee_id), GR
 addressee_id))`, che impedisce una seconda riga per la coppia anche con i ruoli invertiti; `ix_friendships_requester
 (requester_id)`; `ix_friendships_addressee (addressee_id)`.
 
+### notifications
+
+Notifiche salvate per il destinatario, con stato di lettura (decisione 97). `target_id` è il post, l'annuncio o
+l'amicizia secondo il tipo: non è una chiave esterna perché punta a tabelle diverse. `NEW_MESSAGE` non è salvato: i
+messaggi restano solo live e hanno il badge dei non letti della chat. Le righe create da più di 30 giorni si cancellano ogni giorno, lette o no.
+
+| Colonna | Tipo | Vincoli |
+|---|---|---|
+| `id` | uuid | PK `pk_notifications`, default `gen_random_uuid()` |
+| `recipient_id` | uuid | NOT NULL, FK `fk_notifications_recipient` → `users(id)`; chi riceve |
+| `actor_id` | uuid | NOT NULL, FK `fk_notifications_actor` → `users(id)`; chi ha compiuto l'azione |
+| `type` | notification_type | NOT NULL |
+| `target_id` | uuid | NOT NULL; post, annuncio o amicizia secondo il tipo, senza chiave esterna |
+| `created_at` | timestamptz | NOT NULL; valorizzato dall'applicazione |
+| `read_at` | timestamptz | NULL; vuoto = non letta |
+
+Vincolo di controllo: `ck_notifications_not_self`, `recipient_id <> actor_id` (nessuna notifica a se stessi).
+
+Indici: `ix_notifications_recipient_created (recipient_id, created_at DESC, id DESC)` per l'elenco;
+`ix_notifications_unread (recipient_id)` parziale su `read_at IS NULL`, per il conteggio; `ix_notifications_created
+(created_at)` per la pulizia; `uq_notifications_like (recipient_id, actor_id, target_id)` univoco parziale su
+`type = 'NEW_LIKE'`, che impedisce due notifiche di like per la stessa coppia autore-post anche con due richieste insieme.
+
 ### chat_conversations
 
 Conversazione privata fra due utenti (decisione 59): una sola per coppia, qualunque dei due la apra. La coppia è
@@ -382,6 +407,7 @@ flowchart TB
         feed_posts["feed_posts"]
         post_likes["post_likes"]
         friendships["friendships"]
+        notifications["notifications"]
     end
 
     subgraph chat["Chat"]
@@ -400,6 +426,7 @@ flowchart TB
     users -->|"1:N"| post_likes
     feed_posts -->|"1:N"| post_likes
     users -->|"N:N (richiedente, destinatario)"| friendships
+    users -->|"N:N (destinatario, autore)"| notifications
     users -->|"N:N (due membri)"| chat_conversations
     chat_conversations -->|"1:N"| chat_messages
     users -->|"1:N (mittente)"| chat_messages
@@ -536,6 +563,8 @@ erDiagram
     USERS ||--o{ FRIENDSHIPS : "chiede (requester_id)"
     USERS ||--o{ FRIENDSHIPS : "riceve (addressee_id)"
     USERS |o--o{ FRIENDSHIPS : "chiude (closed_by)"
+    USERS ||--o{ NOTIFICATIONS : "riceve (recipient_id)"
+    USERS ||--o{ NOTIFICATIONS : "causa (actor_id)"
 
     USERS {
         uuid id PK
@@ -585,6 +614,16 @@ erDiagram
         boolean request_masked
         timestamptz created_at
         timestamptz updated_at
+    }
+
+    NOTIFICATIONS {
+        uuid id PK
+        uuid recipient_id FK
+        uuid actor_id FK
+        notification_type type
+        uuid target_id
+        timestamptz created_at
+        timestamptz read_at
     }
 ```
 
@@ -653,6 +692,8 @@ erDiagram
     USERS ||--o{ FRIENDSHIPS : "chiede (requester_id)"
     USERS ||--o{ FRIENDSHIPS : "riceve (addressee_id)"
     USERS |o--o{ FRIENDSHIPS : "chiude (closed_by)"
+    USERS ||--o{ NOTIFICATIONS : "riceve (recipient_id)"
+    USERS ||--o{ NOTIFICATIONS : "causa (actor_id)"
     USERS ||--o{ CHAT_CONVERSATIONS : "membro A (user_a_id)"
     USERS ||--o{ CHAT_CONVERSATIONS : "membro B (user_b_id)"
     CHAT_CONVERSATIONS ||--o{ CHAT_MESSAGES : "contiene"
@@ -790,6 +831,16 @@ erDiagram
         boolean request_masked
         timestamptz created_at
         timestamptz updated_at
+    }
+
+    NOTIFICATIONS {
+        uuid id PK
+        uuid recipient_id FK
+        uuid actor_id FK
+        notification_type type
+        uuid target_id
+        timestamptz created_at
+        timestamptz read_at
     }
 
     CHAT_CONVERSATIONS {

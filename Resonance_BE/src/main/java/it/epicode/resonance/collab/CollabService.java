@@ -15,13 +15,10 @@ import it.epicode.resonance.common.PageParams;
 import it.epicode.resonance.common.PageResponse;
 import it.epicode.resonance.common.RateLimit;
 import it.epicode.resonance.common.RateLimitService;
-import it.epicode.resonance.notification.LiveNotification;
-import it.epicode.resonance.notification.LiveNotificationEvent;
+import it.epicode.resonance.notification.NotificationService;
 import it.epicode.resonance.notification.NotificationType;
 import it.epicode.resonance.user.User;
 import it.epicode.resonance.user.UserRepository;
-import it.epicode.resonance.user.dto.AuthorSummary;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -42,18 +39,18 @@ public class CollabService {
     private final UserAccessService userAccess;
     private final ChatService chat;
     private final RateLimitService rateLimits;
-    private final ApplicationEventPublisher events;
+    private final NotificationService notifications;
     private final Clock clock;
 
     public CollabService(CollabPostRepository posts, UserRepository users, UserAccessService userAccess,
-                         ChatService chat, RateLimitService rateLimits, ApplicationEventPublisher events,
+                         ChatService chat, RateLimitService rateLimits, NotificationService notifications,
                          Clock clock) {
         this.posts = posts;
         this.users = users;
         this.userAccess = userAccess;
         this.chat = chat;
         this.rateLimits = rateLimits;
-        this.events = events;
+        this.notifications = notifications;
         this.clock = clock;
     }
 
@@ -131,7 +128,8 @@ public class CollabService {
      * limite {@code COLLAB_APPLICATIONS} per ultimo, cosi' i rifiuti non lo consumano. Poi, nella stessa
      * transazione: conversazione senza controllo di amicizia, sblocco {@code COLLAB_POST} (una sola riga per
      * annuncio, anche con piu' candidature) e messaggio con il titolo. Dopo il commit arrivano il messaggio a
-     * entrambi e la notifica {@code COLLAB_APPLICATION} all'autore, non anche NEW_MESSAGE (sezione 7.6).
+     * entrambi e la notifica {@code COLLAB_APPLICATION} all'autore, salvata nella stessa transazione (decisione 97), non anche
+     * NEW_MESSAGE (sezione 7.6).
      */
     @Transactional
     public ApplicationResponse apply(UUID postId, UUID applicantId, String message) {
@@ -154,8 +152,7 @@ public class CollabService {
                 postId, "Candidatura per \u00ab" + post.getTitle() + "\u00bb:\n" + message);
         ChatConversation conversation = saved.getConversation();
         User applicant = conversation.otherThan(author.getId());
-        events.publishEvent(new LiveNotificationEvent(author.getId(), new LiveNotification(
-                NotificationType.COLLAB_APPLICATION, saved.getSentAt(), AuthorSummary.from(applicant), postId, null)));
+        notifications.create(author, applicant, NotificationType.COLLAB_APPLICATION, postId, saved.getSentAt());
         return new ApplicationResponse(conversation.getId(), saved.getId());
     }
 

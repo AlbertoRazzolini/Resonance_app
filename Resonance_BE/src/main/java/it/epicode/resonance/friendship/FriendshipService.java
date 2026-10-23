@@ -10,6 +10,8 @@ import it.epicode.resonance.common.PageResponse;
 import it.epicode.resonance.common.RateLimitService;
 import it.epicode.resonance.friendship.dto.FriendshipListType;
 import it.epicode.resonance.friendship.dto.FriendshipResponse;
+import it.epicode.resonance.notification.NotificationService;
+import it.epicode.resonance.notification.NotificationType;
 import it.epicode.resonance.user.User;
 import it.epicode.resonance.user.UserRepository;
 import org.springframework.data.domain.Page;
@@ -39,14 +41,16 @@ public class FriendshipService {
     private final UserRepository users;
     private final UserAccessService userAccess;
     private final RateLimitService rateLimits;
+    private final NotificationService notifications;
     private final Clock clock;
 
     public FriendshipService(FriendshipRepository friendships, UserRepository users, UserAccessService userAccess,
-                             RateLimitService rateLimits, Clock clock) {
+                             RateLimitService rateLimits, NotificationService notifications, Clock clock) {
         this.friendships = friendships;
         this.users = users;
         this.userAccess = userAccess;
         this.rateLimits = rateLimits;
+        this.notifications = notifications;
         this.clock = clock;
     }
 
@@ -73,8 +77,9 @@ public class FriendshipService {
         if (row == null) {
             // Due richieste incrociate nello stesso istante: la seconda viola uq_friendships_pair e con il flush
             // l'errore arriva subito come 409 CONFLICT.
-            row = friendships.saveAndFlush(
-                    new Friendship(users.getReferenceById(me), addressee, FriendshipStatus.PENDING, now));
+            User requester = users.getReferenceById(me);
+            row = friendships.saveAndFlush(new Friendship(requester, addressee, FriendshipStatus.PENDING, now));
+            notifications.create(addressee, requester, NotificationType.FRIEND_REQUEST, row.getId(), now);
             return FriendshipResponse.from(row, me);
         }
 
@@ -123,8 +128,12 @@ public class FriendshipService {
         if (userAccess.resolve(row.getRequester().getId()).status() != AccessStatus.ACTIVE) {
             throw new AppException(ErrorCode.USER_NOT_ACTIVE, "L'utente non e' piu' attivo");
         }
+        Instant now = clock.instant();
         row.setStatus(FriendshipStatus.ACCEPTED);
-        row.setUpdatedAt(clock.instant());
+        row.setUpdatedAt(now);
+        // La richiesta gestita resta nell'elenco del destinatario, letta; chi l'aveva mandata viene avvisato (decisione 97).
+        notifications.markRead(me, NotificationType.FRIEND_REQUEST, row.getId());
+        notifications.create(row.getRequester(), row.getAddressee(), NotificationType.FRIEND_ACCEPTED, row.getId(), now);
         return FriendshipResponse.from(row, me);
     }
 
@@ -141,6 +150,8 @@ public class FriendshipService {
         row.setClosedBy(me);
         row.setRequestMasked(true);
         row.setUpdatedAt(clock.instant());
+        // Rifiuto silenzioso: solo la notifica del destinatario passa a letta, chi ha chiesto non riceve nulla.
+        notifications.markRead(me, NotificationType.FRIEND_REQUEST, row.getId());
     }
 
     /**
@@ -155,6 +166,8 @@ public class FriendshipService {
         }
         if (row.getStatus() == FriendshipStatus.PENDING) {
             row.setStatus(FriendshipStatus.CANCELLED);
+            // La richiesta non esiste piu': sparisce anche la notifica del destinatario (decisione 97).
+            notifications.delete(row.getAddressee().getId(), NotificationType.FRIEND_REQUEST, row.getId());
         } else if (row.getStatus() == FriendshipStatus.DECLINED && row.isRequestMasked()) {
             row.setRequestMasked(false);
         } else {
@@ -268,11 +281,13 @@ public class FriendshipService {
      * Riapre la riga: {@code me} diventa il richiedente, lo stato torna PENDING e chiusura e maschera si azzerano.
      */
     private void reopen(Friendship row, UUID me, User addressee, Instant now) {
-        row.setRequester(users.getReferenceById(me));
+        User requester = users.getReferenceById(me);
+        row.setRequester(requester);
         row.setAddressee(addressee);
         row.setStatus(FriendshipStatus.PENDING);
         row.setClosedBy(null);
         row.setRequestMasked(false);
         row.setUpdatedAt(now);
+        notifications.create(addressee, requester, NotificationType.FRIEND_REQUEST, row.getId(), now);
     }
 }

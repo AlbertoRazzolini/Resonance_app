@@ -3241,3 +3241,62 @@ studente, soluzione A fra tre; nome e cognome restano tra le funzioni future, pr
 - **409 `DISPLAY_NAME_TAKEN` anche per i riservati:** nessun utente ha preso quei nomi; il codice sarebbe meno preciso.
 - **Elenco dei riservati anche nel frontend:** due elenchi da tenere uguali.
 - **«Nome già utilizzato» anche nell'avviso rosso in alto:** lo stesso testo due volte sullo schermo.
+
+## Decisione 97: notifiche persistenti con stato di lettura (card F7-06, progettazione, sezioni 3.2, 6.14, 6.15 e 7)
+
+Ogni punto è stato proposto allo studente con alternative, pro, contro e raccomandazione, e approvato il 23 ottobre. **Sostituisce** la parte
+della decisione 59 che metteva le notifiche live delle richieste di amicizia fuori dall'MVP, e lo «storico delle notifiche» che la sezione 6.13
+della progettazione teneva fra le funzioni Post-V1.
+
+### Scelta
+
+- **Eventi che si salvano:** richiesta di amicizia ricevuta (`FRIEND_REQUEST`), richiesta accettata (`FRIEND_ACCEPTED`, a chi aveva chiesto), like
+  al post (`NEW_LIKE`) e candidatura all'annuncio (`COLLAB_APPLICATION`). `NEW_MESSAGE` e il contatto degli eventi restano **solo live**: i
+  messaggi hanno già il badge dei non letti nella chat.
+- **Rifiuto silenzioso:** la richiesta rifiutata non genera nessuna notifica a chi aveva chiesto (decisione 59). Anche il rifiuto silenzioso
+  ripetuto da chi era stato rifiutato non notifica nessuno.
+- **Stato di lettura:** solo letta / non letta (`read_at`), niente «vista». Il numero sull'icona conta le non lette e scende solo segnandole lette.
+- **Richiesta già gestita:** se il destinatario accetta o rifiuta, la sua notifica `FRIEND_REQUEST` resta nell'elenco **segnata letta**. Se chi
+  aveva chiesto **annulla** la richiesta ancora in attesa, la notifica del destinatario viene **cancellata**.
+- **`targetId` delle notifiche di amicizia:** l'id dell'amicizia, così accetta, rifiuta e annulla ritrovano la notifica per quel bersaglio.
+- **Like ripetuti:** una sola notifica per coppia autore-post, qualunque sia lo stato di lettura; mettere, togliere e rimettere il like non la
+  rinnova. Indice univoco parziale `uq_notifications_like` e inserimento con `ON CONFLICT DO NOTHING`: la live parte solo se la riga è nuova.
+- **Dati esistenti:** la migrazione crea solo la tabella; le richieste in attesa già presenti non diventano notifiche (restano in `/amici`).
+- **Schema:** migrazione `V11__notifications`, enum `notification_type` (senza `NEW_MESSAGE`), tabella `notifications` con `recipient_id`, `actor_id`,
+  `type`, `target_id` (senza chiave esterna), `created_at` (dall'applicazione), `read_at`; indici per l'elenco, per le non lette, per la pulizia
+  e il like univoco. Dettagli in `docs/schema-db.md`.
+- **Elenco:** dalla più recente (`created_at desc, id desc`), paginato come le altre liste. Conservazione **30 giorni** dalla creazione, lette o no,
+  nessun tetto per utente; `NotificationService.deleteExpired` è un lavoro programmato giornaliero (`fixedDelay`, parte anche all'avvio) come la
+  pulizia dei refresh token.
+- **Endpoint** (sezione 6.15): `GET /api/notifications`, `GET /api/notifications/unread-count`, `POST /api/notifications/{id}/read` (204, idempotente),
+  `POST /api/notifications/read-all` (204). Una notifica altrui o inesistente è un 404; risposta `{id, type, actor, targetId, createdAt, read}`, senza
+  anteprima.
+- **Notifiche live:** restano su `/user/queue/notifications`; il payload `LiveNotification` ha in più `id` (quello della notifica salvata, nullo per
+  `NEW_MESSAGE`), così il frontend la unisce all'elenco. Nuovi tipi `FRIEND_REQUEST` e `FRIEND_ACCEPTED`.
+- **Struttura del codice:** un `NotificationService` centrale nel package `notification`, chiamato da `FriendshipService`, `FeedService` e
+  `CollabService` dentro la loro transazione (`Propagation.MANDATORY`): salva la riga e pubblica l'evento live dopo il commit. Se l'azione fallisce
+  non resta nulla.
+- **Privacy:** non si salva testo di messaggi; le notifiche si salvano anche per utenti sospesi (le rivedono alla riattivazione).
+- **Postman:** nuova cartella `Notifications`, dopo `Friends`.
+
+### Motivazione
+
+- La campanella deve mostrare le notifiche anche dopo il ricarico e anche a chi ha mandato una richiesta che l'altro ha accettato: le notifiche
+  solo in memoria della sessione (decisione 92) non bastano.
+- «Letta/non letta» basta a un contatore sull'icona e ha un solo concetto da testare; il rifiuto silenzioso resta quello voluto contro l'insistenza.
+- Una richiesta gestita resta come storico letto, mentre una annullata non ha più nulla da mostrare e sparisce.
+- L'indice univoco sui like fa rispettare la regola anche con due richieste insieme; la tabella non cresce all'infinito grazie ai 30 giorni.
+- Un solo service tiene le regole in un posto e le rende facili da testare.
+
+### Alternative scartate
+
+- **Salvare anche `NEW_MESSAGE` e il contatto degli eventi:** una notifica per messaggio inonda l'elenco e duplica il badge della chat.
+- **Solo amicizie:** like e candidature resterebbero in memoria e la campanella incoerente.
+- **Stato «vista» oltre a «letta»:** due colonne, un endpoint in più e più regole.
+- **Notifica di rifiuto:** rompe il rifiuto silenzioso della decisione 59.
+- **Migrare le richieste in attesa:** SQL in più per dati che in produzione sono quasi inesistenti.
+- **Cancellare la notifica anche su accetta/rifiuto:** perde lo storico.
+- **Conservazione illimitata o tetto di 100 per utente:** la prima fa crescere la tabella, il secondo richiede pulizia a ogni inserimento.
+- **Filtrare in lettura senza cancellare:** la tabella cresce comunque.
+- **Salvataggio con evento Spring e listener `BEFORE_COMMIT`:** più indiretto da seguire e da testare.
+- **`PATCH` per segnare lette:** nessuna differenza pratica rispetto a `POST`.

@@ -9,13 +9,9 @@ import it.epicode.resonance.feed.dto.FeedPostResponse;
 import it.epicode.resonance.feed.dto.LikeStatusResponse;
 import it.epicode.resonance.geo.NearbyQuery;
 import it.epicode.resonance.geo.NearbyRow;
-import it.epicode.resonance.notification.LiveNotification;
-import it.epicode.resonance.notification.LiveNotificationEvent;
-import it.epicode.resonance.notification.NotificationType;
+import it.epicode.resonance.notification.NotificationService;
 import it.epicode.resonance.user.User;
 import it.epicode.resonance.user.UserRepository;
-import it.epicode.resonance.user.dto.AuthorSummary;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Sort;
@@ -42,15 +38,15 @@ public class FeedService {
     private final FeedPostRepository posts;
     private final PostLikeRepository likes;
     private final UserRepository users;
-    private final ApplicationEventPublisher events;
+    private final NotificationService notifications;
     private final Clock clock;
 
     public FeedService(FeedPostRepository posts, PostLikeRepository likes, UserRepository users,
-                       ApplicationEventPublisher events, Clock clock) {
+                       NotificationService notifications, Clock clock) {
         this.posts = posts;
         this.likes = likes;
         this.users = users;
-        this.events = events;
+        this.notifications = notifications;
         this.clock = clock;
     }
 
@@ -127,7 +123,7 @@ public class FeedService {
      * Mette like (sezione 3.4): inserisce la riga solo se manca e, solo se l'ha inserita, aumenta il contatore con
      * un UPDATE del database. E' idempotente: un secondo like dello stesso utente non cambia nulla. Un post
      * nascosto o inesistente e' un 404 (sezione 3.5). Solo un inserimento effettivo, e non sul proprio post,
-     * notifica NEW_LIKE all'autore dopo il commit (sezioni 6.8 e 7.6).
+     * salva e notifica NEW_LIKE all'autore dopo il commit, una sola volta per coppia autore-post (decisione 97).
      */
     @Transactional
     public LikeStatusResponse like(UUID postId, UUID userId) {
@@ -137,8 +133,7 @@ public class FeedService {
             if (!authorId.equals(userId)) {
                 User actor = users.findById(userId)
                         .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Utente non trovato"));
-                events.publishEvent(new LiveNotificationEvent(authorId, new LiveNotification(
-                        NotificationType.NEW_LIKE, clock.instant(), AuthorSummary.from(actor), postId, null)));
+                notifications.createLikeOnce(users.getReferenceById(authorId), actor, postId);
             }
         }
         return new LikeStatusResponse(posts.likesCountOf(postId), true);

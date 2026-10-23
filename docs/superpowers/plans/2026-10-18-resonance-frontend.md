@@ -766,30 +766,29 @@ studente a inizio card, uno per uno, prima di scrivere test o codice.
 §6.13, §6.14, §7 (notifiche live), `docs/schema-db.md`. Riuso NoseY: `notification/Notifica*` e `NotificheService*` sono nella lista «non
 portato» di `riuso-nosey.md`: si guardano solo come riferimento e la decisione sul riuso la prende lo studente.
 **Sicurezza: sì** (ogni utente legge e segna lette solo le proprie notifiche).
-**File (da confermare a inizio card):** package `notification` (entity, repository, service, controller, DTO), migrazione Flyway,
-`config/SecurityConfig`, i service che creano le notifiche; test d'integrazione; Postman (nuova cartella o in Friends); `docs/schema-db.md`
-(erDiagram e flowchart), `docs/progettazione.md`, `docs/decisioni.md`, `package-info.java`, questo piano.
+**File:** package `notification` (entity, repository, service, controller, DTO), migrazione `V11`, i service che creano le notifiche
+(`FriendshipService`, `FeedService`, `CollabService`); test d'integrazione; Postman (cartella `Notifications`); `docs/schema-db.md`
+(erDiagram e flowchart), `docs/progettazione.md`, `docs/decisioni.md`, `README.md`, `package-info.java`, questo piano. `SecurityConfig` non
+cambia: ogni percorso non elencato richiede già il login.
 
-**Punti aperti da porre allo studente a inizio card (nessuno è deciso):**
-- **Quali eventi generano una notifica salvata:** richiesta di amicizia ricevuta e richiesta accettata (il caso che ha dato origine alla
-  card); e inoltre like, candidature, nuovi messaggi, contatto di un evento? Chi riceve cosa (la richiesta rifiutata resta silenziosa?).
-- **Stato di lettura:** solo letta/non letta, oppure anche «vista» (il numero sull'icona si azzera all'apertura del pannello, la singola
-  notifica resta non letta finché non si apre)?
-- **Che cosa diventa la notifica di una richiesta già gestita:** resta nell'elenco con l'esito, o sparisce.
-- **Elenco:** ordine, pagine, durata di conservazione (cancellazione dopo un certo tempo), tetto massimo per utente.
-- **Notifiche live (STOMP):** restano, e a cosa corrispondono nel nuovo modello; cosa succede alle notifiche solo in memoria di oggi.
-- **Endpoint:** elenco a pagine, conteggio delle non lette, segna letta, segna tutte lette; codici d'errore.
-- **Dati esistenti:** le richieste di amicizia in attesa diventano notifiche con una migrazione, o si parte da zero.
-- **Utenti sospesi e privacy:** cosa si salva e per quanto, mai testo di messaggi più lungo dell'anteprima attuale.
+**Scelte approvate a inizio card (23 ottobre, decisione 97):**
+- **Eventi salvati:** richiesta di amicizia ricevuta, richiesta accettata, like (una sola notifica per coppia autore-post) e candidatura.
+  `NEW_MESSAGE` e il contatto degli eventi restano solo live. La richiesta rifiutata resta silenziosa.
+- **Stato di lettura:** solo letta/non letta. Una richiesta accettata o rifiutata resta nell'elenco, letta; una annullata sparisce.
+- **Elenco:** dalla più recente, paginato; conservazione 30 giorni con pulizia giornaliera; nessun tetto per utente.
+- **Live:** restano, con l'`id` della notifica salvata e i nuovi tipi `FRIEND_REQUEST` e `FRIEND_ACCEPTED`.
+- **Endpoint:** `GET /api/notifications`, `GET .../unread-count`, `POST .../{id}/read`, `POST .../read-all`; altrui o inesistente 404.
+- **Dati esistenti:** si parte da zero, nessuna migrazione dei dati. **Privacy:** niente testo di messaggi; anche per utenti sospesi.
+- **Postman:** nuova cartella `Notifications`.
 
-**Sotto-task (bozza, da dettagliare con lo studente a inizio card):**
-- [ ] **1. Schema e migrazione.** Tabella delle notifiche con stato di lettura e indici; `schema-db.md` (erDiagram di dettaglio e completo,
+**Sotto-task:**
+- [x] **1. Schema e migrazione.** Tabella delle notifiche con stato di lettura e indici; `schema-db.md` (erDiagram di dettaglio e completo,
   flowchart di panoramica).
-- [ ] **2. Creazione delle notifiche.** Dagli eventi scelti (richiesta, accettazione, …), nella stessa transazione e senza rompere le
+- [x] **2. Creazione delle notifiche.** Dagli eventi scelti (richiesta, accettazione, …), nella stessa transazione e senza rompere le
   notifiche live esistenti.
-- [ ] **3. Endpoint.** Elenco, conteggio non lette, segna letta, segna tutte lette; solo le proprie notifiche; test d'integrazione.
-- [ ] **4. Notifica live e compatibilità.** Cosa arriva sul WebSocket e come il frontend di FE-13 la unisce all'elenco salvato.
-- [ ] **5. Postman, documentazione e chiusura.** Collection (successo e almeno un errore per endpoint), `progettazione.md`,
+- [x] **3. Endpoint.** Elenco, conteggio non lette, segna letta, segna tutte lette; solo le proprie notifiche; test d'integrazione.
+- [x] **4. Notifica live e compatibilità.** Cosa arriva sul WebSocket e come il frontend di FE-13 la unisce all'elenco salvato.
+- [x] **5. Postman, documentazione e chiusura.** Collection (successo e almeno un errore per endpoint), `progettazione.md`,
   `decisioni.md` (sostituzione di parte della 59), questo piano; `./mvnw -q verify`.
 
 **Criterio:** `./mvnw -q verify` verde; Postman con gli endpoint nuovi; notifiche salvate e lette provate in locale con due account.

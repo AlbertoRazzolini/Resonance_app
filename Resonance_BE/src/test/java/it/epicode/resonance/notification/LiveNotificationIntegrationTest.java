@@ -18,6 +18,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.event.EventListener;
+import org.springframework.http.MediaType;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.util.Map;
@@ -27,6 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -55,6 +57,9 @@ class LiveNotificationIntegrationTest extends ChatTestSupport {
 
     @Autowired
     private FeedService feedService;
+
+    @Autowired
+    private NotificationRepository savedNotifications;
 
     @Autowired
     private FailAfterNotification failAfterNotification;
@@ -110,6 +115,8 @@ class LiveNotificationIntegrationTest extends ChatTestSupport {
                 .containsEntry("type", "NEW_LIKE")
                 .containsEntry("targetId", post.getId().toString())
                 .containsKey("createdAt");
+        // Il frontend unisce la live all'elenco salvato per id (decisione 97).
+        assertThat(notification.get("id")).isEqualTo(onlySavedNotification().getId().toString());
         assertThat(notification.get("preview")).isNull();
         assertThat(notification.get("actor")).asInstanceOf(org.assertj.core.api.InstanceOfAssertFactories.MAP)
                 .containsEntry("id", fan.getId().toString())
@@ -146,6 +153,52 @@ class LiveNotificationIntegrationTest extends ChatTestSupport {
         assertThat(notifications.poll(QUIET_MILLIS, TimeUnit.MILLISECONDS)).isNull();
     }
 
+    // ---- amicizie ----
+
+    @Test
+    void friendRequest_notifiesTheAddresseeLive_withTheSavedId() throws Exception {
+        User a = user("a@example.com", "Alice");
+        User b = user("b@example.com", "Bruno");
+        BlockingQueue<Map<String, Object>> toAddressee = notificationsOf(b);
+        BlockingQueue<Map<String, Object>> toRequester = notificationsOf(a);
+
+        mockMvc.perform(post("/api/friendships").header("Authorization", bearer(a))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"userId\": \"" + b.getId() + "\"}"))
+                .andExpect(status().isCreated());
+
+        Map<String, Object> notification = toAddressee.poll(StompTestClient.WAIT_SECONDS, TimeUnit.SECONDS);
+        assertThat(notification).isNotNull()
+                .containsEntry("type", "FRIEND_REQUEST")
+                .containsEntry("targetId", friendships.findAll().get(0).getId().toString());
+        assertThat(notification.get("id")).isEqualTo(onlySavedNotification().getId().toString());
+        assertThat(notification.get("actor")).asInstanceOf(org.assertj.core.api.InstanceOfAssertFactories.MAP)
+                .containsEntry("id", a.getId().toString());
+        // Chi chiede non riceve niente.
+        assertThat(toRequester.poll(QUIET_MILLIS, TimeUnit.MILLISECONDS)).isNull();
+    }
+
+    @Test
+    void accept_notifiesTheRequesterLive_withTheSavedId() throws Exception {
+        User a = user("a@example.com", "Alice");
+        User b = user("b@example.com", "Bruno");
+        mockMvc.perform(post("/api/friendships").header("Authorization", bearer(a))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"userId\": \"" + b.getId() + "\"}"))
+                .andExpect(status().isCreated());
+        BlockingQueue<Map<String, Object>> toRequester = notificationsOf(a);
+
+        mockMvc.perform(post("/api/friendships/{id}/accept", friendships.findAll().get(0).getId())
+                        .header("Authorization", bearer(b)))
+                .andExpect(status().isOk());
+
+        Map<String, Object> notification = toRequester.poll(StompTestClient.WAIT_SECONDS, TimeUnit.SECONDS);
+        assertThat(notification).isNotNull().containsEntry("type", "FRIEND_ACCEPTED");
+        Notification accepted = savedNotifications.findAll().stream()
+                .filter(n -> n.getType() == NotificationType.FRIEND_ACCEPTED).findFirst().orElseThrow();
+        assertThat(notification.get("id")).isEqualTo(accepted.getId().toString());
+        assertThat(notification.get("actor")).asInstanceOf(org.assertj.core.api.InstanceOfAssertFactories.MAP)
+                .containsEntry("id", b.getId().toString());
+    }
+
     // ---- NEW_MESSAGE ----
 
     @Test
@@ -165,6 +218,8 @@ class LiveNotificationIntegrationTest extends ChatTestSupport {
                 .containsEntry("type", "NEW_MESSAGE")
                 .containsEntry("targetId", conversation.getId().toString());
         assertThat(notification.get("preview")).isEqualTo("x".repeat(100));
+        // NEW_MESSAGE non e' salvato (decisione 97): nessun id.
+        assertThat(notification.get("id")).isNull();
         assertThat(notification.get("actor")).asInstanceOf(org.assertj.core.api.InstanceOfAssertFactories.MAP)
                 .containsEntry("id", a.getId().toString());
         // Chi scrive non riceve la notifica del proprio messaggio.
@@ -208,6 +263,11 @@ class LiveNotificationIntegrationTest extends ChatTestSupport {
     }
 
     // ---- helper ----
+
+    private Notification onlySavedNotification() {
+        assertThat(savedNotifications.count()).isEqualTo(1);
+        return savedNotifications.findAll().get(0);
+    }
 
     /** Connessione dell'utente con la sola coda delle notifiche attiva. */
     private BlockingQueue<Map<String, Object>> notificationsOf(User user) throws Exception {

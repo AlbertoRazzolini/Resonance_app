@@ -176,7 +176,7 @@ Base: `it.epicode.resonance`. Ogni package ha il suo `package-info.java` con una
 | `feed` | Post del feed e like. | `FeedPost`, `PostLike`, `PostLikeId`, repository, `FeedService`, `FeedController`, DTO. |
 | `friendship` | Amicizie fra utenti e ricerca degli utenti con lo stato della relazione. | `Friendship`, `FriendshipStatus`, `FriendshipView`, `FriendshipRelation`, `FriendshipRepository`, `FriendshipService`, `FriendshipController`, `UserSearchService`, `UserSearchController`, DTO. |
 | `chat` | Conversazioni e messaggi privati 1:1 (REST e STOMP) e permesso di scrittura. | `ChatConversation`, `ChatMessage`, `ChatUnlock`, `ChatUnlockId`, `ChatUnlockSource`, repository, `ChatService`, `ChatController`, `ChatWebSocketController`, `ChatMessageEvent`, `ChatMessageListener`, DTO. |
-| `notification` | Notifiche live non persistenti. | `LiveNotification`, `NotificationType`, `LiveNotificationEvent`, `LiveNotificationListener`. |
+| `notification` | Notifiche salvate con stato di lettura (decisione 97) e consegna live dopo il commit. | `Notification`, `NotificationType`, `NotificationRepository`, `NotificationService`, `NotificationController`, `LiveNotification`, `LiveNotificationEvent`, `LiveNotificationListener`, DTO. |
 | `websocket` | Registro delle sessioni WebSocket e chiusura alla sospensione. | `WebSocketSessionRegistry`, `UserSuspendedSessionCloser`. |
 | `mail` | Email a eventi con template Thymeleaf. | `EmailService`, `HtmlEmailService`, `LogEmailService`, `BrevoEmailService`, `EmailEventListener`, eventi email. |
 | `web` | Endpoint tecnici e distribuzione del frontend (fallback SPA). | `HealthController`, `SpaResourceConfig` (risorse statiche + fallback a `index.html`). |
@@ -250,6 +250,7 @@ inserimenti SQL diretti. Timestamp sempre `timestamptz` (UTC). Nomi dei vincoli 
 | `indie_event_status` | `DRAFT`, `PUBLISHED` | `IndieEventStatus` |
 | `friendship_status` | `PENDING`, `ACCEPTED`, `DECLINED`, `CANCELLED`, `REMOVED` | `FriendshipStatus` |
 | `chat_unlock_source` | `COLLAB_POST`, `OFFICIAL_CONCERT`, `INDIE_EVENT` | `ChatUnlockSource` |
+| `notification_type` | `NEW_LIKE`, `COLLAB_APPLICATION`, `FRIEND_REQUEST`, `FRIEND_ACCEPTED` | `NotificationType` (ha in più `NEW_MESSAGE`, solo live) |
 
 In JPA: `@Enumerated(EnumType.STRING)` + `@JdbcTypeCode(SqlTypes.NAMED_ENUM)`, come in NoseY.
 `text[]` con `@JdbcTypeCode(SqlTypes.ARRAY)` su `List<String>`.
@@ -422,6 +423,25 @@ indice univoco `uq_friendships_pair` su `(LEAST(requester_id, addressee_id), GRE
 addressee_id))`. Indici `ix_friendships_requester (requester_id)` e `ix_friendships_addressee
 (addressee_id)`.
 
+#### notifications
+
+Decisione 97; regole nella sezione 6.15.
+
+| Colonna | Tipo | Vincoli |
+|---|---|---|
+| id | uuid | PK |
+| recipient_id | uuid | NOT NULL, FK → users (chi riceve) |
+| actor_id | uuid | NOT NULL, FK → users (chi ha compiuto l'azione) |
+| type | notification_type | NOT NULL |
+| target_id | uuid | NOT NULL, senza FK (post, annuncio o amicizia secondo il tipo) |
+| created_at | timestamptz | NOT NULL, dall'applicazione |
+| read_at | timestamptz | NULL, vuoto = non letta |
+
+Vincolo `ck_notifications_not_self (recipient_id <> actor_id)`. Indici `ix_notifications_recipient_created
+(recipient_id, created_at DESC, id DESC)`, `ix_notifications_unread (recipient_id)` parziale su
+`read_at IS NULL`, `ix_notifications_created (created_at)` per la pulizia e `uq_notifications_like (recipient_id,
+actor_id, target_id)` univoco parziale su `type = 'NEW_LIKE'`.
+
 #### chat_conversations
 
 | Colonna | Tipo | Vincoli |
@@ -493,6 +513,7 @@ erDiagram
     FEED_POSTS ||--o{ POST_LIKES : "riceve"
     USERS ||--o{ FRIENDSHIPS : "richiede / riceve"
     USERS |o--o{ FRIENDSHIPS : "chiude (closed_by)"
+    USERS ||--o{ NOTIFICATIONS : "riceve / causa"
     USERS ||--o{ CHAT_CONVERSATIONS : "utente A / utente B"
     CHAT_CONVERSATIONS ||--o{ CHAT_MESSAGES : "contiene"
     CHAT_CONVERSATIONS ||--o{ CHAT_UNLOCKS : "sbloccata da (annuncio o evento, senza FK)"
@@ -540,6 +561,7 @@ correzioni vanno in una nuova `V`); nessuna credenziale nelle migrazioni.
 | `V7__feed_and_likes.sql` | F4-02 | tabelle `feed_posts`, `post_likes`. |
 | `V8__friendships.sql` | F4-04 | enum `friendship_status`; tabella `friendships`. |
 | `V9__chat.sql` | F5-02 | enum `chat_unlock_source`; tabelle `chat_conversations`, `chat_messages`, `chat_unlocks`. |
+| `V11__notifications.sql` | F7-06 | enum `notification_type`; tabella `notifications` (decisione 97). |
 
 Ogni migrazione dipende solo da `users` (V1) e, per `post_likes`/`chat_messages`/`chat_unlocks`, dalle
 tabelle create nella stessa migrazione. Nessuna tabella Post-V1/Post-V2 viene creata. (La chat era `V8`
@@ -1164,11 +1186,12 @@ l'handshake WebSocket; le richieste della stessa origine sono sempre ammesse.
 
 Tutti gli endpoint di questa sezione sono MVP. Non esistono nell'MVP: modifica dei contenuti,
 rimozione dei ruoli MUSICIAN/HOST, upload di immagini, follow, recensioni, ticket, storico delle
-notifiche, appeal delle sospensioni, notifiche live delle richieste di amicizia (sezione 15).
+appeal delle sospensioni (sezione 15). Le notifiche salvate sono MVP dalla decisione 97 (sezione 6.15).
 
 ### 6.14 Amicizie
 
-Decisione 59; regole riprese da `AmiciziaService` di NoseY senza evento, ticket e notifiche persistenti.
+Decisione 59; regole riprese da `AmiciziaService` di NoseY senza evento, ticket e chat creata all'accettazione. Le notifiche delle
+richieste sono quelle della sezione 6.15 (decisione 97).
 
 | Metodo e percorso | Accesso | Note |
 |---|---|---|
@@ -1220,7 +1243,38 @@ messaggi seguono il permesso di scrittura (6.9).
 
 Elenchi: `FRIENDS` = righe `ACCEPTED` di X; `INCOMING` = `PENDING` ricevute da X; `OUTGOING` = `PENDING`
 inviate da X più le `DECLINED` mascherate inviate da X. Gli utenti sospesi restano negli elenchi (non
-possono comunque connettersi). Nessuna notifica live delle richieste (sezione 15).
+possono comunque connettersi).
+
+**Notifiche delle richieste** (sezione 6.15): richiesta nuova o riaperta → `FRIEND_REQUEST` al destinatario; accetta →
+`FRIEND_ACCEPTED` a chi aveva chiesto e la `FRIEND_REQUEST` del destinatario passa a letta; rifiuta → solo quella
+`FRIEND_REQUEST` passa a letta, chi ha chiesto non riceve nulla (rifiuto silenzioso); annulla di una richiesta in attesa →
+la `FRIEND_REQUEST` del destinatario viene cancellata. Il rifiuto silenzioso ripetuto da chi era stato rifiutato non
+notifica nessuno. `targetId` è l'id dell'amicizia.
+
+### 6.15 Notifiche
+
+Decisione 97, che sostituisce la parte della decisione 59 sulle notifiche delle amicizie. Tutti gli endpoint richiedono il
+login e lavorano solo sulle notifiche del chiamante.
+
+| Metodo e percorso | Accesso | Note |
+|---|---|---|
+| `GET /api/notifications?page&size` | autenticato | `PageResponse<NotificationResponse>` per `created_at desc, id desc` |
+| `GET /api/notifications/unread-count` | autenticato | `{count}` |
+| `POST /api/notifications/{id}/read` | destinatario | 204, anche se già letta (resta il primo orario di lettura) |
+| `POST /api/notifications/read-all` | autenticato | 204 |
+
+`NotificationResponse` = `{id, type, actor: AuthorSummary, targetId, createdAt, read}`: nessuna anteprima, le notifiche salvate
+non portano testo. Una notifica altrui o inesistente → 404 `NOT_FOUND` su `read`; un `id` non UUID → 400.
+
+**Quali eventi si salvano:** `NEW_LIKE` (post, una sola per coppia autore-post anche se il like viene tolto e rimesso, e mai per
+il proprio like), `COLLAB_APPLICATION` (annuncio), `FRIEND_REQUEST` e `FRIEND_ACCEPTED` (amicizia). `NEW_MESSAGE` e il
+contatto degli eventi restano solo live: i messaggi hanno il badge dei non letti della chat. Si salva nella transazione
+dell'azione che la causa, quindi se questa fallisce non resta nulla. Si salvano anche per utenti sospesi (che le rivedono alla
+riattivazione) e per autori poi sospesi o nascosti; non si salva mai testo di messaggi.
+
+**Stato di lettura:** letta/non letta (`read_at`). Una richiesta gestita resta nell'elenco, letta. **Conservazione:** 30 giorni
+dalla creazione, lette o no; un lavoro programmato giornaliero (che parte anche all'avvio, come la pulizia dei refresh token,
+sezione 4.11) cancella le scadute. Nessun tetto per utente.
 
 ---
 
@@ -1260,11 +1314,13 @@ Header nativo `Authorization: Bearer <accessToken>`. `JwtChannelInterceptor`:
 |---|---|---|
 | client → server | `/app/chats/{conversationId}/send` | `{body}` |
 | server → client | `/user/queue/messages` | `ChatMessageResponse {id, conversationId, senderId, body, sentAt, readAt}` |
-| server → client | `/user/queue/notifications` | `LiveNotification {type, createdAt, actor: AuthorSummary, targetId, preview}` |
+| server → client | `/user/queue/notifications` | `LiveNotification {id, type, createdAt, actor: AuthorSummary, targetId, preview}` |
 | server → client | `/user/queue/errors` | `WsError {code, message}` |
 
 `LiveNotification.type`: `NEW_LIKE` (`targetId` = post), `NEW_MESSAGE` (`targetId` = conversazione,
-`preview` = primi 100 caratteri), `COLLAB_APPLICATION` (`targetId` = annuncio).
+`preview` = primi 100 caratteri), `COLLAB_APPLICATION` (`targetId` = annuncio), `FRIEND_REQUEST` (al destinatario) e
+`FRIEND_ACCEPTED` (a chi aveva chiesto), entrambi con `targetId` = amicizia. `id` è quello della notifica salvata (sezione
+6.15), con cui il frontend la unisce all'elenco; `NEW_MESSAGE` non è salvato e ha `id` nullo.
 
 ### 7.5 Invio di un messaggio
 
@@ -1292,8 +1348,8 @@ che ha inviato, connessione aperta.
 
 Pattern di NoseY: il service pubblica l'evento **dentro** la transazione; i listener con
 `@TransactionalEventListener(phase = AFTER_COMMIT)` chiamano `convertAndSendToUser`. Se la
-transazione fallisce non parte nulla. Le notifiche non vengono salvate: un utente offline non le
-riceve (storico in Post-V1).
+transazione fallisce non parte nulla. Tutti i tipi tranne `NEW_MESSAGE` vengono anche salvati (sezione 6.15, decisione 97): chi è
+offline li trova nell'elenco al ritorno; `NEW_MESSAGE` resta solo live.
 
 ### 7.7 Scadenza dell'access token durante la connessione (P9)
 
@@ -1912,10 +1968,8 @@ modifiche distruttive.
 | `collab_matches` con `ai_score` | FK verso `collab_posts` e `users` |
 | `reviews` | FK verso eventi e utenti |
 | `follows` | tabella con PK composta (follower, followed): seguire senza reciprocità, accanto alle amicizie dell'MVP (decisione 59) |
-| Notifiche live delle richieste di amicizia | stesso pattern di `LiveNotification` (decisione 59) |
 | Fine degli eventi (`end_date`) | colonna nullable con una nuova migrazione; oggi lo sblocco della chat di un evento finisce all'inizio |
 | Ricerca utenti con indice trigram (`pg_trgm`) | oggi `ILIKE` senza indice, adeguato ai volumi dell'MVP |
-| `notifications` (storico) | i payload `LiveNotification` sono già il formato da salvare |
 | `indie_events.official_concert_id` | colonna nullable aggiunta con una nuova migrazione |
 | Appeal delle sospensioni | i campi di sospensione esistono già |
 | Upload immagini | oggi solo URL |

@@ -5903,6 +5903,560 @@
       ]
     },
     {
+      "name": "Notifications",
+      "description": "Notifiche salvate (card F7-06, decisione 97). Servono accessToken (primo utente, userId salvato da Me di Users) e fanAccessToken (secondo utente, friendUserId salvato da Friends). Eseguire prima per intero la cartella Friends; la sequenza va in ordine e termina con la richiesta annullata, cosi puo essere rieseguita. Like e candidature creano notifiche allo stesso modo ma non stanno qui.",
+      "item": [
+        {
+          "name": "Elenco senza login (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 senza access token', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications"
+              ]
+            },
+            "description": "Errore significativo. Le notifiche richiedono il login."
+          },
+          "response": []
+        },
+        {
+          "name": "Il primo utente chiede amicizia al secondo (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 e salva friendshipId', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.environment.set('friendshipId', pm.response.json().id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships"
+              ]
+            },
+            "description": "Preparazione. Con accessToken chiede l amicizia a friendUserId: il secondo utente (fanAccessToken) riceve una notifica FRIEND_REQUEST salvata. Richiede friendUserId e userId della cartella Friends, eseguita prima fino in fondo.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{friendUserId}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Conteggio non lette (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con almeno una non letta', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const count = pm.response.json().count;",
+                  "    pm.expect(count).to.be.at.least(1);",
+                  "    pm.environment.set('unreadBefore', count);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/unread-count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "unread-count"
+              ]
+            },
+            "description": "Con fanAccessToken (il destinatario) conta le notifiche non lette e salva unreadBefore."
+          },
+          "response": []
+        },
+        {
+          "name": "Elenco notifiche (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con la richiesta di amicizia in testa, non letta', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const first = pm.response.json().content[0];",
+                  "    pm.expect(first.type).to.eql('FRIEND_REQUEST');",
+                  "    pm.expect(first.read).to.eql(false);",
+                  "    pm.expect(first.actor.id).to.eql(pm.environment.get('userId'));",
+                  "    pm.expect(first.actor.email).to.be.undefined;",
+                  "    pm.expect(first.targetId).to.eql(pm.environment.get('friendshipId'));",
+                  "    pm.environment.set('notificationId', first.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications"
+              ]
+            },
+            "description": "Con fanAccessToken: elenco paginato dalla piu recente. La prima e la richiesta appena mandata; targetId e l amicizia. Salva notificationId."
+          },
+          "response": []
+        },
+        {
+          "name": "Segna letta una notifica altrui (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 NOT_FOUND per chi non e il destinatario', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql('NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/{{notificationId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "{{notificationId}}",
+                "read"
+              ]
+            },
+            "description": "Errore significativo. Con accessToken (chi ha mandato la richiesta, non il destinatario) una notifica altrui e come se non esistesse."
+          },
+          "response": []
+        },
+        {
+          "name": "Segna letta con id non valido (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 per un id che non e un UUID', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/non-un-uuid/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "non-un-uuid",
+                "read"
+              ]
+            },
+            "description": "Errore significativo. L id nel percorso deve essere un UUID."
+          },
+          "response": []
+        },
+        {
+          "name": "Segna letta (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 senza corpo', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/{{notificationId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "{{notificationId}}",
+                "read"
+              ]
+            },
+            "description": "Con fanAccessToken segna letta la notifica salvata in notificationId."
+          },
+          "response": []
+        },
+        {
+          "name": "Segna letta di nuovo (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 anche se era gia letta (idempotente)', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/{{notificationId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "{{notificationId}}",
+                "read"
+              ]
+            },
+            "description": "Ripetere l azione non da errore e conserva il primo orario di lettura."
+          },
+          "response": []
+        },
+        {
+          "name": "Conteggio dopo la lettura (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con una non letta in meno', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().count).to.eql(Number(pm.environment.get('unreadBefore')) - 1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/unread-count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "unread-count"
+              ]
+            },
+            "description": "Con fanAccessToken: il conteggio scende di uno rispetto a unreadBefore."
+          },
+          "response": []
+        },
+        {
+          "name": "Segna tutte lette (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 senza corpo', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/read-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "read-all"
+              ]
+            },
+            "description": "Con fanAccessToken segna lette tutte le non lette del chiamante."
+          },
+          "response": []
+        },
+        {
+          "name": "Conteggio a zero (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con zero non lette', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().count).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/unread-count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "unread-count"
+              ]
+            },
+            "description": "Con fanAccessToken: dopo segna tutte lette il conteggio e zero."
+          },
+          "response": []
+        },
+        {
+          "name": "Il primo utente annulla la richiesta (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 senza corpo', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/friendships/{{friendshipId}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "friendships",
+                "{{friendshipId}}",
+                "cancel"
+              ]
+            },
+            "description": "Con accessToken annulla la richiesta ancora in attesa: la notifica del destinatario viene cancellata e la sequenza si puo ripetere."
+          },
+          "response": []
+        },
+        {
+          "name": "Elenco dopo l annullo (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 senza la notifica della richiesta annullata', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const ids = pm.response.json().content.map(function (n) { return n.id; });",
+                  "    pm.expect(ids).to.not.include(pm.environment.get('notificationId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fanAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications"
+              ]
+            },
+            "description": "Con fanAccessToken: la notifica di notificationId non c e piu."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Chat",
       "description": "Conversazioni e storico dei messaggi, solo la parte REST (card F5-02). L'invio dei messaggi passa dal WebSocket e non sta in Postman. Servono accessToken (primo utente), fanAccessToken (secondo utente) e adminAccessToken (un terzo utente che non e membro della conversazione ne amico del secondo), copiati da un login come nelle cartelle Admin e Friends. Eseguire in ordine: la sequenza rende i due utenti amici e termina rimuovendo l'amicizia, cosi puo essere rieseguita (la conversazione resta, come lo storico).",
       "item": [
