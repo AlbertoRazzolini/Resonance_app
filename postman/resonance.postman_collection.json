@@ -1623,9 +1623,9 @@
                   "    pm.expect(body.content).to.be.an('array');",
                   "    pm.expect(body).to.have.all.keys('content', 'page', 'size', 'totalElements', 'totalPages');",
                   "    pm.expect(body.content[0]).to.not.have.property('passwordHash');",
-                  "    // Il bersaglio delle richieste seguenti: il primo utente di sola community.",
-                  "    const target = body.content.find(u => !u.roles.includes('ADMIN') && !u.roles.includes('SUPERADMIN'));",
-                  "    pm.expect(target, 'serve almeno un utente di community nel database').to.not.be.undefined;",
+                  "    // Il bersaglio delle richieste seguenti: il primo utente di sola community con l'email verificata (serve a Nomina ADMIN).",
+                  "    const target = body.content.find(u => !u.roles.includes('ADMIN') && !u.roles.includes('SUPERADMIN') && u.emailVerified);",
+                  "    pm.expect(target, 'serve almeno un utente di community con email verificata nel database').to.not.be.undefined;",
                   "    pm.environment.set('targetUserId', target.id);",
                   "});"
                 ]
