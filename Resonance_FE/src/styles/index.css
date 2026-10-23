@@ -1583,12 +1583,28 @@ textarea {
   text-align: center;
 }
 
-/* Pannello della campanella: largo come lo schermo sul telefono, 24 rem da tablet in su */
+/* Pannello della campanella: 24 rem sotto la campanella da 460 px in su (margine sinistro di 0,75 rem a 460 px) */
 .rs-bell__panel {
   width: min(24rem, calc(100vw - 2 * var(--rs-space-3)));
   max-height: 70vh;
   overflow-y: auto;
   padding: var(--rs-space-3);
+}
+
+/*
+ * Sotto i 460 px la campanella è a 4 rem dal bordo (c'è l'avatar), quindi il pannello ancorato a lei toccava il bordo
+ * sinistro. Qui sta ancorato allo schermo, sotto la barra, con 0,75 rem per lato a ogni larghezza; !important perché il
+ * menu a tendina scrive posizione e trasformazione in linea.
+ */
+@media (max-width: 459.98px) {
+  .rs-bell__panel {
+    position: fixed !important;
+    top: var(--rs-topbar-height) !important;
+    right: var(--rs-space-3) !important;
+    left: var(--rs-space-3) !important;
+    width: auto;
+    transform: none !important;
+  }
 }
 
 .rs-bell__title {

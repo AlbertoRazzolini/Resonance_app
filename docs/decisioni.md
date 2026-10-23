@@ -3409,3 +3409,19 @@ Senza il campo il frontend saprebbe della candidatura già fatta solo dopo l'err
 - **Errore rosso sopra il modulo dopo il 409:** il pulsante resterebbe premibile e si potrebbe riprovare all'infinito.
 - **Nessuna rilettura dopo il 409:** il link «Apri la chat» comparirebbe solo dopo un ricarico.
 - **Memoria nel browser (`localStorage`):** vale solo per quel browser e il progetto lo evita per i dati di sessione.
+
+## Decisione 101: pannello della campanella ancorato allo schermo sul telefono (card FE-15, progettazione, sezione 7.4)
+
+### Scelta
+
+Sotto i 460 px il pannello delle notifiche non segue più la campanella: sta fisso sotto la barra in alto con 0,75 rem (12 px) a sinistra e a destra, a ogni larghezza (a 320 px largo 296 px, a 448 px largo 424 px). Da 460 px in su resta com'era: 24 rem sotto la campanella, con 12 px di margine sinistro a 460 px. Il margine è quello misurato a 460 px; sotto i 360 px il pannello si restringe con lo stesso margine, senza regole speciali. Il CSS usa `!important` su posizione e trasformazione, perché il menu a tendina le scrive in linea.
+
+### Motivazione
+
+La campanella è a 64 px dal bordo destro (a destra c'è l'avatar), quindi con il pannello ancorato a lei il bordo sinistro toccava lo schermo sotto i 460 px. Ancorarlo allo schermo dà gli stessi margini a ogni larghezza e lascia al testo tutto lo spazio possibile; la sola larghezza calcolata avrebbe dato 244 px a 320 px.
+
+### Alternative scartate
+
+- **Solo larghezza calcolata (`100vw` meno 76 px):** una riga di CSS, ma a 320 px il pannello sarebbe largo 244 px, con 64 px vuoti a destra.
+- **Margine di 1 rem o di 0,75 rem scelto a occhio:** non coincide per forza con quello che si vede a 460 px.
+- **Margine ridotto sotto i 360 px:** una regola in più da mantenere e da provare, senza vantaggio chiaro.
