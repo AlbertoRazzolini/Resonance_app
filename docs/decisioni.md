@@ -3539,3 +3539,25 @@ Una libreria già pronta evita di mantenere a mano elenchi, ricerca e categorie,
 - **Selettore sempre aperto fino a Esc:** sul telefono coprirebbe la conversazione.
 - **Avviso quando l'emoji non entra nel limite:** testo nuovo e altro stato per un caso già visibile dal contatore.
 - **Database in memoria al posto di IndexedDB:** apertura più lenta e nessuna sezione «recenti».
+
+## Decisione 106: icone della colonna animate anche al tocco (card FE-20, decisione 83)
+
+Tutte le scelte sono dello studente, 23 ottobre.
+
+### Scelta
+
+- **Solo la colonna di navigazione (`SideItem` in `SideNav.tsx`):** le voci aggiungono `animateOnTap` a `animateOnHover`, come la campanella. Le tab del telefono e la campanella avevano già il tocco; nel codice non ci sono altre icone animate. Vale anche per le voci dell'area admin, che usano lo stesso componente.
+- **Tocco e mouse insieme, senza rilevare il dispositivo:** niente media query `hover: none` o `pointer: coarse`. Un tablet con mouse o tastiera funziona in entrambi i modi, senza cambiare comportamento al ricarico. Col mouse l'animazione parte al passaggio e anche al clic.
+- **Durata e `prefers-reduced-motion` invariati:** la durata resta quella delle icone. `AnimateIcon` avvolge già le icone in un `ReducedMotionConfig` della libreria, quindi chi riduce il movimento non vede le icone muoversi; non serve altro codice (verificato in lettura del pacchetto `@animate-ui/react`, non con un test automatico: i test provati in jsdom non distinguevano le due impostazioni).
+
+### Motivazione
+
+- Il tablet mostra la colonna, dove l'animazione partiva solo con l'hover, che un dito non genera. Aggiungere il tocco è la modifica minima e non cambia il telefono.
+- Rilevare il dispositivo avrebbe aggiunto codice e un caso (tablet con mouse) senza dare un vantaggio visibile.
+
+### Alternative scartate
+
+- **Rilevare i dispositivi senza cursore con una media query:** più codice, nessun beneficio per chi usa il mouse.
+- **Animare anche al focus da tastiera:** la libreria non lo offre e servirebbe codice nostro.
+- **`MotionConfig reducedMotion="user"` nella radice (scelta in un primo momento):** annullata, perché la libreria gestisce già la riduzione.
+- **`useReducedMotion` nei componenti di navigazione:** codice ripetuto in tre punti per un effetto già garantito.

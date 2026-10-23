@@ -1023,10 +1023,11 @@ scatta mai (richiesta dello studente, 23 ottobre).
 **Punti aperti a inizio card (nessuno è deciso):** quali icone e quale evento le anima al tocco; come si riconosce un dispositivo senza
 cursore (`hover: none` / `pointer: coarse`) e che cosa succede con tastiera o mouse collegati; durata e `prefers-reduced-motion`.
 **Sotto-task:**
-- [ ] **1. Animazione al tocco.** Le icone si animano al tocco sui dispositivi senza cursore; test.
-- [ ] **2. Chiusura.** Tre larghezze con Playwright (768 px in modalità touch); `npm run lint`, `npm test`, `npm run build`; piano e decisioni.
+- [x] **1. Animazione al tocco.** Le icone si animano al tocco sui dispositivi senza cursore; test.
+- [x] **2. Chiusura.** Tre larghezze con Playwright (768 px in modalità touch); `npm run lint`, `npm test`, `npm run build`; piano e decisioni.
 
 **Criterio:** su tablet le icone si animano al tocco come sul telefono; con il mouse nessuna regressione.
+**Esito (23 ottobre, decisione 106):** `animateOnTap` aggiunto alle voci della colonna (`SideItem`), accanto all'hover; nessuna rilevazione del dispositivo; `prefers-reduced-motion` già gestito dalla libreria. Provato con Playwright a 375 e 768 px (touch) e 1280 px (mouse): l'icona si anima in tutti e tre; a 768 px senza la correzione no.
 **Commit proposto:** `fix(fe-ui): anima le icone al tocco sui dispositivi senza cursore`
 
 ---

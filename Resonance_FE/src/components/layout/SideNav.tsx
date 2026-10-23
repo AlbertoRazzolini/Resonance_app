@@ -6,10 +6,13 @@ import { selectHasRole } from '@/features/auth/authSlice'
 import { useAppSelector } from '@/hooks/redux'
 import { ADMIN_NAV_ITEMS, NAV_ITEMS, type NavItem } from './navItems'
 
-/** Una voce della colonna: l'animazione sta sulla voce intera, non sull'icona di 22 px, così parte appena il mouse entra, anche sulla scritta. */
+/**
+ * Una voce della colonna: l'animazione sta sulla voce intera, non sull'icona di 22 px, così parte appena il mouse entra, anche
+ * sulla scritta. Il tocco (`animateOnTap`) serve ai tablet senza cursore, dove l'hover non scatta mai (FE-20).
+ */
 function SideItem({ label, to, Icon, Badge }: NavItem) {
   return (
-    <AnimateIcon animateOnHover asChild>
+    <AnimateIcon animateOnHover animateOnTap asChild>
       <NavLink to={to} className="rs-side-item">
         <Icon size={22} />
         <span>{label}</span>

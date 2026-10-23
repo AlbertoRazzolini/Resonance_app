@@ -148,4 +148,17 @@ describe('SideNav', () => {
 
     await waitFor(() => expect(iconStyles()).not.toBe(before))
   })
+
+  it("l'animazione dell'icona parte anche al tocco, per i tablet senza cursore (FE-20)", async () => {
+    const user = userEvent.setup()
+    renderSideNav(ROUTES.feed, false)
+    const link = screen.getByRole('link', { name: 'Eventi' })
+    const iconStyles = () => [...link.querySelectorAll('svg *')].map((node) => node.getAttribute('style') ?? '').join('|')
+    const before = iconStyles()
+
+    // Dito premuto sulla scritta, senza rilasciare per non cambiare pagina: un tocco non fa mai scattare l'hover
+    await user.pointer({ keys: '[TouchA>]', target: link.querySelector('span')! })
+
+    await waitFor(() => expect(iconStyles()).not.toBe(before))
+  })
 })
