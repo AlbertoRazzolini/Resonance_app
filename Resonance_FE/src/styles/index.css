@@ -510,6 +510,15 @@ textarea {
   padding: var(--rs-space-4) var(--rs-space-4) var(--rs-space-8);
 }
 
+/* Da 1200 px la card di accesso sta al centro verticale dello schermo, non ancorata in alto (24 ottobre) */
+@media (min-width: 1200px) {
+  .rs-app--auth > .rs-main {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+}
+
 .rs-auth-card {
   position: relative;
   overflow: hidden;

@@ -6,6 +6,7 @@ import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import { FieldError } from '@/components/ui/FieldError'
 import { getErrorCode, getFieldErrors } from '@/lib/errors/getErrorMessage'
 import DesktopMagnet from '@/components/motion/DesktopMagnet'
+import { AUTH_MAGNET_LOOK } from '@/components/motion/magnetLook'
 import { useRegisterMutation } from '../api/authApi'
 import { AuthCard } from '../components/AuthCard'
 import { PasswordField } from '../components/PasswordField'
@@ -120,7 +121,7 @@ export function Component() {
           error={errorOf('password')}
           showByteCount
         />
-        <DesktopMagnet fullWidth>
+        <DesktopMagnet fullWidth look={AUTH_MAGNET_LOOK}>
           <Button
             type="submit"
             variant="primary"

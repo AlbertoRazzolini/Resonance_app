@@ -23,3 +23,15 @@ export const LANDING_MAGNET_LOOK = {
   tilt: 5,
   scale: 1.04,
 } as const
+
+/**
+ * Magnete più leggero per le card di autenticazione (registrazione, verifica, accesso, password dimenticata e
+ * reset), su segnalazione dello studente il 24 ottobre: la card è stretta e il pulsante a tutta larghezza usciva
+ * dai suoi bordi. Forza 24 (quasi il triplo di MAGNET_LOOK, meno spostamento) e ingrandimento 1,08 invece di 1,15
+ * (alzata e abbassato di nuovo lo stesso giorno); inclinazione invariata.
+ */
+export const AUTH_MAGNET_LOOK = {
+  ...MAGNET_LOOK,
+  magnetStrength: 24,
+  scale: 1.08,
+} as const

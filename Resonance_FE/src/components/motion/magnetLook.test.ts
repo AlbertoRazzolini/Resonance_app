@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LANDING_MAGNET_LOOK, MAGNET_LOOK } from './magnetLook'
+import { AUTH_MAGNET_LOOK, LANDING_MAGNET_LOOK, MAGNET_LOOK } from './magnetLook'
 
 // Valori di Magnet scritti dallo studente: attrazione da 100 px, forza 9, inclinazione 15°, ingrandimento 1,15, molla 200/18.
 describe('magnetLook', () => {
@@ -38,5 +38,24 @@ describe('LANDING_MAGNET_LOOK', () => {
     expect(LANDING_MAGNET_LOOK.padding).toBe(MAGNET_LOOK.padding)
     expect(LANDING_MAGNET_LOOK.axis).toBe(MAGNET_LOOK.axis)
     expect(LANDING_MAGNET_LOOK.spring).toEqual(MAGNET_LOOK.spring)
+  })
+})
+
+// Le card di autenticazione sono strette: il pulsante a tutta larghezza usciva dai bordi della card (segnalato dallo
+// studente il 24 ottobre, forza alzata e ingrandimento abbassato di nuovo lo stesso giorno). Stessa inclinazione di
+// MAGNET_LOOK, si sposta meno e ingrandisce meno.
+describe('AUTH_MAGNET_LOOK', () => {
+  it('si sposta meno di MAGNET_LOOK, con la stessa inclinazione e un ingrandimento minore', () => {
+    expect(AUTH_MAGNET_LOOK.magnetStrength).toBe(24)
+    expect(AUTH_MAGNET_LOOK.magnetStrength).toBeGreaterThan(MAGNET_LOOK.magnetStrength)
+    expect(AUTH_MAGNET_LOOK.tilt).toBe(MAGNET_LOOK.tilt)
+    expect(AUTH_MAGNET_LOOK.scale).toBe(1.08)
+    expect(AUTH_MAGNET_LOOK.scale).toBeLessThan(MAGNET_LOOK.scale)
+  })
+
+  it('tiene uguali distanza di attrazione, assi e molla', () => {
+    expect(AUTH_MAGNET_LOOK.padding).toBe(MAGNET_LOOK.padding)
+    expect(AUTH_MAGNET_LOOK.axis).toBe(MAGNET_LOOK.axis)
+    expect(AUTH_MAGNET_LOOK.spring).toEqual(MAGNET_LOOK.spring)
   })
 })

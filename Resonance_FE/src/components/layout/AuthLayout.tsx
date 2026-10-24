@@ -15,13 +15,14 @@ export type AuthRouteHandle = {
  * Cornice delle pagine di accesso, come nel prototipo: barra con freccia indietro e logo, colonna stretta al centro.
  * Sta fuori da `AppShell`: nelle pagine di accesso non ci sono né la navigazione né il menu utente. La freccia porta
  * a una destinazione fissa (non alla cronologia): così da `/verifica` si torna alla registrazione per correggere l'email.
+ * `rs-app--auth` centra la colonna anche in verticale da 1200 px (segnalato dallo studente il 24 ottobre).
  */
 export function AuthLayout() {
   const matches = useMatches()
   const handle = matches.at(-1)?.handle as AuthRouteHandle | undefined
 
   return (
-    <div className="rs-app">
+    <div className="rs-app rs-app--auth">
       <AppRings />
       <header className="rs-nav rs-auth__bar">
         <Link to={handle?.backTo ?? ROUTES.home} className="rs-auth__back" aria-label="Indietro">

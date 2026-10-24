@@ -7,6 +7,7 @@ import { FieldError } from '@/components/ui/FieldError'
 import { suspensionOf } from '@/lib/api/apiSlice'
 import { getErrorCode, getErrorMessage, getFieldErrors } from '@/lib/errors/getErrorMessage'
 import DesktopMagnet from '@/components/motion/DesktopMagnet'
+import { AUTH_MAGNET_LOOK } from '@/components/motion/magnetLook'
 import { useVerifyMutation } from '../api/authApi'
 import { AuthCard } from '../components/AuthCard'
 import { OtpField } from '../components/OtpField'
@@ -111,7 +112,7 @@ export function Component() {
               error={clientErrors.password ?? serverFields.password}
             />
           )}
-          <DesktopMagnet fullWidth>
+          <DesktopMagnet fullWidth look={AUTH_MAGNET_LOOK}>
             <Button
               type="submit"
               variant="primary"

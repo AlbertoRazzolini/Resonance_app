@@ -51,3 +51,17 @@ describe('dove sta DesktopMagnet', () => {
     expect(read(file)).not.toContain('DesktopMagnet')
   })
 })
+
+// Le card di autenticazione sono strette: il pulsante a tutta larghezza usciva dai bordi (segnalato il 24 ottobre).
+const AUTH_PAGES = [
+  'features/auth/pages/RegisterPage.tsx',
+  'features/auth/pages/VerifyPage.tsx',
+  'features/auth/pages/ForgotPasswordPage.tsx',
+  'features/auth/pages/ResetPasswordPage.tsx',
+]
+
+describe('le card di autenticazione usano AUTH_MAGNET_LOOK', () => {
+  it.each(AUTH_PAGES)('%s passa look={AUTH_MAGNET_LOOK}', (file) => {
+    expect(read(file)).toContain('look={AUTH_MAGNET_LOOK}')
+  })
+})
