@@ -10,12 +10,16 @@ Community musicale locale: **fan** 🎧, **musicisti** 🎸 e **host** 🎤 (loc
 | **📰 Feed** | **💬 Chat in tempo reale** |
 | ![Feed](docs/img/feed.jpg) | ![Chat](docs/img/chat.jpg) |
 
+<p align="center"><b>✉️ Email con lo stile dell'app</b><br>
+<img src="docs/img/email.png" alt="Email di reset della password con lo stile di Resonance" width="420"></p>
+
 ## ✨ Funzioni
 - 🔐 Accesso a due token (access Bearer breve + refresh in cookie `HttpOnly`) e verifica dell'email.
 - 👥 Ruoli di community (fan, musicista, host) e di piattaforma (admin, superadmin), con sospensioni e moderazione.
 - 📍 Concerti ufficiali e indie event con geolocalizzazione e ricerca per raggio.
 - 🤝 Annunci di collaborazione con candidature · 📰 feed con like.
 - 💬 Amicizie, ricerca utenti, chat e notifiche (live e persistenti).
+- ✉️ Email di verifica e di reset con lo stile dell'app, inviate via Brevo.
 
 ## 🧱 Stack
 ☕ Java 25, Spring Boot 4.1.1, PostgreSQL 17 + Flyway, WebSocket (STOMP) · ⚛️ React 19, TypeScript, Vite, Redux Toolkit, Bootstrap · 🐳 Docker su Render: **un solo servizio** per API e frontend, sulla stessa origine.
