@@ -32,7 +32,7 @@ Servono JDK 25, Docker e Node 24.
 1. 🐘 **Database:** `docker compose up -d` dalla radice (PostgreSQL su `127.0.0.1:5433`, database `resonance` e `resonance_test`).
 2. ⚙️ **Backend:** da `Resonance_BE/`, con `SPRING_PROFILES_ACTIVE=dev` e `JWT_SECRET` (almeno 32 caratteri, mai nel repository): `./mvnw spring-boot:run`. Prova: `GET http://localhost:8080/api/health`.
 3. 🖥️ **Frontend:** da `Resonance_FE/`, `npm ci` e `npm run dev` su `http://localhost:5173` (proxy di `/api` e `/ws` verso la 8080).
-4. 👑 **Primo SUPERADMIN:** con `SUPERADMIN_EMAIL` e `SUPERADMIN_PASSWORD` (8-72 byte) il backend lo crea all'avvio, se non esiste.
+4. 👑 **Primo SUPERADMIN:** con `SUPERADMIN_EMAIL` e `SUPERADMIN_PASSWORD` (almeno 8 caratteri, al massimo 72 byte) il backend lo crea all'avvio, se non esiste.
 5. ✅ **Test:** `./mvnw -q verify` (database acceso) · `npm test` e `npm run lint` · `npm run preview` serve la build con la stessa CSP del backend.
 
 🐳 Immagine di produzione, dalla **radice**: `docker build -f Resonance_BE/Dockerfile -t resonance .` (compila anche il frontend).
@@ -55,7 +55,7 @@ Nessun segreto nel repository: in locale dalla configurazione di avvio di Intell
 🔒 Password con BCrypt · 🍪 refresh con cookie `HttpOnly`, `SameSite=Lax` e header `X-Requested-With` · 🚦 limiti di frequenza su login, amicizie e creazione di eventi · 🧱 **Content-Security-Policy** sugli script (`script-src 'self'`): nel frontend niente script inline, da CDN o `eval`.
 
 ## 🚢 Deploy
-Il Blueprint `render.yaml` crea database e servizio; ogni push su `main` fa il deploy, con health check su `/api/health`. 😴 Il piano gratuito si sospende dopo ~15 minuti: la prima richiesta attende il risveglio (apri `/api/health` prima di una demo). Le procedure di verifica su Render e la **checklist della demo** sono in [`docs/verifica-e-demo.md`](docs/verifica-e-demo.md).
+Il Blueprint `render.yaml` crea database e servizio; ogni push su `main` che tocca backend, frontend o `render.yaml` fa il deploy, con health check su `/api/health`. 😴 Il piano gratuito si sospende dopo ~15 minuti: la prima richiesta attende il risveglio (apri `/api/health` prima di una demo). Le procedure di verifica su Render e la **checklist della demo** sono in [`docs/verifica-e-demo.md`](docs/verifica-e-demo.md).
 
 ## ⚠️ Limiti noti
 - 🔗 I link scritti dagli utenti si aprono solo dopo una conferma che mostra il dominio.

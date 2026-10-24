@@ -2052,7 +2052,7 @@ Limiti dei servizi esterni, che nessuna scelta di codice rimuove:
 
 - **Lasciare attivo il mapping di Boot:** due registrazioni di `/**`, con il fallback non garantito.
 - **Cache di 30 giorni senza `immutable`:** più richieste di rivalidazione, senza vantaggio con i nomi con hash.
-- **`GET` e `HEAD` pubblici:** estensione di sezione 6.3 non richiesta dal frontend.
+- **`GET` e `HEAD` pubblici:** estensione di sezione 6.3 non richiesta dal frontend (ripresa con la decisione 114).
 - **Aprire `ALLOWED_ORIGIN` su Render per usare la pagina STOMP:** cambia la configurazione di produzione e non prova la stessa origine.
 - **Pagina di prova nuova in `tools/`, cartella Postman "Demo", anticipo di FE-01:** file e lavoro fuori dalla card.
 
