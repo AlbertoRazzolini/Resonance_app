@@ -1083,8 +1083,31 @@ altrove va riscritta. Richiesta dello studente durante FE-09a, rimandata a FE-12
 solo a fine frontend, con il calendario davanti. Le altre funzioni emerse (suggerimento degli indirizzi, elenco di generi
 a chip, carosello degli eventi, filtri della bacheca, candidature con accettazione) sono in `progettazione.md`, sezione 15.
 
-**Esito parziale (23 ottobre, decisione 107):** fatti il sotto-task 1 e i testi di copyright e termini (pagine vere, avviso «dimostrativo» in tutte e quattro le pagine legali); la password di `/verifica` non si chiede più due volte, solo frontend (opzione b); analisi dei costi (sotto-task 3) scritta in `docs/analisi-costi.md`; ReactBits (sotto-task 2) con StarBorder e Magnet, BlurText arriva con la landing; resta il sotto-task 4 (landing).
+**Esito (24 ottobre, decisioni 107 e 108):** fatti tutti e quattro i sotto-task. Il sotto-task 1 (revisione) con i testi di copyright e termini (pagine vere, avviso «dimostrativo» in tutte e quattro le pagine legali) e la password di `/verifica` non chiesta due volte, solo frontend (opzione b); il sotto-task 2 (ReactBits) con StarBorder, Magnet e, per lo sfondo della landing, MagicRings (eccezione alla decisione 78); il sotto-task 3 con `docs/analisi-costi.md`; il sotto-task 4 con la landing page su «/» (decisione 108: quattro schermate a scatto, anelli animati, footer statico, «Torna all'inizio»).
+**Scelte del 24 ottobre dopo il commit della landing:** i contatti `APPEAL_CONTACT` e `PRIVACY_CONTACT` di `src/config.ts` restano segnaposto; `ComingSoon.tsx` (non usato) è stato tolto; BlurText è nei titoli della landing (effetto «drift», parola in giallo), approvato dallo studente dopo una prova; il suggerimento dei luoghi nei moduli e la barra di ricerca dei luoghi in Eventi sono rimandati a Post-V1 (progettazione, sezione 15).
 **Commit proposto:** `style(fe-ui): rifinisce l'interfaccia e aggiunge componenti animati`
+
+### Card FE-21 · Correzioni rapide dopo FE-12 — stima 0,75 h (provvisoria)
+
+**Riferimenti:** segnalazioni dello studente del 24 ottobre; FE-19 (selettore di emoji); `AdminRoleButton.tsx` e l'elenco utenti dell'area admin.
+**Ordine:** prima di FE-22, F7-07 e FE-11. Solo frontend, nessuna modifica al comportamento oltre a quanto scritto.
+
+- [ ] **1. Emoji nella chat.** Scegliendo un'emoji il selettore si chiude; deve restare aperto, così si scelgono più emoji una alla volta. Quando si chiude (Esc, clic fuori, invio del messaggio) da confermare con lo studente a inizio card. Test del selettore aggiornato.
+- [ ] **2. Riga dell'elenco utenti (admin).** Per un utente non verificato il testo «Email non ancora verificata» sotto «Rendi admin» allarga la colonna e allontana «Sospendi». Solo CSS: i pulsanti restano vicini, il testo sta sotto senza cambiare la larghezza. Controllo a tre larghezze.
+- [x] **3. BlurText.** Provato in un'anteprima e approvato dallo studente il 24 ottobre: componente in `src/components/motion/BlurText.tsx` (licenza MIT + Commons Clause, come gli altri) e nei titoli della landing con l'effetto «drift»; con `prefers-reduced-motion` la libreria toglie gli spostamenti; test sull'accessibilità e sugli spazi (decisione 108).
+
+**Commit proposto:** `fix(fe-ui): corregge le emoji della chat e la riga degli utenti admin`
+
+### Card FE-22 · Stile della landing sulle pagine desktop — stima 2 h (provvisoria, con tetto di tempo)
+
+**Riferimenti:** decisione 108; skill impeccable; `PRODUCT.md`. Richiesta dello studente il 24 ottobre: le pagine dell'app, su desktop, sono più spoglie della landing.
+**Ordine deciso dallo studente (24 ottobre):** FE-21, FE-22, poi F7-07, poi FE-11 (un solo deploy, con la CSP controllata sull'interfaccia finale).
+
+- [ ] **1. Elenco delle pagine e tetto di tempo.** Si scelgono con lo studente le pagine da ritoccare (candidate: Eventi, Profilo, Accesso e registrazione) e il tempo massimo. Superato il tetto si passa a F7-07.
+- [ ] **2. Revisione con impeccable, pagina per pagina, solo da desktop (1200 px).** Gerarchia, spaziature, uso dei token e dell'aspetto della landing (titoli grandi, righe sottili al posto dei riquadri, il giallo come accento). Solo stile e testi: nessun cambiamento di comportamento, test verdi; telefono e tablet non si toccano.
+
+**Taglio:** se il tempo non basta, si riduce l'elenco delle pagine; la card si può chiudere anche con una sola pagina.
+**Commit proposto:** `style(fe-ui): estende lo stile della landing alle pagine desktop`
 
 ### Card FE-11 · Deploy integrato, CSP e prova della demo — stima 4 h
 

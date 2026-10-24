@@ -48,6 +48,25 @@ describe('LandingPage', () => {
     expect(screen.getByLabelText('Resonance')).toBeInTheDocument()
   })
 
+  it('nel titolo «scena» è un blocco a parte in giallo e i titoli di sezione sono animati', () => {
+    renderPage()
+
+    const title = screen.getByRole('heading', { level: 1 })
+    const accent = title.querySelector('.rs-landing__accent')
+    expect(accent).toHaveTextContent('scena')
+    for (const name of [/fan, musicista o host/i, /quattro funzioni, una app/i, /tre passi/i]) {
+      const heading = screen.getByRole('heading', { level: 2, name })
+      expect(heading.querySelector('[aria-hidden="true"]')).not.toBeNull()
+    }
+  })
+
+  it('«palco» è in giallo anche nell invito finale', () => {
+    renderPage()
+
+    const closing = screen.getByRole('heading', { level: 2, name: /sali sul palco/i })
+    expect(closing.querySelector('.rs-landing__accent')).toHaveTextContent('palco')
+  })
+
   it('è fatta di quattro schermate', () => {
     renderPage()
 

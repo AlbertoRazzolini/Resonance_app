@@ -4,6 +4,7 @@ import { ROUTES } from '@/app/routes'
 import { LegalLinks } from '@/components/layout/Footer'
 import { MarkerLegend } from '@/components/map'
 import '@/components/map/map.css'
+import BlurText from '@/components/motion/BlurText'
 import DesktopMagnet from '@/components/motion/DesktopMagnet'
 import StarBorder from '@/components/motion/StarBorder'
 import { LANDING_MAGNET_LOOK } from '@/components/motion/magnetLook'
@@ -80,6 +81,9 @@ const OUTLINE_BUTTON = {
   borderColor: 'var(--rs-color-border-strong)',
 } as const
 
+/** Titoli animati: effetto «drift», parola per parola (scelta dello studente); la parola in giallo è un blocco a parte. */
+const TITLE_MOTION = { effect: 'drift', animateBy: 'words', delay: 100 } as const
+
 /** Frecce in basso alla schermata, che portano alla successiva. */
 function Cue({ onClick }: { onClick: () => void }) {
   return (
@@ -137,10 +141,19 @@ export function Component() {
           <div className="rs-landing__intro">
             <p className="rs-landing__eyebrow">Musica dal vivo e scena indie</p>
             <h1 className="rs-landing__title">
-              <span>
-                Trova la tua <em>scena</em>
+              <span className="rs-landing__title-line">
+                <BlurText text="Trova la tua" trigger="load" {...TITLE_MOTION} delay={120} />{' '}
+                <BlurText
+                  text="scena"
+                  trigger="load"
+                  {...TITLE_MOTION}
+                  delay={120}
+                  className="rs-landing__accent"
+                />
               </span>{' '}
-              <span>dal vivo</span>
+              <span className="rs-landing__title-line">
+                <BlurText text="dal vivo" trigger="load" {...TITLE_MOTION} delay={120} />
+              </span>
             </h1>
             <p className="rs-landing__lead">
               Scopri i concerti vicino a te, cerca musicisti per la tua band, segui chi suona e
@@ -180,7 +193,9 @@ export function Component() {
         </section>
 
         <section className="rs-landing__screen" data-screen>
-          <h2>Fan, musicista o host</h2>
+          <h2>
+            <BlurText text="Fan, musicista o host" trigger="view" {...TITLE_MOTION} />
+          </h2>
           <p className="rs-landing__sub">
             Un solo account. Scegli i ruoli che ti servono e li puoi cambiare dal profilo.
           </p>
@@ -197,7 +212,9 @@ export function Component() {
         </section>
 
         <section className="rs-landing__screen" data-screen>
-          <h2>Quattro cose, una app</h2>
+          <h2>
+            <BlurText text="Quattro funzioni, una app" trigger="view" {...TITLE_MOTION} />
+          </h2>
           <p className="rs-landing__sub">
             Niente di più: le funzioni che servono per vivere la musica dal vivo.
           </p>
@@ -213,7 +230,9 @@ export function Component() {
         </section>
 
         <section className="rs-landing__screen rs-landing__final" data-screen>
-          <h2>Tre passi</h2>
+          <h2>
+            <BlurText text="Tre passi" trigger="view" {...TITLE_MOTION} />
+          </h2>
           <p className="rs-landing__sub">Ci vuole un minuto.</p>
           <ol className="rs-landing__steps">
             {STEPS.map((step) => (
@@ -224,8 +243,14 @@ export function Component() {
             ))}
           </ol>
           <div className="rs-landing__closing">
-            <h2>
-              Sali sul <span>palco</span>
+            <h2 className="rs-landing__closing-title">
+              <BlurText text="Sali sul" trigger="view" {...TITLE_MOTION} />{' '}
+              <BlurText
+                text="palco"
+                trigger="view"
+                {...TITLE_MOTION}
+                className="rs-landing__accent"
+              />
             </h2>
             <div className="rs-landing__cta rs-landing__cta--center">
               <DesktopMagnet look={LANDING_MAGNET_LOOK}>

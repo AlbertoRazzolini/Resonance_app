@@ -2653,13 +2653,15 @@ textarea {
   text-transform: uppercase;
 }
 
-.rs-landing__title span {
-  display: block;
+.rs-landing__title-line {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 0.28em;
 }
 
-.rs-landing__title em {
+/* Parola in giallo dentro un titolo animato (BlurText): un blocco a parte, con il colore dell'accento */
+.rs-landing__accent {
   color: var(--rs-color-accent);
-  font-style: normal;
 }
 
 .rs-landing__lead {
@@ -2919,8 +2921,11 @@ textarea {
   margin-bottom: var(--rs-space-5);
 }
 
-.rs-landing__closing h2 span {
-  color: var(--rs-color-accent);
+.rs-landing__closing-title {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 0.28em;
 }
 
 /* «Torna all'inizio»: pulsante tondo nell'angolo in basso a destra dello schermo, sopra il footer */
