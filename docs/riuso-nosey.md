@@ -112,7 +112,7 @@ alla card corrente, senza rileggere l'intero progetto.
 | `mail/BrevoEmailService` | `mail.BrevoEmailService` (`@Profile("prod")`) | R | F1-03 | Timeout 5 s; mai il corpo nel log. |
 | `mail/EmailEventListener` | `mail.EmailEventListener` | R | F1-03 | `@Async` + `AFTER_COMMIT`. |
 | `mail/CodiceVerificaEmailEvent`, `CodiceResetEmailEvent`, `PasswordCambiataEmailEvent` | `VerificationCodeEmailEvent`, `PasswordResetCodeEmailEvent`, `PasswordChangedEmailEvent` | R | F1-03, F1-04 | |
-| `be/src/main/resources/templates/mail/codice-verifica.html`, `codice-reset.html`, `password-cambiata.html` | `templates/mail/verification-code.html`, `password-reset-code.html`, `password-changed.html` | A | F1-03, F1-04 | Testi in italiano adattati a Resonance. |
+| `be/src/main/resources/templates/mail/codice-verifica.html`, `codice-reset.html`, `password-cambiata.html` | `templates/mail/verification-code.html`, `password-reset-code.html`, `password-changed.html` | A | F1-03, F1-04, FE-24 | Testi in italiano adattati a Resonance. In FE-24 si tiene la struttura (logo, titolo, codice, note) e si cambia lo stile: colori e carattere di Resonance, logo PNG (decisione 115). |
 
 ## Frontend
 

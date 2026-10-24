@@ -10,27 +10,36 @@ import org.thymeleaf.context.Context;
  */
 abstract class HtmlEmailService implements EmailService {
 
-    private final TemplateEngine templateEngine;
+    // Il file sta in Resonance_FE/public e il sito lo serve alla radice (decisione 115).
+    private static final String LOGO_PATH = "/email-logo.png";
 
-    HtmlEmailService(TemplateEngine templateEngine) {
+    private final TemplateEngine templateEngine;
+    private final String logoUrl;
+
+    /**
+     * {@code publicUrl}: indirizzo pubblico del sito ({@code app.public-url}), da cui l'email carica il logo; la
+     * barra finale, se c'e', si toglie.
+     */
+    HtmlEmailService(TemplateEngine templateEngine, String publicUrl) {
         this.templateEngine = templateEngine;
+        this.logoUrl = publicUrl.replaceAll("/+$", "") + LOGO_PATH;
     }
 
     @Override
     public void sendVerificationCode(String recipient, String displayName, String code) {
-        send(recipient, displayName, "Resonance - Conferma la tua email",
+        send(recipient, displayName, "Resonance · Conferma la tua email",
                 render("mail/verification-code", displayName, code));
     }
 
     @Override
     public void sendPasswordResetCode(String recipient, String displayName, String code) {
-        send(recipient, displayName, "Resonance - Reimposta la tua password",
+        send(recipient, displayName, "Resonance · Reimposta la tua password",
                 render("mail/password-reset-code", displayName, code));
     }
 
     @Override
     public void sendPasswordChanged(String recipient, String displayName) {
-        send(recipient, displayName, "Resonance - Password cambiata",
+        send(recipient, displayName, "Resonance · Password cambiata",
                 render("mail/password-changed", displayName, null));
     }
 
@@ -39,6 +48,7 @@ abstract class HtmlEmailService implements EmailService {
         Context context = new Context();
         context.setVariable("displayName", displayName);
         context.setVariable("code", code);
+        context.setVariable("logoUrl", logoUrl);
         return templateEngine.process(template, context);
     }
 

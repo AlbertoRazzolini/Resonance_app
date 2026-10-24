@@ -1555,9 +1555,11 @@ richiesta.
     Chiave o mittente mancanti → errore nel log, nessun invio.
 - `HtmlEmailService`: oggetto e corpo HTML dai template Thymeleaf in `templates/mail/`
   (`verification-code.html`, `password-reset-code.html`, `password-changed.html`), in italiano,
-  mittente "Resonance".
-- Configurazione: `MAIL_FROM` (mittente confermato in Brevo), `BREVO_API_KEY`; nessun valore nei
-  file versionati.
+  mittente "Resonance", oggetto «Resonance · …». Stile di Resonance (decisione 115): fondo nero, giallo
+  dell'accento, titoli in maiuscolo, solo tabelle e stili in linea; il logo (`/email-logo.png`, in
+  `Resonance_FE/public`) si carica dall'indirizzo pubblico del sito.
+- Configurazione: `MAIL_FROM` (mittente confermato in Brevo), `BREVO_API_KEY`, `PUBLIC_URL` (facoltativa,
+  predefinito l'indirizzo del servizio su Render); nessun valore segreto nei file versionati.
 
 ---
 

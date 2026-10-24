@@ -44,6 +44,7 @@ Nessun segreto nel repository: in locale dalla configurazione di avvio di Intell
 | `SUPERADMIN_EMAIL`, `SUPERADMIN_PASSWORD` | Primo SUPERADMIN. |
 | `BREVO_API_KEY`, `MAIL_FROM` | Invio email in produzione (in dev il codice è nel log). |
 | `GEOCODING_CONTACT` | Contatto nello User-Agent verso Nominatim. |
+| `PUBLIC_URL` | Indirizzo pubblico del sito, da cui le email caricano il logo (facoltativa: predefinito l'indirizzo su Render). |
 | `ACCESS_TOKEN_TTL`, `REFRESH_TOKEN_TTL` · `ALLOWED_ORIGIN` · `PORT` | Durate dei token (15 min, 10 giorni) · origini CORS solo in sviluppo · porta. |
 
 ## 🛡️ Sicurezza

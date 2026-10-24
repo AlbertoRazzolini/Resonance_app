@@ -36,6 +36,9 @@ server:
   shutdown: graceful
 
 app:
+  # Indirizzo pubblico del sito, senza barra finale: serve al logo delle email (decisione 115).
+  # PUBLIC_URL lo sostituisce se il servizio cambia indirizzo.
+  public-url: ${PUBLIC_URL:https://resonance-6o89.onrender.com}
   jwt:
     # Nessun default: un segreto scritto qui sarebbe pubblico. Almeno 32 byte (HS256).
     # In locale va impostato nella configurazione di avvio di IntelliJ (variabile JWT_SECRET).

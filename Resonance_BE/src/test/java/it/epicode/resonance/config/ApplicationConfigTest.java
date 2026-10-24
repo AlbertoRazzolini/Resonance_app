@@ -65,6 +65,13 @@ class ApplicationConfigTest {
         });
     }
 
+    @Test
+    void publicUrl_defaultsToTheRenderService() {
+        // Indirizzo pubblico del sito (decisione 115): serve al logo delle email; PUBLIC_URL lo sostituisce.
+        runner.run(context -> assertThat(context.getEnvironment().getProperty("app.public-url"))
+                .isEqualTo("https://resonance-6o89.onrender.com"));
+    }
+
     private static void assertLimit(Binder binder, String name, int max, Duration window) {
         String prefix = "app.rate-limits." + name;
 

@@ -86,7 +86,7 @@ class BrevoEmailServiceTest {
                 .andExpect(jsonPath("$.sender.name").value("Resonance"))
                 .andExpect(jsonPath("$.to[0].email").value("mario@example.com"))
                 .andExpect(jsonPath("$.to[0].name").value("Mario"))
-                .andExpect(jsonPath("$.subject").value("Resonance - Conferma la tua email"))
+                .andExpect(jsonPath("$.subject").value("Resonance · Conferma la tua email"))
                 .andExpect(jsonPath("$.htmlContent").value(containsString("123456")))
                 .andRespond(withSuccess("{\"messageId\":\"x\"}", MediaType.APPLICATION_JSON));
 
@@ -114,11 +114,11 @@ class BrevoEmailServiceTest {
     @Test
     void sendPasswordResetCodeAndPasswordChanged_renderTheirOwnTemplates() {
         server.expect(requestTo(URL + "/smtp/email"))
-                .andExpect(jsonPath("$.subject").value("Resonance - Reimposta la tua password"))
+                .andExpect(jsonPath("$.subject").value("Resonance · Reimposta la tua password"))
                 .andExpect(jsonPath("$.htmlContent").value(containsString("654321")))
                 .andRespond(withSuccess());
         server.expect(requestTo(URL + "/smtp/email"))
-                .andExpect(jsonPath("$.subject").value("Resonance - Password cambiata"))
+                .andExpect(jsonPath("$.subject").value("Resonance · Password cambiata"))
                 .andRespond(withSuccess());
 
         BrevoEmailService service = service("chiave-di-prova", "no-reply@resonance.test");
@@ -203,6 +203,6 @@ class BrevoEmailServiceTest {
     }
 
     private BrevoEmailService service(String apiKey, String sender) {
-        return new BrevoEmailService(engine, builder, URL, apiKey, sender);
+        return new BrevoEmailService(engine, builder, URL, apiKey, sender, "https://sito.test");
     }
 }

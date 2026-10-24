@@ -3806,3 +3806,36 @@ Scelte dello studente il 24 ottobre, dopo FE-22:
 - **Scartare l'email a coda piena:** richiesta veloce, ma l'utente non riceve il codice e deve chiederne un altro.
 - **Test della CSP dentro `SecurityHeadersIntegrationTest`:** meno file, ma il piano indicava un test nuovo nel package `config`.
 - **`HEAD` anche su `/api`:** fuori dalla richiesta e contrario alla regola "solo le risorse senza dati sono pubbliche" (progettazione, sezione 8.4).
+
+## Decisione 115: stile delle email transazionali (card FE-24, progettazione, sezione 9)
+
+Ogni punto è stato proposto allo studente con alternative, pro, contro e raccomandazione, e approvato il 24 ottobre.
+
+### Scelta
+
+- **Colori:** come l'app: fondo `#0a0a0a`, riquadro `#121212` con bordo `#222222`, testo `#f5f5f5`, giallo `#ffd60a` per il codice e i dettagli; note e footer in `#a3a3a3`.
+- **Logo:** PNG del marchio completo (RES, microfono con tre anelli al posto della O, NANCE), 440 x 81 px con sfondo trasparente, in `Resonance_FE/public/email-logo.png`: finisce nell'immagine Docker e il sito lo serve come `/email-logo.png`. Ottenuto con Playwright dal disegno di `logoShapes.ts` (come le icone della decisione 111). Testo alternativo «RESONANCE».
+- **Indirizzo del logo:** proprietà `app.public-url` (variabile `PUBLIC_URL`, facoltativa) con predefinito `https://resonance-6o89.onrender.com`; `HtmlEmailService` toglie l'eventuale barra finale e passa `logoUrl` ai template.
+- **Carattere:** `Arial Narrow`, ripiego `Roboto Condensed`, `Helvetica Neue Condensed`, `Arial`; titoli in maiuscolo. Corpo in Arial.
+- **Testi:** stesso contenuto di prima, con titolo in evidenza (28 px, barra gialla di 40 x 3 px sotto) e footer «Resonance · Musica dal vivo e scena indie». Nessun preheader.
+- **Oggetti:** solo il separatore: «Resonance · Conferma la tua email», «Resonance · Reimposta la tua password», «Resonance · Password cambiata».
+- **Avviso di sicurezza:** barra gialla a sinistra e testo `#c8c8c8`; in «Password cambiata», dove è l'azione da fare, testo bianco da 15 px. Dalla critica di impeccable (25/28); ritocchi di rifinitura e `color-scheme` esclusi.
+- **Verifica:** anteprima in Chrome dai template veri (le email non si inviano in locale) e una email di prova ricevuta dallo studente dopo il deploy, con «Password dimenticata» sul proprio account.
+- **Test:** `EmailTemplatesTest` (oggetti, testi, logo, colori, carattere, avviso, nessuno script o CSS esterno, un solo `<h1>`), `EmailLogoTest` (file, PNG trasparente 440 x 81, peso), `ApplicationConfigTest` (indirizzo predefinito) e `BrevoEmailServiceTest` aggiornato.
+
+### Motivazione
+
+- Le email sono il primo contatto di un utente nuovo: con i colori di NoseY sembravano un altro prodotto.
+- Un client email non carica CSS esterni né font web: solo tabelle e stili in linea, con un ripiego di carattere condensato; la barra gialla sotto il titolo tiene l'identità anche quando il font non arriva.
+- Il logo come immagine è l'unico modo di mostrare la O-microfono; con le immagini bloccate resta il testo alternativo stilato. L'indirizzo configurabile evita di scriverlo in tre file.
+- Il contrasto delle coppie usate supera 4,5:1 (grigio `#a3a3a3` su `#121212` circa 7,5:1).
+
+### Alternative scartate
+
+- **Email chiare, o riquadro con bordo giallo:** meno vicine all'app.
+- **Solo testo, o O finta in HTML:** nessuna dipendenza da immagini, ma non è il logo vero.
+- **Indirizzo scritto nei template:** nessuna configurazione, ma tre file da cambiare se l'indirizzo cambia.
+- **Barlow Condensed da Google Fonts:** richiesta esterna a ogni apertura e supporto in pochi client.
+- **Testi riscritti, preheader con il codice, codice nell'oggetto:** testi nuovi e il codice visibile sulla schermata di blocco.
+- **Solo i test, senza anteprima:** nessuna prova visiva dei template veri.
+

@@ -39,14 +39,16 @@ public class BrevoEmailService extends HtmlEmailService {
     public BrevoEmailService(TemplateEngine templateEngine, @Value("${app.mail.brevo.url}") String url,
                              @Value("${app.mail.brevo.api-key}") String apiKey,
                              @Value("${app.mail.from}") String sender,
-                             @Value("${app.mail.brevo.timeout}") Duration timeout) {
-        this(templateEngine, RestClient.builder().requestFactory(requestFactory(timeout)), url, apiKey, sender);
+                             @Value("${app.mail.brevo.timeout}") Duration timeout,
+                             @Value("${app.public-url}") String publicUrl) {
+        this(templateEngine, RestClient.builder().requestFactory(requestFactory(timeout)), url, apiKey, sender,
+                publicUrl);
     }
 
     // Per i test: un builder legato a MockRestServiceServer.
     BrevoEmailService(TemplateEngine templateEngine, RestClient.Builder builder, String url, String apiKey,
-                      String sender) {
-        super(templateEngine);
+                      String sender, String publicUrl) {
+        super(templateEngine, publicUrl);
         this.restClient = builder.baseUrl(url).build();
         this.apiKey = apiKey;
         this.sender = sender;
