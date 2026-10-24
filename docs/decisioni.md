@@ -3839,3 +3839,35 @@ Ogni punto è stato proposto allo studente con alternative, pro, contro e raccom
 - **Testi riscritti, preheader con il codice, codice nell'oggetto:** testi nuovi e il codice visibile sulla schermata di blocco.
 - **Solo i test, senza anteprima:** nessuna prova visiva dei template veri.
 
+## Decisione 116: valutazione dell'ottimizzazione del frontend (card FE-25, decisioni 71 e 75)
+
+Ogni punto è stato proposto allo studente con alternative, pro, contro e raccomandazione, e approvato il 25 ottobre.
+
+### Scelta
+
+- **Solo analisi, come per il backend (scelta dello studente):** una card, FE-25, che produce `docs/ottimizzazione-fe.md` senza
+  modificare codice. Tetto di 1 ora e nessuna realizzazione dopo le 17 del 25 ottobre. Le proposte da realizzare, se ci sono,
+  si decidono dopo, in una card a parte.
+- **Metodo:** lo stesso della decisione 75: revisione di `Resonance_FE/src` senza leggere decisioni e piano, poi filtro
+  con i tre criteri della decisione 71 (stesso comportamento, copertura da test già esistenti, beneficio concreto) e con
+  le decisioni; misure con la build di Vite e Playwright con Chrome su `vite preview`, senza database e senza Render.
+- **Fuori ambito:** sessione e accesso (refresh, CSP, STOMP), stile e design già approvati, funzioni nuove.
+- **Esito:** nessun punto lento (landing 666 ms con LCP 320 ms, accesso 625 ms, eventi 1,2 s con la mappa; 362-700 kB
+  trasferiti); tutte le pagine già in differita; una sola proposta ammessa, O1 (togliere il tipo `MessagesArgs`), di beneficio
+  minimo e **non realizzata**; sei proposte scartate con motivo (`LazyMotion`, `@stomp/stompjs` in differita, Bootstrap
+  ridotto, selettori CSS doppi, pesi del carattere, mappa). Raccomandazione: non aprire una card di realizzazione.
+
+### Motivazione
+
+- La valutazione non sposta il calendario del 25 ottobre (consegna alle 21) e non rischia regressioni.
+- I numeri non mostrano nessun punto lento da correggere, e ciò che resta da guadagnare (circa 20 kB compressi con STOMP in
+  differita, qualche kB di CSS) non vale il rischio di un refactor a poche ore dalla consegna.
+- `LazyMotion` non porta risparmio perché le icone di `@animate-ui` importano `motion` dentro la libreria.
+
+### Alternative scartate
+
+- **Analisi e realizzazione insieme in una sola card:** più veloce, ma lo studente sceglie meno e la regola «ogni scelta
+  passa da lui» diventa difficile da rispettare a ridosso della consegna.
+- **Prima FE-11 e la demo, poi ottimizzare:** avrebbe lasciato poco tempo per l'analisi.
+- **Non fare la valutazione:** il frontend resterebbe senza una verifica esplicita delle parti alleggeribili.
+- **Realizzare O1 subito:** un tipo morto in meno, ma una modifica di codice senza beneficio per l'utente.

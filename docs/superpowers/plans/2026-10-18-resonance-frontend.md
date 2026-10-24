@@ -1131,6 +1131,20 @@ a chip, carosello degli eventi, filtri della bacheca, candidature con accettazio
 **Taglio:** nessuno previsto; logo e favicon si fanno entrambi (scelta dello studente, 24 ottobre).
 **Commit proposto:** `feat(fe-ui): aggiunge il nuovo logo e la favicon`
 
+### Card FE-25 · Valutazione dell'ottimizzazione del frontend — stima 1 h
+
+**Riferimenti:** decisioni 71, 75 e 116; `docs/ottimizzazione.md` (modello). Richiesta dello studente il 25 ottobre: un giro di ottimizzazione del frontend, come quello fatto sul backend.
+**Ordine:** dopo FE-24, il 25 ottobre (consegna alle 21). Solo analisi: nessun codice modificato; tetto di 1 ora e nessuna realizzazione dopo le 17.
+
+- [x] **1. Revisione di `Resonance_FE/src`** senza leggere decisioni e piano (file grandi, esportazioni inutilizzate, duplicazioni, CSS, dipendenze).
+- [x] **2. Misure:** pacchetti della build, pagine in differita, font, copertura di JavaScript e CSS, richieste e LCP con Chrome.
+- [x] **3. Filtro** con i tre criteri (stesso comportamento, test esistenti, beneficio concreto), con le decisioni e con i test.
+- [x] **4. `docs/ottimizzazione-fe.md` e decisione 116** con l'esito; nessun codice modificato.
+
+**Esito (25 ottobre, decisione 116):** nessun punto lento; una sola proposta ammessa (togliere il tipo `MessagesArgs`), non realizzata; sei proposte scartate. Raccomandazione: nessuna card di realizzazione.
+**Taglio:** nessuno previsto.
+**Commit proposto:** `docs(fe): aggiunge la valutazione dell'ottimizzazione del frontend`
+
 ### Card FE-11 · Deploy integrato, CSP e prova della demo — stima 4 h
 
 **Riferimenti:** decisioni 1, 74, 76; §12.5–12.7, §14 (demo finale); README.
