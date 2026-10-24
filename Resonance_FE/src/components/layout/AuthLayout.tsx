@@ -2,6 +2,7 @@ import { Link, Outlet, useMatches } from 'react-router'
 import { ROUTES } from '@/app/routes'
 import { Logo } from '@/components/ui/Logo'
 import { NoticeBar } from '@/components/ui/NoticeBar'
+import { AppRings } from './AppRings'
 import { Footer } from './Footer'
 
 /** Cosa una rotta può dichiarare in `handle` per la cornice delle pagine di accesso. */
@@ -21,6 +22,7 @@ export function AuthLayout() {
 
   return (
     <div className="rs-app">
+      <AppRings />
       <header className="rs-nav rs-auth__bar">
         <Link to={handle?.backTo ?? ROUTES.home} className="rs-auth__back" aria-label="Indietro">
           <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="currentColor">

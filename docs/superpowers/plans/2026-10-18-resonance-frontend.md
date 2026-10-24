@@ -1103,9 +1103,10 @@ a chip, carosello degli eventi, filtri della bacheca, candidature con accettazio
 **Riferimenti:** decisione 108; skill impeccable; `PRODUCT.md`. Richiesta dello studente il 24 ottobre: le pagine dell'app, su desktop, sono più spoglie della landing.
 **Ordine deciso dallo studente (24 ottobre):** FE-21, FE-22, poi F7-07, poi FE-11 (un solo deploy, con la CSP controllata sull'interfaccia finale).
 
-- [ ] **1. Elenco delle pagine e tetto di tempo.** Si scelgono con lo studente le pagine da ritoccare (candidate: Eventi, Profilo, Accesso e registrazione) e il tempo massimo. Superato il tetto si passa a F7-07.
-- [ ] **2. Revisione con impeccable, pagina per pagina, solo da desktop (1200 px).** Gerarchia, spaziature, uso dei token e dell'aspetto della landing (titoli grandi, righe sottili al posto dei riquadri, il giallo come accento). Solo stile e testi: nessun cambiamento di comportamento, test verdi; telefono e tablet non si toccano.
+- [x] **1. Elenco delle pagine e tetto di tempo.** Si scelgono con lo studente le pagine da ritoccare (candidate: Eventi, Profilo, Accesso e registrazione) e il tempo massimo. Superato il tetto si passa a F7-07.
+- [x] **2. Revisione con impeccable, pagina per pagina, solo da desktop (1200 px).** Gerarchia, spaziature, uso dei token e dell'aspetto della landing (titoli grandi, righe sottili al posto dei riquadri, il giallo come accento). Solo stile e testi: nessun cambiamento di comportamento, test verdi; telefono e tablet non si toccano.
 
+**Esito (24 ottobre, decisione 109):** fatti entrambi i sotto-task. Pagine scelte: Eventi, Profilo, Accesso e registrazione, Feed, Collab e Chat; tetto 3 h. Anelli della landing fermi con un'onda al cambio pagina (`AppRings`), pannello in vetro opaco, titoli in maiuscolo grande, righe sottili al posto dei riquadri; tutto solo da 1200 px.
 **Taglio:** se il tempo non basta, si riduce l'elenco delle pagine; la card si può chiudere anche con una sola pagina.
 **Commit proposto:** `style(fe-ui): estende lo stile della landing alle pagine desktop`
 

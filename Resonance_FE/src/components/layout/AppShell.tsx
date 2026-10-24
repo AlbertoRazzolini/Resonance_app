@@ -4,6 +4,7 @@ import { NoticeBar } from '@/components/ui/NoticeBar'
 import { ROUTES } from '@/app/routes'
 import { LiveNotifications } from '@/features/notifications/components/LiveNotifications'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { AppRings } from './AppRings'
 import { Footer } from './Footer'
 import { NavBar } from './NavBar'
 import { SideNav } from './SideNav'
@@ -27,6 +28,7 @@ export function AppShell() {
   return (
     <div className={className}>
       <LiveNotifications />
+      <AppRings />
       <NavBar showLogo={!isDesktop} />
       {hasSideNav && <SideNav showLogo={isDesktop} />}
       <main className="rs-main">

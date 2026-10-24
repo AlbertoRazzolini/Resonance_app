@@ -3658,3 +3658,30 @@ Scelte dello studente, una per una, durante il sotto-task 4 di FE-12 (landing pa
 - **Riquadri per ruoli, funzioni e passi; etichette sopra i titoli; numeri 01–04:** schema comune a molte landing, giudicato troppo generico dopo una prima schermata così caratterizzata.
 - **Mappa vera e interattiva o screenshot dell'app:** la prima chiede dati e posizione a un anonimo, i secondi non esistono ancora con dati veri (Post-V2).
 - **Cifre, recensioni, negozi di app, chat criptata:** non esistono e non si inventano (PRODUCT.md).
+
+## Decisione 109: stile della landing sulle pagine dell'app da 1200 px (card FE-22, decisioni 78, 80, 83 e 108)
+
+### Scelta
+
+Scelte dello studente, una per una, durante FE-22:
+
+- **Pagine e tempo:** Eventi, Profilo, Accesso e registrazione, Feed, Collab e Chat; tetto di 3 ore. Solo da 1200 px: telefono e tablet non cambiano (verificato su `/collab` a 375, 768 e 1199 px).
+- **Anelli della landing dietro alle pagine** (eccezione alla decisione 78 già estesa dalla 108, ora anche alle pagine dell'app): lo stesso `MagicRings` con gli stessi colori e la stessa forma, **fermi** (disegnati una volta) con **un'onda a ogni cambio di pagina** (non all'apertura; nessuna onda con «riduci animazioni»). Da 1200 px, caricati solo allora; tetto di 1,5 sui pixel. Montati in `AppShell` e `AuthLayout` (componente `AppRings`).
+- **Pannello centrale** (idea dello studente, provata prima in una pagina di prova): da 1200 px il contenuto sta in un pannello largo al massimo 68 rem, in vetro opaco (sfondo scuro quasi opaco, sfocatura di 14 px, bordo sottile e filo di luce in alto), così gli anelli restano ai lati e dietro, meno visibili dove si legge e si scrive. Sotto il pannello lo stesso spazio (1 rem) che c'è sopra, fra barra e pannello. Barra in alto e colonna a sinistra restano come sono.
+- **Titoli:** maiuscolo grande (3,5 rem), tutto bianco, senza parola gialla; il nome nel profilo resta com'era.
+- **Righe sottili** (filo di 1 px) al posto dei riquadri di eventi, annunci, miei eventi, conversazioni e testata del profilo; l'evento selezionato ha un fondo giallo tenue; la conversazione non letta ha un punto giallo al posto del bordo spesso a sinistra. I post del feed e i moduli restano in riquadro; nell'implementazione restano in riquadro tutti i post, anche quelli senza foto.
+- **Effetto sul resto dell'app:** pannello e titoli valgono per tutte le pagine con la colonna a sinistra (Amici, Admin, moduli, dettagli), non solo per le sei scelte; controllato su Feed, Amici, Utenti, Modifica profilo e Pubblica annuncio.
+
+### Motivazione
+
+- Le pagine di lavoro erano più spoglie della landing: stessi titoli, stesse righe e gli stessi anelli danno un'app coerente.
+- Il pannello rende gli anelli compatibili con liste e moduli; anelli fermi non consumano GPU di continuo di GPU e nessuna distrazione mentre si scrive; l'onda dà un tocco di vita solo al cambio di pagina.
+- Il CSS della landing si riusa con classi `rs-*` e le regole stanno in un unico blocco da 1200 px: le soglie sono quelle di Bootstrap come nelle decisioni 80 e 83.
+
+### Alternative scartate
+
+- **Anelli disegnati in CSS:** provati nella pagina di prova, non somigliavano a quelli della landing.
+- **Anelli in movimento nell'app:** GPU sempre occupata dietro a mappa e liste, vetro sfocato più pesante, distrazione durante la scrittura; il carico non è stato misurato.
+- **Titoli con una parola gialla, o minuscoli ma più grandi:** meno sobri del bianco in maiuscolo, o troppo vicini all'aspetto di prima.
+- **Riquadri tenuti con bordo più leggero, o righe anche nel feed:** il primo quasi non cambiava, il secondo lasciava le foto senza cornice.
+- **Pagina divisa in tre sezioni verticali:** a 1200 px la colonna a sinistra è già una sezione; un solo pannello centrale dà lo stesso effetto con meno struttura.
