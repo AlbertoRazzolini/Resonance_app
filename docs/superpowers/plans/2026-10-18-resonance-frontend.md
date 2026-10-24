@@ -1092,8 +1092,8 @@ a chip, carosello degli eventi, filtri della bacheca, candidature con accettazio
 **Riferimenti:** segnalazioni dello studente del 24 ottobre; FE-19 (selettore di emoji); `AdminRoleButton.tsx` e l'elenco utenti dell'area admin.
 **Ordine:** prima di FE-22, F7-07 e FE-11. Solo frontend, nessuna modifica al comportamento oltre a quanto scritto.
 
-- [ ] **1. Emoji nella chat.** Scegliendo un'emoji il selettore si chiude; deve restare aperto, così si scelgono più emoji una alla volta. Quando si chiude (Esc, clic fuori, invio del messaggio) da confermare con lo studente a inizio card. Test del selettore aggiornato.
-- [ ] **2. Riga dell'elenco utenti (admin).** Per un utente non verificato il testo «Email non ancora verificata» sotto «Rendi admin» allarga la colonna e allontana «Sospendi». Solo CSS: i pulsanti restano vicini, il testo sta sotto senza cambiare la larghezza. Controllo a tre larghezze.
+- [x] **1. Emoji nella chat.** Scegliendo un'emoji il selettore si chiude; deve restare aperto, così si scelgono più emoji una alla volta. Scelte dello studente (24 ottobre): si chiude con Esc, clic fuori, ripremendo la faccina e inviando il messaggio; dopo la scelta il cursore resta nel selettore (Esc lo riporta nella casella). Test del selettore aggiornato.
+- [x] **2. Riga dell'elenco utenti (admin).** Per un utente non verificato il testo «Email non ancora verificata» sotto «Rendi admin» allarga la colonna e allontana «Sospendi». Solo CSS: `.rs-admin-row__hint` ha larghezza propria 0 e almeno quanto il pulsante, così la frase va a capo sotto senza cambiare la larghezza; test sul CSS. Controllo a tre larghezze da fare nel browser (jsdom non fa il layout).
 - [x] **3. BlurText.** Provato in un'anteprima e approvato dallo studente il 24 ottobre: componente in `src/components/motion/BlurText.tsx` (licenza MIT + Commons Clause, come gli altri) e nei titoli della landing con l'effetto «drift»; con `prefers-reduced-motion` la libreria toglie gli spostamenti; test sull'accessibilità e sugli spazi (decisione 108).
 
 **Commit proposto:** `fix(fe-ui): corregge le emoji della chat e la riga degli utenti admin`

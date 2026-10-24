@@ -55,4 +55,13 @@ describe('contenuto delle celle dell’area admin', () => {
     expect(body).toMatch(/flex-direction:\s*column/)
     expect(body).toMatch(/gap:\s*var\(--rs-space-1\)/)
   })
+
+  it('`.rs-admin-row__hint` non allarga la colonna: larghezza propria 0, ma almeno quanto il pulsante', () => {
+    // Con «Email non ancora verificata» sotto «Rendi admin» la colonna si allargava e «Sospendi» restava lontano
+    const body = rule('.rs-admin-row__hint')
+
+    expect(body, 'regola .rs-admin-row__hint').toBeDefined()
+    expect(body).toMatch(/inline-size:\s*0/)
+    expect(body).toMatch(/min-inline-size:\s*100%/)
+  })
 })

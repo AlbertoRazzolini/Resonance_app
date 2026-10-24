@@ -38,8 +38,8 @@ type MessageComposerProps = {
  * «Invia» sotto. Invio manda, Maiusc+Invio va a capo; «Invia» resta spento senza testo o senza connessione. La casella
  * cresce col testo fino a 160 px. Con `canSend` falso è spenta e una nota neutra spiega che si può solo rileggere.
  * Il pulsante con la faccina apre il selettore di emoji sopra la casella: l'emoji entra nel punto del cursore (o al posto
- * della selezione) se il messaggio resta entro il limite, poi il selettore si chiude e il cursore torna nella casella;
- * si chiude anche con Esc e con un clic fuori.
+ * della selezione) se il messaggio resta entro il limite, e il selettore resta aperto per sceglierne altre; si chiude con
+ * Esc (il cursore torna nella casella), con un clic fuori, ripremendo la faccina e inviando il messaggio.
  */
 export function MessageComposer({ name, value, onChange, onSubmit, status, canSend, error }: MessageComposerProps) {
   const field = useRef<HTMLTextAreaElement>(null)
@@ -85,22 +85,22 @@ export function MessageComposer({ name, value, onChange, onSubmit, status, canSe
     }
   }, [pickerOpen])
 
-  /** Mette l'emoji nel punto del cursore, chiude il selettore e rimette il cursore nella casella. */
+  /** Mette l'emoji nel punto del cursore e lascia il selettore aperto, con il cursore dove si trova, per sceglierne altre. */
   function insertEmoji(unicode: string) {
     const element = field.current
-    setPickerOpen(false)
     if (!element) return
     const inserted = insertAtSelection(value, element.selectionStart, element.selectionEnd, unicode, MESSAGE_MAX)
     if (inserted) {
       pendingCaret.current = inserted.caret
       onChange(inserted.value)
     }
-    element.focus()
   }
 
   function submit(event?: FormEvent) {
     event?.preventDefault()
-    if (canSubmit) onSubmit()
+    if (!canSubmit) return
+    setPickerOpen(false)
+    onSubmit()
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {

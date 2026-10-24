@@ -38,7 +38,7 @@ function pick(picker: HTMLElement, unicode: string) {
   fireEvent(picker, new CustomEvent('emoji-click', { detail: { unicode } }))
 }
 
-// Pulsante e selettore: apertura, chiusura (scelta, Esc, clic fuori) e ritorno del cursore nella casella.
+// Pulsante e selettore: apertura, selettore che resta aperto dopo la scelta, chiusura (Esc, clic fuori, faccina, invio).
 describe('MessageComposer, selettore di emoji', () => {
   it('il pulsante «Inserisci emoji» parte chiuso e non mostra il selettore', () => {
     render(<Harness />)
@@ -57,12 +57,23 @@ describe('MessageComposer, selettore di emoji', () => {
     expect(picker.getAttribute('locale')).toBe('it')
   })
 
-  it('la scelta di un’emoji chiude il selettore', async () => {
+  it('la scelta di un’emoji lascia il selettore aperto, così se ne scelgono altre una alla volta', async () => {
     render(<Harness />)
     await userEvent.click(screen.getByRole('button', { name: 'Inserisci emoji' }))
-    pick(await findPicker(), '🎸')
+    const picker = await findPicker()
+    pick(picker, '🎸')
+    pick(picker, '🎹')
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Messaggio per Anna' })).toHaveValue('🎸🎹'))
+    expect(document.querySelector('emoji-picker')).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'Inserisci emoji' })).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('l’invio del messaggio chiude il selettore', async () => {
+    render(<Harness initial="Ciao" />)
+    await userEvent.click(screen.getByRole('button', { name: 'Inserisci emoji' }))
+    await findPicker()
+    await userEvent.click(screen.getByRole('button', { name: 'Invia' }))
     await waitFor(() => expect(document.querySelector('emoji-picker')).toBeNull())
-    expect(screen.getByRole('button', { name: 'Inserisci emoji' })).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('Esc chiude il selettore e riporta il cursore nella casella', async () => {
@@ -138,7 +149,6 @@ describe('MessageComposer, inserimento dell’emoji nel testo', () => {
     const full = 'a'.repeat(MESSAGE_MAX)
     render(<Harness initial={full} />)
     const field = await insert('🎸', 5)
-    await waitFor(() => expect(document.querySelector('emoji-picker')).toBeNull())
     expect(field).toHaveValue(full)
     expect(screen.queryByRole('alert')).toBeNull()
   })

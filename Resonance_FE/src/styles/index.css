@@ -2507,7 +2507,11 @@ textarea {
   max-width: 14rem;
 }
 
+/* La frase non conta nella larghezza della colonna (0 di base, poi quanto il pulsante): va a capo sotto il pulsante
+   senza allargarla e senza allontanare i pulsanti vicini */
 .rs-admin-row__hint {
+  inline-size: 0;
+  min-inline-size: 100%;
   color: var(--rs-color-text-muted);
   font-size: var(--rs-text-xs);
 }
