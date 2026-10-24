@@ -422,17 +422,27 @@ textarea {
   margin-bottom: var(--rs-space-2);
 }
 
-/* Logo a due colori e cerchio del profilo (barra e pagine di accesso) */
+/* Logo SVG (decisione 111): lettere nel colore del testo, microfono e anelli nel giallo; altezza in rem, larghezza dal disegno */
 .rs-logo {
-  font-size: var(--rs-text-lg);
-  font-weight: var(--rs-weight-heading);
-  letter-spacing: var(--rs-tracking-heading);
-  text-transform: uppercase;
+  display: block;
+  height: 1.75rem;
+  width: auto;
+  flex-shrink: 0;
   color: var(--rs-color-text);
 }
 
-.rs-logo__accent {
-  color: var(--rs-color-accent);
+.rs-logo__letters {
+  fill: currentColor;
+}
+
+.rs-logo__mic {
+  fill: none;
+  stroke: var(--rs-color-accent);
+}
+
+.rs-logo__body {
+  fill: var(--rs-color-accent);
+  stroke: none;
 }
 
 .rs-avatar {

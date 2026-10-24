@@ -3707,3 +3707,31 @@ Scelte dello studente il 24 ottobre, dopo FE-22:
 - **Ridurre il magnete del pulsante di candidatura:** toglieva l'effetto approvato nella decisione 107 solo su questo pulsante.
 - **Aumentare la distanza fra tutti i figli del dettaglio:** allontanava anche elementi che non hanno il magnete.
 - **Nome a corpo fisso (17 o 20 px):** non seguiva lo schermo né le preferenze del carattere; per questo `clamp()` con i token.
+
+
+## Decisione 111: nuovo logo e favicon (card FE-23, decisioni 76, 78, 83, 107 e 108)
+
+### Scelta
+
+- **Logo:** SVG nel componente `Logo` (`ui/Logo.tsx`, forme in `ui/logoShapes.ts`): «RES», microfono con tre anelli al posto della O, «NANCE». Lettere bianche (colore del testo), microfono e anelli gialli (colore di accento). Compare dove c'era già il `Logo` (barra in alto, colonna laterale, accesso e registrazione, landing); footer e pagine legali restano senza.
+- **Lettere:** Barlow Condensed Bold già nel progetto, convertita in tracciati con uno script esterno al progetto (Python con fonttools). Nessun font da caricare per il logo. Nome accessibile unico «Resonance» (`role="img"` e `aria-label` sull'SVG), nessun testo nel documento.
+- **Favicon:** un solo disegno a 3 anelli (microfono su fondo nero con angoli arrotondati), in `Resonance_FE/public/`: `favicon.svg`, `favicon-32.png`, `apple-touch-icon.png` (180) e `icon-512.png`, collegati in `index.html`. Il backend serve già questi file (GET statici, decisione 74): nessuna modifica.
+- **Colore del tema:** `<meta name="theme-color" content="#0a0a0a">`. Nessun manifest: l'app installabile (PWA) va in Post-V2 (`docs/progettazione.md`, sezione 15, con il procedimento).
+- **Strumenti:** i PNG sono stati ottenuti con Playwright (già presente) e le lettere con fonttools in una cartella temporanea; nel progetto non entra nessuna dipendenza nuova.
+- **Test:** `Logo.test.tsx` (nome accessibile, SVG senza testo, tre anelli e microfono) e `indexHtml.test.ts` (link alle icone, file presenti in `public/`, colore del tema, nessuna icona da altri siti).
+
+### Motivazione
+
+- Il giallo resta solo sul simbolo: il microfono col bianco delle lettere si legge anche a 24 px di altezza.
+- Un solo file a 3 anelli tiene la favicon uguale al simbolo del logo ed evita due disegni da mantenere.
+- Lettere in tracciati: bordi puliti (i tracciati automatici di Gemini erano ondulati) e nessuna dipendenza dal font caricato.
+- Il manifest non serve al brief e invita a parlare di service worker: fuori dal perimetro.
+
+### Alternative scartate
+
+- **«NANCE» giallo:** due blocchi gialli ai lati della O toglievano risalto al microfono.
+- **Lettere di Gemini ripulite:** lavoro lungo con esito incerto.
+- **Versione a 2 anelli solo per 16 px:** due disegni da mantenere.
+- **Solo SVG, senza PNG:** Safari/iOS non usano l'SVG per l'icona nella schermata Home.
+- **Manifest subito:** rimandato a Post-V2.
+- **Libreria npm di sviluppo (sharp, opentype.js):** dipendenza in più per pochi file.

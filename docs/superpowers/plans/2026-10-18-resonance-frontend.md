@@ -1121,10 +1121,12 @@ a chip, carosello degli eventi, filtri della bacheca, candidature con accettazio
 
 **Punti aperti da porre allo studente a inizio card (nessuno è deciso):** colori del wordmark («NANCE» bianco come nell'immagine o giallo come oggi); dove compare (barra in alto sul telefono, colonna laterale, accesso, landing; footer e pagine legali?); misure piccole (anelli più spessi e asta più corta; microfono con o senza griglia; un file unico a 3 anelli o una versione a 2 anelli solo per 16 px); lettere (quelle tracciate da Gemini o Barlow Condensed Bold); file della favicon (SVG, PNG da 32, 180 e 512; `manifest`? colore del tema?); nome accessibile del logo e test del componente `Logo`.
 
-- [ ] **1. Punti aperti.** Si decidono con lo studente prima di scrivere test o codice.
-- [ ] **2. Favicon.** SVG disegnata nel progetto, PNG da 32, 180 e 512, collegamento in `index.html`; test sul collegamento.
-- [ ] **3. Logo.** SVG (testo in tracciati, O con microfono e anelli) nel componente `Logo`, con nome accessibile; test aggiornati.
-- [ ] **4. Controlli.** 375, 768 e 1280 px, lint, test e build; decisione e piano aggiornati.
+- [x] **1. Punti aperti.** Si decidono con lo studente prima di scrivere test o codice.
+- [x] **2. Favicon.** SVG disegnata nel progetto, PNG da 32, 180 e 512, collegamento in `index.html`; test sul collegamento.
+- [x] **3. Logo.** SVG (testo in tracciati, O con microfono e anelli) nel componente `Logo`, con nome accessibile; test aggiornati.
+- [x] **4. Controlli.** 375, 768 e 1280 px, lint, test e build; decisione e piano aggiornati.
+
+**Esito (24 ottobre, decisione 111):** scelte confermate: 3 anelli, lettere bianche e microfono giallo, logo dove c'era già, lettere Barlow Condensed Bold in tracciati, favicon SVG + PNG da 32, 180 e 512 in `public/`, solo `theme-color` (manifest/PWA in Post-V2, con il procedimento in `progettazione.md`, sezione 15), strumenti fuori dal progetto, test `Logo.test.tsx` e `indexHtml.test.ts`.
 
 **Taglio:** nessuno previsto; logo e favicon si fanno entrambi (scelta dello studente, 24 ottobre).
 **Commit proposto:** `feat(fe-ui): aggiunge il nuovo logo e la favicon`
