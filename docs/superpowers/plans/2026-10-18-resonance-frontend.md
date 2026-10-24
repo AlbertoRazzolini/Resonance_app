@@ -1113,16 +1113,20 @@ a chip, carosello degli eventi, filtri della bacheca, candidature con accettazio
 ### Card FE-23 · Nuovo logo e favicon — stima 1,5 h (provvisoria)
 
 **Riferimenti:** decisioni 78, 83, 107, 108; `PRODUCT.md`. Richiesta dello studente il 24 ottobre: ribrandizzare la scritta Resonance e creare una favicon. Proposte generate con Gemini (bitmap): wordmark «RES» + microfono dentro anelli al posto della O + «NANCE»; favicon con microfono dentro anelli su fondo nero con angoli arrotondati.
-**Ordine:** prima di FE-11 (un solo deploy: il logo deve esserci nel deploy finale). Solo frontend. Gli SVG si disegnano nel progetto, con il testo convertito in tracciati con Barlow Condensed Bold (già in npm, nessun CDN, decisione 76).
+**Ordine:** prima di F7-07 e FE-11 (un solo deploy: logo e favicon devono esserci nel deploy finale). Solo frontend. Gli SVG si disegnano nel progetto, con il testo convertito in tracciati con Barlow Condensed Bold (già in npm, nessun CDN, decisione 76).
 
-**Punti aperti da porre allo studente a inizio card (nessuno è deciso):** colori del wordmark («NANCE» bianco come nell'immagine o giallo come oggi); dove compare (barra in alto sul telefono, colonna laterale, accesso, landing; footer e pagine legali?); misure piccole (anelli più spessi e asta più corta; favicon con 2 anelli, microfono con o senza griglia); file della favicon (SVG, PNG da 32, 180 e 512; `manifest`? colore del tema?); nome accessibile del logo e test del componente `Logo`.
+**Materiale pronto** in `Desktop\brand-prove-resonance\` (fuori dal progetto, non versionato; `LEGGIMI.txt`): `favicon-pulita-4anelli.svg` e `favicon-pulita-3anelli.svg`, ricostruite con forme geometriche misurate sull'originale di Gemini (somiglianza 0,93, circa 1 KB, script `favicon-geometria.py`); i tracciati con vtracer (`favicon-traced.svg`, `wordmark-traced.svg`) hanno bordi ondulati e sono solo prove.
+
+**Scelta provvisoria dello studente (24 ottobre, da confermare a inizio card):** favicon con 3 anelli (non 2 né 4), un po' più spessi dell'originale; gli stessi 3 anelli intorno al microfono nel logo. Misure in unità relative.
+
+**Punti aperti da porre allo studente a inizio card (nessuno è deciso):** colori del wordmark («NANCE» bianco come nell'immagine o giallo come oggi); dove compare (barra in alto sul telefono, colonna laterale, accesso, landing; footer e pagine legali?); misure piccole (anelli più spessi e asta più corta; microfono con o senza griglia; un file unico a 3 anelli o una versione a 2 anelli solo per 16 px); lettere (quelle tracciate da Gemini o Barlow Condensed Bold); file della favicon (SVG, PNG da 32, 180 e 512; `manifest`? colore del tema?); nome accessibile del logo e test del componente `Logo`.
 
 - [ ] **1. Punti aperti.** Si decidono con lo studente prima di scrivere test o codice.
 - [ ] **2. Favicon.** SVG disegnata nel progetto, PNG da 32, 180 e 512, collegamento in `index.html`; test sul collegamento.
 - [ ] **3. Logo.** SVG (testo in tracciati, O con microfono e anelli) nel componente `Logo`, con nome accessibile; test aggiornati.
 - [ ] **4. Controlli.** 375, 768 e 1280 px, lint, test e build; decisione e piano aggiornati.
 
-**Taglio:** se il tempo non basta, solo la favicon (il logo resta com'è).
+**Taglio:** nessuno previsto; logo e favicon si fanno entrambi (scelta dello studente, 24 ottobre).
 **Commit proposto:** `feat(fe-ui): aggiunge il nuovo logo e la favicon`
 
 ### Card FE-11 · Deploy integrato, CSP e prova della demo — stima 4 h
