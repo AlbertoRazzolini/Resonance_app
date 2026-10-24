@@ -61,7 +61,12 @@ Il Blueprint `render.yaml` crea database e servizio; ogni push su `main` fa il d
 - 🔗 I link scritti dagli utenti si aprono solo dopo una conferma che mostra il dominio.
 - 💬 I messaggi di chat e i contatti degli eventi sono solo live (non compaiono fra le notifiche salvate).
 - ✏️ I contenuti si creano e si cancellano, non si modificano · 🖼️ le immagini sono solo indirizzi (URL).
-- 🎟️ Niente partecipazione agli eventi né biglietti. L'elenco completo è in `docs/progettazione.md`, sezione 15.
+- 🎟️ Niente partecipazione agli eventi né biglietti.
+
+## 🔮 Sviluppi futuri
+Previsti in `docs/progettazione.md`, sezione 15 (dove sta l'elenco completo):
+- **V1:** 🎟️ partecipazione agli eventi («parteciperò») e biglietti · ✏️ modifica dei propri contenuti · 🖼️ caricamento delle immagini · 🗑️ cancellazione dei messaggi di chat · ✅ candidature con accettazione o rifiuto · 🔎 ricerca dei luoghi e suggerimento degli indirizzi.
+- **V2:** 🔔 notifiche push · 🎧 integrazione con Spotify · 💳 pagamento dei biglietti · 🔐 login social.
 
 ## 📚 Documentazione
 📐 [`progettazione.md`](docs/progettazione.md) · 🧾 [`decisioni.md`](docs/decisioni.md) · 🗄️ [`schema-db.md`](docs/schema-db.md) · ♻️ [`riuso-nosey.md`](docs/riuso-nosey.md) · 📮 [`postman/`](postman/) (guida in [`verifica-e-demo.md`](docs/verifica-e-demo.md))
