@@ -142,6 +142,16 @@ class SuperadminBootstrapTest extends IntegrationTest {
     }
 
     @Test
+    void run_withAPasswordWithoutADigit_failsTheStartupAndCreatesNothing() {
+        // Stessa regola della registrazione e del reset (decisione 113): anche il SUPERADMIN la rispetta.
+        assertThatThrownBy(() -> bootstrap(EMAIL, "sololetterelunghe").run(null))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("SUPERADMIN_PASSWORD");
+
+        assertThat(users.count()).isZero();
+    }
+
+    @Test
     void run_withAPasswordOver72Bytes_failsTheStartup() {
         // 30 emoji: 30 caratteri ma 120 byte in UTF-8, oltre il limite di BCrypt.
         assertThatThrownBy(() -> bootstrap(EMAIL, "😀".repeat(30)).run(null))

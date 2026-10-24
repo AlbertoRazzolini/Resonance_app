@@ -47,7 +47,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class RegistrationIntegrationTest extends IntegrationTest {
 
     private static final String EMAIL = "mario@example.com";
-    private static final String PASSWORD = "password-corretta";
+    private static final String PASSWORD = "password-corretta1";
 
     @Autowired
     private ApplicationEvents events;
@@ -115,16 +115,38 @@ class RegistrationIntegrationTest extends IntegrationTest {
         assertThat(events.stream(VerificationCodeEmailEvent.class)).isEmpty();
     }
 
+    // ------------------------------------------ password lettera+numero (decisione 113)
+
+    @Test
+    void register_withOnlyLettersInThePassword_returns400OnThePasswordField() throws Exception {
+        register(EMAIL, "solo-lettere-niente-cifre", "Mario")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.fields.password").value("deve contenere almeno una lettera e un numero"));
+
+        assertThat(users.count()).isZero();
+    }
+
+    @Test
+    void register_withOnlyDigitsInThePassword_returns400OnThePasswordField() throws Exception {
+        register(EMAIL, "12345678", "Mario")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.fields.password").exists());
+
+        assertThat(users.count()).isZero();
+    }
+
     // ------------------------------------------------- nome e password (decisione 84)
 
     @Test
     void register_withEmojiInThePassword_returns400OnThePasswordField() throws Exception {
-        // Sotto i 72 byte: a fermarla e' la regola sulle emoji, non quella dei byte.
-        register(EMAIL, "password-🎸-lunga", "Mario")
+        // Sotto i 72 byte e con una cifra: a fermarla e' solo la regola sulle emoji (decisione 84).
+        register(EMAIL, "password1-🎸-lunga", "Mario")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.fields.password").value("non può contenere emoji"))
-                .andExpect(content().string(not(containsString("password-🎸-lunga"))));
+                .andExpect(content().string(not(containsString("password1-🎸-lunga"))));
 
         assertThat(users.count()).isZero();
         assertThat(events.stream(VerificationCodeEmailEvent.class)).isEmpty();
@@ -178,7 +200,7 @@ class RegistrationIntegrationTest extends IntegrationTest {
 
     @Test
     void register_withAccentedNameAndPassword_isAccepted() throws Exception {
-        register(EMAIL, "pässwörd-sicüra", "Zoë Società Già-Là!").andExpect(status().isCreated());
+        register(EMAIL, "pässwörd-sicüra1", "Zoë Società Già-Là!").andExpect(status().isCreated());
 
         assertThat(users.findByEmail(EMAIL).orElseThrow().getDisplayName()).isEqualTo("Zoë Società Già-Là!");
     }

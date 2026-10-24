@@ -39,7 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @RecordApplicationEvents
 class DisplayNameUniquenessIntegrationTest extends IntegrationTest {
 
-    private static final String PASSWORD = "password-corretta";
+    private static final String PASSWORD = "password-corretta1";
     private static final String TAKEN_MESSAGE = "Nome già utilizzato";
     private static final String RESERVED_MESSAGE = "Questo nome utente non è disponibile";
 

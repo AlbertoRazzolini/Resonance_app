@@ -406,14 +406,31 @@ class PasswordResetIntegrationTest extends IntegrationTest {
         forgot(EMAIL).andExpect(status().isNoContent());
         String code = lastCodeEvent().code();
 
-        // Sotto i 72 byte: a fermarla e' la regola sulle emoji (decisione 84).
-        reset(EMAIL, code, "nuova-🎸-password")
+        // Sotto i 72 byte e con una cifra: a fermarla e' solo la regola sulle emoji (decisione 84).
+        reset(EMAIL, code, "nuova1-🎸-password")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.fields.newPassword").value("non può contenere emoji"))
-                .andExpect(content().string(not(containsString("nuova-🎸-password"))));
+                .andExpect(content().string(not(containsString("nuova1-🎸-password"))));
 
         // La validazione precede il service: il codice non e' stato consumato e la password e' invariata.
+        reset(EMAIL, code, NEW_PASSWORD).andExpect(status().isNoContent());
+    }
+
+    // ------------------------------------------ password lettera+numero (decisione 113)
+
+    @Test
+    void reset_withOnlyLettersInTheNewPassword_returns400OnTheNewPasswordField() throws Exception {
+        verifiedUser(EMAIL);
+        forgot(EMAIL).andExpect(status().isNoContent());
+        String code = lastCodeEvent().code();
+
+        reset(EMAIL, code, "solo-lettere-niente-cifre")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.fields.newPassword").value("deve contenere almeno una lettera e un numero"));
+
+        // La validazione precede il service: il codice non e' stato consumato.
         reset(EMAIL, code, NEW_PASSWORD).andExpect(status().isNoContent());
     }
 

@@ -62,10 +62,11 @@ public class SuperadminBootstrap implements ApplicationRunner {
             return;
         }
         // Una password debole su un account con tutti i poteri non e' accettabile: meglio non avviare.
-        // Il messaggio non riporta il valore.
-        if (password.length() < MIN_PASSWORD_LENGTH || PasswordMax72BytesValidator.exceedsLimit(password)) {
+        // Il messaggio non riporta il valore. Stessa regola di registrazione e reset (decisione 113).
+        if (password.length() < MIN_PASSWORD_LENGTH || PasswordMax72BytesValidator.exceedsLimit(password)
+                || !PasswordHasLetterAndDigitValidator.hasLetterAndDigit(password)) {
             throw new IllegalStateException("SUPERADMIN_PASSWORD non valida: servono almeno "
-                    + MIN_PASSWORD_LENGTH + " caratteri e al massimo 72 byte in UTF-8");
+                    + MIN_PASSWORD_LENGTH + " caratteri, al massimo 72 byte in UTF-8, almeno una lettera e un numero");
         }
 
         String passwordHash = passwordEncoder.encode(password);

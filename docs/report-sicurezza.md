@@ -177,3 +177,47 @@ punti, corretti in F7-03 ciascuno con un test scritto prima del codice, che fall
   integrazione delle card della chat, non riprovati qui.
 - Test di carico e di denial of service, dipendenze con vulnerabilità note (`mvn dependency-check`), analisi dei
   segreti nella cronologia Git.
+
+## Prova dinamica F7-07 (24 ottobre, decisione 112)
+
+Prova dinamica black-box, senza Strix (decisione 112): due giri con un agente Claude Code senza accesso al codice del
+progetto, contro uno stack locale isolato e usa e getta (database Postgres nuovo in Docker sulla porta 5440, backend
+di prova sulla porta 8090, geocodifica finta, limiti di login alzati solo lì, dati tutti finti). Account anonimo, FAN,
+MUSICIAN e ADMIN.
+
+### Giro 1 (generale)
+
+Aree provate: autenticazione, JWT, escalation di ruolo, IDOR su chat/amicizie/collab/notifiche/eventi indie, like del
+feed, sospensione, refresh token, CSRF, CORS, SQL injection, validazione dell'input, endpoint di debug, codice di
+verifica email.
+
+- **Esito:** nessuna vulnerabilità confermata. Due segnalazioni verificate a mano e già coperte da scelte di design
+  esistenti: il testo libero del feed non è sanificato dal backend per scelta (decisione 79, l'escape è compito del
+  frontend: verificato che `UserText` lo mostra sempre come nodo React, nessun `dangerouslySetInnerHTML` in tutto il
+  frontend); la password non aveva un controllo di complessità oltre alla lunghezza (corretto, vedi sotto).
+- Un tentativo del primo giro si è fermato da solo per un blocco di sicurezza del modello (falso positivo su un
+  compito di pentest): risolto ripetendo la richiesta con più contesto sull'autorizzazione.
+
+### Giro 2 (mirato su STOMP)
+
+Destinazione fornita a mano (letta nel codice da questa sessione, non dall'agente): isolamento fra conversazioni,
+`conversationId` inesistente, CONNECT con token non valido o assente, validazione del payload (lunghezza, JSON
+malformato, campo assente).
+
+- **Esito:** nessuna vulnerabilità trovata. Messaggi di errore coerenti (`NOT_CONVERSATION_MEMBER`, `NOT_FOUND`,
+  `TOKEN_INVALID`, `VALIDATION_ERROR`), nessun errore 500 né fuga di dati.
+- Non testata la scadenza del token per solo passare del tempo (limite di tempo della prova); la firma manomessa
+  copre lo stesso percorso di validazione.
+
+### Correzione (decisione 113)
+
+La password accettava "password" (solo lettere, 8 caratteri): nessuna regola del brief o del design lo impediva, ma è
+un rischio di credential stuffing con dizionari comuni. Aggiunta `@PasswordHasLetterAndDigit` (almeno una lettera e
+una cifra), stesso stile delle altre regole di forma della password (`VALIDATION_ERROR`, messaggio sul campo), su
+registrazione, reset e bootstrap del primo SUPERADMIN. Test scritti prima del codice; tre mutazioni (annotazione
+tolta da registrazione, da reset, controllo tolto dal bootstrap) tutte intercettate da un test con nome.
+
+### Non eseguito in questo giro
+
+Strix (decisione 112, costo non approvato); i ruoli HOST e SUPERADMIN (simili a MUSICIAN e ADMIN); una lista di
+password comuni bloccate (alternativa scartata nella decisione 113); verifica dinamica su Render (resta F6-03).

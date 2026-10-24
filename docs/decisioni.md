@@ -3735,3 +3735,40 @@ Scelte dello studente il 24 ottobre, dopo FE-22:
 - **Solo SVG, senza PNG:** Safari/iOS non usano l'SVG per l'icona nella schermata Home.
 - **Manifest subito:** rimandato a Post-V2.
 - **Libreria npm di sviluppo (sharp, opentype.js):** dipendenza in più per pochi file.
+
+## Decisione 112: prova di sicurezza dinamica senza Strix (card F7-07, decisione 76)
+
+### Scelta
+
+- **Niente Strix:** lo strumento è gratuito (Apache-2.0) ma ha bisogno di un modello AI a pagamento per guidare l'attacco; lo studente ha scelto di non spendere altro oltre all'abbonamento Pro già pagato. Scartate anche le alternative di un modello locale (poco capace sulla macchina disponibile, rischio di giri a vuoto con la scadenza vicina).
+- **Prova manuale con agenti Claude Code, in due giri:** un agente generale, senza accesso al codice del progetto, contro uno stack isolato (database Postgres nuovo in Docker sulla porta 5440, backend di prova sulla porta 8090, servizio di geocodifica finto, limiti di login alzati solo lì); un secondo giro mirato sul protocollo STOMP della chat, con la destinazione esatta fornita a mano (letta nel codice da questa sessione, non dall'agente). Account di prova FAN, MUSICIAN e ADMIN, più un anonimo.
+- **Esito:** nessuna vulnerabilità confermata che richieda una correzione. Un primo tentativo del primo giro si è fermato da solo per un blocco di sicurezza del modello (falso positivo su un compito di pentest); è bastato ripetere la richiesta con più contesto sull'autorizzazione.
+- **Due segnalazioni verificate a mano:** il testo libero del feed non è sanificato dal backend (comportamento voluto, decisione 79: l'escape è compito del frontend, verificato nel componente `UserText`, che non usa mai `dangerouslySetInnerHTML`) e la password non ha un controllo di complessità oltre alla lunghezza (scelta di design esistente, non un buco; rinforzata separatamente, decisione 113).
+
+### Motivazione
+
+- Il blocco è del progetto open source, non del codice dello studente: pagare un modello solo per guidarlo non era previsto dal brief né necessario, con un'alternativa gratuita che copre comunque le aree più importanti (autenticazione, ruoli, IDOR, WebSocket, injection, validazione).
+- Un agente Claude Code generico, lanciato senza il contesto del codice, si comporta come un attaccante esterno quanto basta per questa prova, a costo zero aggiuntivo.
+
+### Alternative scartate
+
+- **Strix con chiave API Anthropic a pagamento:** scelta iniziale del 22 ottobre, abbandonata il 24 per il costo.
+- **Strix con modello locale (Ollama):** gratis ma troppo debole sulla macchina disponibile per guidare bene l'attacco, con rischio concreto di giri a vuoto.
+
+## Decisione 113: regola minima sulla password (card F7-07, dalla prova dinamica)
+
+### Scelta
+
+- **Regola:** oltre alla lunghezza (8-72 caratteri) già prevista, la password deve contenere almeno una lettera e almeno un numero.
+- **Dove si applica:** registrazione (`POST /api/auth/register`), reset (`POST /api/auth/password/reset`) e bootstrap del primo SUPERADMIN (`SUPERADMIN_PASSWORD`, fallisce l'avvio con un messaggio chiaro se non rispetta la regola, come già per la lunghezza). Non nel login né nella verifica email, che confrontano una password già scelta (stesso schema della decisione 84).
+- **Errore:** stesso stile delle altre regole di forma della password (lunghezza, byte massimi, niente emoji): un'annotazione di validazione nuova (`@PasswordHasLetterAndDigit`), errore generico `VALIDATION_ERROR` con il messaggio "deve contenere almeno una lettera e un numero" sul campo `password`. Nessun codice d'errore dedicato: nessun'altra regola di forma della password ne ha uno.
+
+### Motivazione
+
+- La prova dinamica ha mostrato che una password come "password" (solo lettere, 8 caratteri) viene accettata: nessuna regola del brief o del design lo impediva, ma è un rischio reale di credential stuffing con dizionari comuni.
+- Lettera+numero è una regola semplice, nota e poco invasiva per l'utente, a differenza di una lista di password comuni da scegliere e mantenere a mano.
+
+### Alternative scartate
+
+- **Nessuna regola nuova:** lasciava aperto il rischio trovato dalla prova.
+- **Lista di password comuni bloccate:** copertura migliore ma richiede una lista da scegliere, mantenere e tenere aggiornata; fuori dal tempo disponibile.

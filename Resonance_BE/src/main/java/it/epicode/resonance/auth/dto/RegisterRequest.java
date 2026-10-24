@@ -1,5 +1,6 @@
 package it.epicode.resonance.auth.dto;
 
+import it.epicode.resonance.auth.PasswordHasLetterAndDigit;
 import it.epicode.resonance.auth.PasswordMax72Bytes;
 import it.epicode.resonance.common.NoEmoji;
 import it.epicode.resonance.common.NoInvisibleChars;
@@ -17,7 +18,7 @@ import java.util.Locale;
  */
 public record RegisterRequest(
         @NotBlank @Email @Size(max = 255) String email,
-        @NotBlank @Size(min = 8, max = 72) @PasswordMax72Bytes @NoEmoji String password,
+        @NotBlank @Size(min = 8, max = 72) @PasswordMax72Bytes @NoEmoji @PasswordHasLetterAndDigit String password,
         @NotBlank @Size(min = 3, max = 30) @NoEmoji @NoInvisibleChars String displayName
 ) {
 

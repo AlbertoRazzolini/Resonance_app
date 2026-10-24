@@ -1,5 +1,6 @@
 package it.epicode.resonance.auth.dto;
 
+import it.epicode.resonance.auth.PasswordHasLetterAndDigit;
 import it.epicode.resonance.auth.PasswordMax72Bytes;
 import it.epicode.resonance.common.NoEmoji;
 import jakarta.validation.constraints.Email;
@@ -18,7 +19,7 @@ import java.util.Locale;
 public record ResetPasswordRequest(
         @NotBlank @Email @Size(max = 255) String email,
         @NotBlank @Pattern(regexp = "\\d{6}", message = "deve essere di 6 cifre") String code,
-        @NotBlank @Size(min = 8, max = 72) @PasswordMax72Bytes @NoEmoji String newPassword
+        @NotBlank @Size(min = 8, max = 72) @PasswordMax72Bytes @NoEmoji @PasswordHasLetterAndDigit String newPassword
 ) {
 
     public ResetPasswordRequest {
