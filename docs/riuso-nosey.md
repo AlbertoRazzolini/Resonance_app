@@ -153,6 +153,7 @@ Bootstrap e le custom properties `--rs-*` (decisione 78).
 | `features/social/FormMessaggio.tsx` | `features/chat/components/MessageComposer.tsx`, `features/chat/hooks/useOutgoingMessages.ts` | A | FE-09b | Invio con Invio e Maiusc+Invio, contatore «n / 2000», casella che cresce. L'attesa dell'eco e il testo che torna indietro diventano un hook, con segnaposto dopo 300 ms e limite di 10 s. |
 | `features/social/RigaNotifica.tsx` | `features/notifications/components/NotificationItem.tsx` | A | FE-09b | Voce di notifica con testo, anteprima e ora; categorie e notifiche salvate di NoseY non si portano (Resonance non salva le notifiche, progettazione, sezione 6.13). |
 | `features/social/tempiChat.ts` | `lib/format/dates.ts` | A | FE-09b | `quandoBreve`, `etichettaGiorno`, `ora` e `stessoGiorno` diventano `formatChatListTime`, `formatChatDay`, `formatClock` e `isSameDay`; «adesso» si passa ai test. |
+| `components/ui/Paginazione.tsx` | `components/ui/Pagination.tsx` | A | FE-10 | Si tiene l'idea (Precedente, numeri con la pagina corrente segnata, Successivo; niente con una sola pagina). Stile Bootstrap e `--rs-*`; l'elenco dei numeri visibili sta in `lib/visiblePages.ts`; usata dagli elenchi dell'area admin. |
 
 **Non consultati in FE-05:** `features/eventi/ListaEventiMappa` e `components/eventi/CardEvento`: l'elenco e la card di Resonance sono nuovi, disegnati dal mock-up Stitch (NoseY ha stati e POI degli eventi, Resonance no).
 

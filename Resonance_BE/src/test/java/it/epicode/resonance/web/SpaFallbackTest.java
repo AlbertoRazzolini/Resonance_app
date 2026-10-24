@@ -7,6 +7,7 @@ import org.springframework.http.HttpHeaders;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.forwardedUrl;
@@ -91,6 +92,23 @@ class SpaFallbackTest extends IntegrationTest {
         mockMvc.perform(post("/qualcosa"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    }
+
+    @Test
+    void headOnFrontendRouteAndStaticFiles_isPublic() throws Exception {
+        // Controlli di uptime e anteprime dei link usano HEAD (decisione 74, aggiornata in FE-11).
+        mockMvc.perform(head("/eventi/123")).andExpect(status().isOk());
+        mockMvc.perform(head("/index.html")).andExpect(status().isOk());
+        mockMvc.perform(head("/assets/app.js")).andExpect(status().isOk());
+    }
+
+    @Test
+    void headOnApi_requiresTokenEvenWhenGetIsPublic() throws Exception {
+        // HEAD si apre solo fuori da /api e /ws: su /api/health, pubblico in GET, resta protetto.
+        mockMvc.perform(head("/api/health"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+        mockMvc.perform(head("/api/users/me")).andExpect(status().isUnauthorized());
     }
 
     @Test

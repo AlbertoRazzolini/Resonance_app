@@ -39,6 +39,13 @@ import java.util.Map;
 @Configuration
 public class SecurityConfig {
 
+    /**
+     * Policy sugli script (decisione 76): niente script inline, da altre origini o eval; niente plugin, iframe
+     * esterni sulla pagina e form verso altri siti.
+     */
+    private static final String CONTENT_SECURITY_POLICY = "script-src 'self'; object-src 'none'; "
+            + "base-uri 'self'; frame-ancestors 'none'; form-action 'self'";
+
     private final JsonMapper jsonMapper;
     private final Clock clock;
 
@@ -65,8 +72,10 @@ public class SecurityConfig {
                 .logout(AbstractHttpConfigurer::disable)
                 // Header predefiniti di Spring (nosniff, X-Frame-Options, Cache-Control, HSTS su https) piu'
                 // due aggiunti a mano (sezione 8.1): niente Referer verso altri siti e solo la
-                // geolocalizzazione del browser consentita, che il frontend usa per gli eventi vicini.
+                // geolocalizzazione del browser consentita, che il frontend usa per gli eventi vicini. La
+                // Content-Security-Policy limita i soli script alla propria origine (decisione 76).
                 .headers(headers -> headers
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(CONTENT_SECURITY_POLICY))
                         .referrerPolicy(referrer -> referrer.policy(ReferrerPolicy.NO_REFERRER))
                         .permissionsPolicyHeader(permissions -> permissions
                                 .policy("geolocation=(self), camera=(), microphone=()")))
@@ -120,7 +129,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/v3/api-docs/**", "/swagger-ui/**",
                                 "/swagger-ui.html").permitAll()
                         // Frontend (decisione 1, sezione 6.3): i GET fuori da /api e /ws servono solo file statici
-                        // o index.html. Dopo le regole /api e /ws, e solo GET: ogni altro metodo resta protetto.
+                        // o index.html. Dopo le regole /api e /ws, e solo GET e HEAD (decisione 74): ogni altro
+                        // metodo resta protetto.
                         .requestMatchers(SecurityConfig::isStaticFileRequest).permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/superadmin/**").hasRole("SUPERADMIN")
@@ -135,11 +145,13 @@ public class SecurityConfig {
     }
 
     /**
-     * Vero per un GET fuori da /api e /ws: puo' solo servire un file statico o index.html (sezione 6.3).
+     * Vero per un GET o HEAD fuori da /api e /ws: puo' solo servire un file statico o index.html (sezione 6.3).
+     * HEAD serve ai controlli di uptime e alle anteprime dei link e non restituisce il corpo.
      */
     private static boolean isStaticFileRequest(HttpServletRequest request) {
         String path = request.getRequestURI().substring(request.getContextPath().length());
-        return HttpMethod.GET.matches(request.getMethod()) && !SpaResourceConfig.isApiOrWebSocketPath(path);
+        boolean readOnly = HttpMethod.GET.matches(request.getMethod()) || HttpMethod.HEAD.matches(request.getMethod());
+        return readOnly && !SpaResourceConfig.isApiOrWebSocketPath(path);
     }
 
     /**

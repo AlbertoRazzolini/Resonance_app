@@ -1409,7 +1409,9 @@ di 8.5.
 Header di risposta: restano attivi quelli predefiniti di Spring Security (`X-Content-Type-Options: nosniff`,
 `X-Frame-Options: DENY`, `Cache-Control` senza cache, `Strict-Transport-Security` sulle richieste https) e si
 aggiungono `Referrer-Policy: no-referrer` e `Permissions-Policy`, che consente solo la geolocalizzazione del sito
-stesso e disattiva camera e microfono (decisione 70).
+stesso e disattiva camera e microfono (decisione 70), e la `Content-Security-Policy` sugli script
+(`script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'`, decisioni 76
+e 114): nessuno script inline, da altre origini o `eval`, anche nella Swagger UI.
 
 ### 8.2 JwtFilter e AuthenticationEntryPoint
 
@@ -1438,7 +1440,7 @@ stesso e disattiva camera e microfono (decisione 70).
 ### 8.4 Endpoint pubblici
 
 Elenco esplicito per metodo e percorso, senza pattern generici, per tutti gli endpoint `/api/**`
-(sezione 6.3). Unica regola generale: `GET` fuori da `/api/**` e `/ws/**` (file statici del
+(sezione 6.3). Unica regola generale: `GET` e `HEAD` fuori da `/api/**` e `/ws/**` (file statici del
 frontend e `index.html`, che non contengono dati). È una conseguenza della nuova D1: il vincolo
 "senza wildcard" del brief resta rispettato per le API, che sono le uniche risorse con dati.
 
@@ -1788,6 +1790,7 @@ e limiti condivisi: da progettare allora, non ora).
 | `docs/riuso-nosey.md` | Mappa NoseY → Resonance | Quando si porta una classe non prevista o cambia la destinazione |
 | `docs/report-sicurezza.md` | F6: analisi statica e verifica dinamica (SQL injection, XSS, CSRF, brute force, furto/riuso del refresh token, escalation di ruolo), risultati reali, correzioni, criticità aperte | F6 |
 | `README.md` (radice) | Descrizione, backend, avvio locale con Docker e profilo dev (porta 5433), variabili d'ambiente senza valori, import Postman, link al deploy (solo quando esiste) | Quando cambiano avvio, variabili, struttura o deploy |
+| `docs/verifica-e-demo.md` | Guida alla collection Postman, verifica del rilascio su Render e checklist della demo (con gli snippet per la console del browser); gli screenshot del README stanno in `docs/img/` | Quando cambiano le procedure di prova o il deploy |
 | `CLAUDE.md` (radice) | Regole permanenti di lavoro in forma sintetica | Quando cambiano le regole |
 | `package-info.java` | Una riga di responsabilità per package | Alla creazione del package, nello stesso sotto-task |
 | `render.yaml` | Blueprint Render | Quando cambia l'infrastruttura |

@@ -2030,6 +2030,8 @@ Limiti dei servizi esterni, che nessuna scelta di codice rimuove:
   tutto il resto, `index.html` compreso, `no-cache`.
 - **Sicurezza:** una regola in `SecurityConfig` rende pubblici i soli `GET` fuori da `/api` e `/ws`, dopo le
   regole dell'API. Solo `GET`: `HEAD` e `OPTIONS` fuori da `/api` restano protetti. Un `POST /qualcosa` risponde 401.
+  **Aggiornamento di FE-11 (decisione 114):** ora sono pubblici anche i `HEAD` fuori da `/api` e `/ws`; `OPTIONS`
+  resta protetto.
 - **Un file con estensione mancante** (es. `/assets/mancante.js`) e un `/api/...` inesistente rispondono 404 JSON
   `NOT_FOUND`, mai `index.html`. La pagina iniziale `/` la gestisce il welcome page di Spring Boot (forward a `index.html`).
 - **Verifica su Render:** cookie di refresh e WebSocket si provano dalla console del browser aperto sulla stessa
@@ -2132,6 +2134,11 @@ Limiti dei servizi esterni, che nessuna scelta di codice rimuove:
   lettura stanno sulla factory, non sul mapper). Il limite delle creazioni conta anche i tentativi respinti dalla
   geocodifica (indirizzo non trovato), perché è proprio la geocodifica che protegge. Test, prove di mutazione ed
   esiti sono nel report di sicurezza.
+- **Esito di S4 (FE-11, 24 ottobre):** la CSP è in `SecurityConfig` (decisione 114). Provata in locale con il frontend
+  compilato e con la Swagger UI aprendo le pagine in Chrome senza interfaccia e leggendo la console: nessuna violazione
+  (una pagina di controllo con uno script inline produce invece l'errore `Executing inline script violates ... Content
+  Security Policy`, quindi il metodo li vede). `index.html` ha una sola `<script>` esterna. Resta da provare su Render
+  (README, "Verifica del rilascio finale").
 
 ### Motivazione
 
@@ -3772,3 +3779,30 @@ Scelte dello studente il 24 ottobre, dopo FE-22:
 
 - **Nessuna regola nuova:** lasciava aperto il rischio trovato dalla prova.
 - **Lista di password comuni bloccate:** copertura migliore ma richiede una lista da scegliere, mantenere e tenere aggiornata; fuori dal tempo disponibile.
+
+## Decisione 114: CSP, HEAD sui file statici ed esecutore delle email (card FE-11, decisioni 74 e 76)
+
+### Scelta
+
+- **Content-Security-Policy:** header `script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'` configurato in `SecurityConfig` con gli altri header di sicurezza, quindi su tutte le risposte, errori compresi, Swagger UI compresa. Valore della decisione 76; test in `CspIntegrationTest` (pagina del frontend, API, Swagger UI, errore 401).
+- **HEAD sui file statici (scelta dello studente, 23 ottobre):** `isStaticFileRequest` ammette `GET` e `HEAD` fuori da `/api` e `/ws`. Su `/api` `HEAD` resta protetto anche dove `GET` è pubblico (es. `/api/health` risponde 401). Test in `SpaFallbackTest`. Aggiorna la decisione 74, che lo escludeva.
+- **Esecutore delle email (scelta dello studente, 24 ottobre):** un `ThreadPoolTaskExecutor` con 2 thread di base, 4 al massimo, coda di 50, prefisso dei thread `email-` e, a coda piena, invio nel thread della richiesta (`CallerRunsPolicy`). Gli unici `@Async` sono i tre metodi di `EmailEventListener`. **Non è un bean:** `AsyncConfig` implementa `AsyncConfigurer` (`getAsyncExecutor`) e `DisposableBean` (chiude il pool alla chiusura dell'applicazione). Scelta dello studente dopo che una prima versione, con il pool dichiarato come bean `taskExecutor`, risultava assegnata da Spring Boot anche ai canali del WebSocket. Test in `AsyncConfigIntegrationTest`.
+
+### Motivazione
+
+- La CSP limita gli script alla propria origine: anche se un testo di un utente finisse nella pagina come HTML, il browser non eseguirebbe uno script inline. Gli stili non sono limitati, perché la decisione 76 riguarda solo gli script.
+- Controlli di uptime e anteprime dei link usano `HEAD`; su Render davano 401 mentre `GET` dava 200. `HEAD` non restituisce il corpo e fuori da `/api` serve gli stessi file pubblici del `GET`.
+- Con più esecutori nel contesto (quelli del WebSocket) e nessuno chiamato `taskExecutor`, Spring scrive l'INFO `More than one TaskExecutor bean found` e per `@Async` ripiega su un esecutore che crea un thread per ogni email. Con `AsyncConfigurer` Spring conosce l'esecutore di `@Async` e l'INFO non serve più. Il pool limitato mette un tetto ai thread sul piano da 512 MB; l'invio nel thread della richiesta a coda piena evita di perdere codici di verifica.
+- **Perché non un bean:** `SpringBootWebSocketMessageBrokerConfigurer` assegna ai canali `clientInbound` e `clientOutbound` l'unico `AsyncTaskExecutor` del contesto. Un bean `taskExecutor` finiva quindi anche a chat e notifiche live (provato con un test usa e getta: prefisso `email-` e 2 thread sui due canali), che avrebbero aspettato dietro le chiamate a Brevo. Fuori dal contesto, Boot mantiene il proprio esecutore predefinito per il WebSocket e il comportamento di prima non cambia; lo garantisce il test `webSocketChannels_doNotShareTheEmailPool`.
+- Con una coda di 50 il pool cresce oltre i 2 thread di base solo quando la coda è piena (comportamento di `ThreadPoolExecutor`): in pratica le email partono due alla volta.
+
+### Alternative scartate
+
+- **Solo verificare e documentare il messaggio INFO:** nessun rischio, ma resta nel log e i thread delle email restano senza tetto.
+- **Bean `taskExecutor` (prima versione):** log pulito, ma il pool delle email finiva anche ai canali del WebSocket.
+- **Bean `taskExecutor` più un bean `applicationTaskExecutor` per il WebSocket:** due bean da tenere d'accordo e configurazione in più solo per ricostruire il comportamento di prima.
+- **Un solo thread, o 4 base e 8 massimo:** il primo rallenta i codici in una demo con più registrazioni, il secondo usa più memoria e più chiamate a Brevo insieme.
+- **Coda di 10 o di 200:** la prima si riempie subito, la seconda lascia un'email in attesa per minuti con il codice che scade.
+- **Scartare l'email a coda piena:** richiesta veloce, ma l'utente non riceve il codice e deve chiederne un altro.
+- **Test della CSP dentro `SecurityHeadersIntegrationTest`:** meno file, ma il piano indicava un test nuovo nel package `config`.
+- **`HEAD` anche su `/api`:** fuori dalla richiesta e contrario alla regola "solo le risorse senza dati sono pubbliche" (progettazione, sezione 8.4).
