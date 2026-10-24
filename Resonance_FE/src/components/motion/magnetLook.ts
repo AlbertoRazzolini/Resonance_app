@@ -11,3 +11,15 @@ export const MAGNET_LOOK = {
   scale: 1.15,
   spring: { stiffness: 200, damping: 18 },
 } as const
+
+/**
+ * Magnete più leggero per la landing (FE-12, decisione 108), su scelta dello studente: i pulsanti stanno vicini e con i
+ * valori pieni, e poi con quelli intermedi (forza 14, 8°, 1,08), quello attratto toccava il vicino. Forza 30 (al massimo
+ * circa 7 px di spostamento), inclinazione 5°, ingrandimento 1,04; distanza, assi e molla restano quelli di `MAGNET_LOOK`.
+ */
+export const LANDING_MAGNET_LOOK = {
+  ...MAGNET_LOOK,
+  magnetStrength: 30,
+  tilt: 5,
+  scale: 1.04,
+} as const

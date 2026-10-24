@@ -39,9 +39,17 @@ describe('router', () => {
   // /eventi cerca concerti e indie event vicini all'apertura: senza handler la richiesta farebbe fallire il test
   beforeEach(() => server.use(nearbyConcertsFound([makePage([])]), nearbyIndieFound([makePage([])])))
 
-  it('"/" porta agli eventi', async () => {
+  it('"/" mostra la landing a chi non ha l\'accesso e resta su "/"', async () => {
     const router = renderAt(ROUTES.home)
-    expect(await screen.findByRole('heading', { name: 'Eventi vicini' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { level: 1, name: /trova la tua scena dal vivo/i }),
+    ).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe(ROUTES.home)
+  })
+
+  it('"/" porta agli eventi chi ha già la sessione', async () => {
+    const router = renderAt(ROUTES.home, { loggedIn: true })
+    expect(await screen.findByRole('heading', { level: 1, name: 'Eventi vicini' })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe(ROUTES.events)
   })
 

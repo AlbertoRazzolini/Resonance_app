@@ -2005,3 +2005,5 @@ ufficiali (Stripe); piano premium per HOST; personalizzazione dei biglietti con 
 valore `TWO_FACTOR` di `email_code_purpose`); GDPR e anonimizzazione; login social con Firebase Auth
 limitato all'autenticazione (`password_hash` diventerebbe nullable, PostgreSQL resta il database
 applicativo).
+
+Immagini reali dell'app (schermate dei quattro tab) nella landing page, quando ci saranno dati di prova veritieri (richiesta dello studente il 24 ottobre; oggi la landing usa una mappa di esempio disegnata, decisione 108).

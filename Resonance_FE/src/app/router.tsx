@@ -1,4 +1,4 @@
-import { Navigate, Outlet, createBrowserRouter, type RouteObject } from 'react-router'
+import { Outlet, createBrowserRouter, type RouteObject } from 'react-router'
 import { RedirectIfAuthenticated } from '@/components/guards/RedirectIfAuthenticated'
 import { RequireAuth } from '@/components/guards/RequireAuth'
 import { RequireRole } from '@/components/guards/RequireRole'
@@ -46,12 +46,16 @@ export const routes: RouteObject[] = [
     ],
   },
   {
+    // «/» è la landing per chi non ha la sessione; chi ce l'ha va agli Eventi (la pagina stessa decide, decisione 85).
+    // Sta fuori da `AppShell`, che quindi è un layout senza percorso: le sue rotte hanno già percorsi assoluti.
     path: ROUTES.home,
+    HydrateFallback,
+    lazy: () => import('@/features/landing/pages/LandingPage'),
+  },
+  {
     Component: AppShell,
     HydrateFallback,
     children: [
-      // La home è la lista degli eventi (decisione 83: la tab Eventi e il logo portano nello stesso posto)
-      { index: true, element: <Navigate to={ROUTES.events} replace /> },
       {
         path: ROUTES.events,
         handle: titled('Eventi'),

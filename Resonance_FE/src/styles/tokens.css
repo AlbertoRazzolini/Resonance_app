@@ -73,6 +73,8 @@
   --rs-topbar-height: 3.5rem;
   --rs-tabbar-height: 4rem;
   --rs-footer-height: 5.5rem;
+  /* Footer statico della landing (FE-12): alto uguale a ogni larghezza, per far stare l'ultima schermata nello schermo */
+  --rs-landing-footer: 4rem;
 
   /* Ombre con scostamento e sfumatura, senza aloni colorati */
   --rs-shadow-card: 0 2px 6px rgba(0, 0, 0, 0.5);

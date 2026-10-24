@@ -2534,3 +2534,650 @@ textarea {
   align-items: center;
   gap: var(--rs-space-2);
 }
+
+/*
+ * Landing page su «/» (FE-12, decisione 108): quattro schermate alte quanto lo schermo da tablet in su, con gli anelli
+ * animati dietro e il faro giallo con la griglia come ripiego. L'header è trasparente in cima e prende lo sfondo pieno
+ * scendendo dall'alto quando si scorre. Colori, font, raggi e ombre sono quelli dei token.
+ */
+.rs-landing {
+  position: relative;
+  background-image: var(--rs-spotlight-layers);
+  background-size: var(--rs-spotlight-sizes);
+  background-attachment: fixed;
+}
+
+.rs-landing__rings {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.rs-landing__bar {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--rs-topbar-height);
+  padding-inline: max(var(--rs-space-4), calc((100% - 68rem) / 2 + var(--rs-space-4)));
+}
+
+.rs-landing__bar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--rs-color-nav);
+  border-bottom: 1px solid var(--rs-color-border);
+  box-shadow: var(--rs-shadow-raised);
+  transform: translateY(-100%);
+  transition: transform var(--rs-duration-base) var(--rs-ease-out);
+}
+
+.rs-landing__bar[data-solid='true']::before {
+  transform: translateY(0);
+}
+
+.rs-landing__brand {
+  text-decoration: none;
+}
+
+.rs-landing__main {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  width: 100%;
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: 0 var(--rs-space-4);
+}
+
+/* Una schermata per argomento: sul telefono segue il contenuto, da tablet è alta quanto lo schermo */
+.rs-landing__screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: calc(var(--rs-topbar-height) + var(--rs-space-5)) 0 var(--rs-space-7);
+}
+
+@media (min-width: 768px) {
+  .rs-landing__screen {
+    min-height: 100vh;
+    min-height: 100svh;
+    padding-bottom: 7rem;
+  }
+
+  .rs-landing__final {
+    min-height: calc(100svh - var(--rs-landing-footer));
+    padding-bottom: var(--rs-space-6);
+  }
+}
+
+.rs-landing__hero {
+  display: grid;
+  gap: var(--rs-space-7);
+  align-items: center;
+  padding-top: calc(var(--rs-topbar-height) + var(--rs-space-7));
+}
+
+@media (min-width: 768px) {
+  /* Il piede più corto dell'hero tiene il contenuto al centro ottico: le frecce stanno nello spazio sotto */
+  .rs-landing__hero {
+    padding-bottom: 3.5rem;
+  }
+}
+
+@media (min-width: 900px) {
+  .rs-landing__hero {
+    grid-template-columns: 1.05fr 1fr;
+  }
+}
+
+.rs-landing__eyebrow {
+  margin: 0;
+  color: var(--rs-color-accent);
+  font-size: var(--rs-text-sm);
+  font-weight: var(--rs-weight-strong);
+  letter-spacing: var(--rs-tracking-label);
+  text-transform: uppercase;
+}
+
+.rs-landing__title {
+  margin: var(--rs-space-2) 0 var(--rs-space-4);
+  font-size: clamp(2.6rem, 7.2vw, 4.9rem);
+  line-height: 1.02;
+  text-transform: uppercase;
+}
+
+.rs-landing__title span {
+  display: block;
+}
+
+.rs-landing__title em {
+  color: var(--rs-color-accent);
+  font-style: normal;
+}
+
+.rs-landing__lead {
+  max-width: 34rem;
+  margin-bottom: var(--rs-space-5);
+  font-size: var(--rs-text-lg);
+  color: var(--rs-color-text);
+}
+
+.rs-landing__screen h2 {
+  margin: 0 0 var(--rs-space-2);
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  line-height: var(--rs-leading-heading);
+  text-transform: uppercase;
+}
+
+.rs-landing__sub {
+  max-width: 40rem;
+  margin-bottom: var(--rs-space-6);
+  color: var(--rs-color-text-muted);
+}
+
+.rs-landing__cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rs-space-3);
+}
+
+.rs-landing__cta--center {
+  justify-content: center;
+}
+
+.rs-landing__hint {
+  margin-top: var(--rs-space-4);
+  color: var(--rs-color-text-muted);
+  font-size: var(--rs-text-sm);
+}
+
+.rs-landing__hint a {
+  color: var(--rs-color-accent);
+}
+
+/* Pulsanti con bordo animato della landing: altezza comoda e testo in maiuscolo come gli altri pulsanti grandi */
+.star-border.rs-landing__outline {
+  padding: 0.5rem 1rem;
+  font-size: var(--rs-text-lg);
+  font-weight: var(--rs-weight-heading);
+  letter-spacing: var(--rs-tracking-label);
+  text-transform: uppercase;
+}
+
+.rs-landing .btn-lg {
+  font-weight: var(--rs-weight-heading);
+  letter-spacing: var(--rs-tracking-label);
+  text-transform: uppercase;
+}
+
+/* Colonna destra dell'hero: la mappa di esempio con la legenda sopra e il riquadro che sporge in basso */
+.rs-landing__showcase {
+  position: relative;
+}
+
+.rs-landing__map {
+  position: relative;
+}
+
+.rs-landing__map .rs-map-legend {
+  position: absolute;
+  top: var(--rs-space-3);
+  left: var(--rs-space-3);
+  gap: var(--rs-space-2);
+  pointer-events: none;
+}
+
+.rs-landing__map .rs-map-legend li {
+  padding: 0.15rem var(--rs-space-3) 0.15rem 0.2rem;
+  color: var(--rs-color-text);
+  background: rgba(10, 10, 10, 0.8);
+  border: 1px solid var(--rs-color-border-strong);
+  border-radius: var(--rs-radius-pill);
+  font-size: var(--rs-text-sm);
+  font-weight: var(--rs-weight-strong);
+  letter-spacing: var(--rs-tracking-label);
+  text-transform: uppercase;
+}
+
+.rs-landing__tagline {
+  display: grid;
+  gap: var(--rs-space-1);
+  margin-top: var(--rs-space-3);
+  padding: var(--rs-space-3) var(--rs-space-4);
+  background: var(--rs-color-surface);
+  border: 1px solid var(--rs-color-border-strong);
+  border-radius: var(--rs-radius-lg);
+  box-shadow: var(--rs-shadow-raised);
+}
+
+.rs-landing__tagline strong {
+  color: var(--rs-color-accent);
+  font-size: var(--rs-text-sm);
+  letter-spacing: var(--rs-tracking-label);
+  text-transform: uppercase;
+}
+
+@media (min-width: 900px) {
+  .rs-landing__tagline {
+    position: absolute;
+    bottom: -1.25rem;
+    left: -1rem;
+    max-width: 15rem;
+    margin-top: 0;
+  }
+}
+
+/* Ruoli: tre colonne senza riquadri, divise da una riga sottile */
+.rs-landing__roles {
+  display: grid;
+  gap: var(--rs-space-6);
+}
+
+.rs-landing__role h3 {
+  margin: 0;
+  font-size: clamp(2.6rem, 6vw, 4.25rem);
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.rs-landing__role-title {
+  margin: var(--rs-space-2) 0;
+  color: var(--rs-color-accent);
+  font-weight: var(--rs-weight-heading);
+  letter-spacing: var(--rs-tracking-label);
+  text-transform: uppercase;
+}
+
+.rs-landing__role p:last-child {
+  max-width: 24rem;
+  margin: 0;
+  color: var(--rs-color-text);
+}
+
+@media (min-width: 800px) {
+  .rs-landing__roles {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+  }
+
+  .rs-landing__role {
+    padding: 0 var(--rs-space-5);
+  }
+
+  .rs-landing__role:first-child {
+    padding-left: 0;
+  }
+
+  .rs-landing__role:last-child {
+    padding-right: 0;
+  }
+
+  .rs-landing__role + .rs-landing__role {
+    border-left: 1px solid var(--rs-color-border-strong);
+  }
+}
+
+/* Funzioni a «scaletta»: il nome grande a sinistra, il testo a destra, una riga sottile fra una voce e l'altra */
+.rs-landing__setlist {
+  display: grid;
+}
+
+.rs-landing__setrow {
+  display: grid;
+  gap: var(--rs-space-2) var(--rs-space-6);
+  padding: var(--rs-space-5) 0;
+  border-top: 1px solid var(--rs-color-border-strong);
+}
+
+.rs-landing__setrow:last-child {
+  border-bottom: 1px solid var(--rs-color-border-strong);
+}
+
+.rs-landing__setrow h3 {
+  margin: 0;
+  font-size: clamp(2rem, 4.5vw, 3.25rem);
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.rs-landing__setrow p {
+  max-width: 38rem;
+  margin: 0;
+  color: var(--rs-color-text);
+}
+
+@media (min-width: 800px) {
+  .rs-landing__setrow {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: baseline;
+  }
+}
+
+/* Tre passi senza riquadri: l'ordine conta, quindi resta il cerchio col numero */
+.rs-landing__steps {
+  display: grid;
+  gap: var(--rs-space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.rs-landing__steps li {
+  position: relative;
+  padding: var(--rs-space-1) 0 0 3rem;
+}
+
+.rs-landing__steps li::before {
+  content: counter(step);
+  counter-increment: step;
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  color: var(--rs-color-accent-ink);
+  background: var(--rs-color-accent);
+  border-radius: 50%;
+  font-weight: var(--rs-weight-heading);
+}
+
+.rs-landing__steps h3 {
+  margin: 0 0 var(--rs-space-1);
+  font-size: var(--rs-text-xl);
+  text-transform: uppercase;
+}
+
+.rs-landing__steps p {
+  margin: 0;
+  color: var(--rs-color-text-muted);
+}
+
+@media (min-width: 800px) {
+  .rs-landing__steps {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.rs-landing__closing {
+  margin-top: var(--rs-space-7);
+  text-align: center;
+}
+
+.rs-landing__closing h2 {
+  margin-bottom: var(--rs-space-5);
+}
+
+.rs-landing__closing h2 span {
+  color: var(--rs-color-accent);
+}
+
+/* «Torna all'inizio»: pulsante tondo nell'angolo in basso a destra dello schermo, sopra il footer */
+.rs-landing__top {
+  position: absolute;
+  right: var(--rs-space-5);
+  bottom: calc(var(--rs-landing-footer) + var(--rs-space-5));
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.75rem;
+  height: 3.75rem;
+  padding: 0;
+  color: var(--rs-color-accent);
+  background: var(--rs-color-surface);
+  border: 1px solid var(--rs-color-border-strong);
+  border-radius: 50%;
+  box-shadow: var(--rs-shadow-card);
+  cursor: pointer;
+  transition:
+    border-color var(--rs-duration-fast) var(--rs-ease-out),
+    transform var(--rs-duration-fast) var(--rs-ease-out);
+}
+
+.rs-landing__top:hover {
+  border-color: var(--rs-color-accent);
+  transform: translateY(-2px);
+}
+
+.rs-landing__top:focus-visible {
+  outline: 2px solid var(--rs-color-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rs-landing__top {
+    transition: none;
+  }
+
+  .rs-landing__top:hover {
+    transform: none;
+  }
+}
+
+/* Footer statico a fine pagina: sulla landing niente comparsa dal basso (decisione 108) */
+.rs-landing__footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  min-height: var(--rs-landing-footer);
+  padding: var(--rs-space-3) max(var(--rs-space-4), calc((100% - 68rem) / 2 + var(--rs-space-4)));
+  background: var(--rs-color-nav);
+  border-top: 1px solid var(--rs-color-border);
+}
+
+@media (min-width: 768px) {
+  .rs-landing__footer .rs-footer__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--rs-space-1) var(--rs-space-5);
+    font-size: var(--rs-text-sm);
+  }
+}
+
+/* Frecce «scorri»: pulsante in basso al centro di ogni schermata, da tablet in su */
+.rs-landing__cue-slot {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.rs-landing__cue {
+  position: absolute;
+  bottom: 1.25rem;
+  left: 50%;
+  display: none;
+  padding: var(--rs-space-2) var(--rs-space-3);
+  color: inherit;
+  background: none;
+  border: 0;
+  border-radius: var(--rs-radius-lg);
+  cursor: pointer;
+  pointer-events: auto;
+  translate: -50% 0;
+}
+
+@media (min-width: 768px) {
+  .rs-landing__cue {
+    display: block;
+  }
+}
+
+.rs-landing__cue:focus-visible {
+  outline: 2px solid var(--rs-color-accent);
+  outline-offset: 2px;
+}
+
+.rs-landing__arrows {
+  display: block;
+  width: 4.75rem;
+  height: 5.45rem;
+  overflow: visible;
+  transition: transform var(--rs-duration-base) var(--rs-ease-out);
+}
+
+.rs-landing__cue:hover .rs-landing__arrows {
+  transform: translateY(4px);
+}
+
+.rs-landing__arrows path {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+  animation: rs-landing-arrow 2s infinite both;
+}
+
+.rs-landing__arrows .rs-landing__arrow-2 {
+  animation-delay: 0.3s;
+}
+
+.rs-landing__arrows .rs-landing__arrow-3 {
+  animation-delay: 0.6s;
+}
+
+@keyframes rs-landing-arrow {
+  0% {
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+  80%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rs-landing__arrows path {
+    opacity: 0.9;
+    animation: none;
+  }
+
+  .rs-landing__arrows {
+    transition: none;
+  }
+}
+
+/* Mappa di esempio: disegno fisso, nessuna interazione (progettazione: landing, FE-12) */
+.rs-radar {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  aspect-ratio: 600 / 440;
+  background: var(--rs-color-surface);
+  border: 1px solid var(--rs-color-border);
+  border-radius: var(--rs-radius-lg);
+  box-shadow: var(--rs-shadow-card);
+  pointer-events: none;
+  user-select: none;
+}
+
+.rs-radar__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.rs-radar__ground {
+  fill: var(--rs-color-surface);
+}
+
+.rs-radar__block {
+  fill: var(--rs-color-field);
+}
+
+.rs-radar__river {
+  fill: none;
+  stroke: var(--rs-color-nav);
+  stroke-width: 22;
+}
+
+.rs-radar__road {
+  fill: none;
+  stroke: var(--rs-color-border);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.rs-radar__road .rs-radar__road--main {
+  stroke: var(--rs-color-border-strong);
+  stroke-width: 5;
+}
+
+.rs-radar__range {
+  fill: rgba(var(--rs-color-accent-rgb), 0.08);
+  stroke: var(--rs-color-accent);
+  stroke-opacity: 0.7;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+}
+
+.rs-radar__you-halo {
+  fill: rgba(var(--rs-color-accent-rgb), 0.2);
+}
+
+.rs-radar__you {
+  fill: var(--rs-color-accent);
+  stroke: var(--rs-color-bg);
+  stroke-width: 2;
+}
+
+.rs-radar__pin {
+  stroke: var(--rs-color-accent);
+  stroke-width: 2;
+}
+
+.rs-radar__pin--official {
+  fill: var(--rs-color-accent);
+}
+
+.rs-radar__pin--indie {
+  fill: var(--rs-color-bg);
+}
+
+.rs-radar__glyph--official {
+  fill: var(--rs-color-accent-ink);
+}
+
+.rs-radar__glyph--indie {
+  fill: var(--rs-color-accent);
+}
+
+.rs-radar__range-label rect {
+  fill: var(--rs-color-bg);
+  fill-opacity: 0.85;
+}
+
+.rs-radar__range-label text {
+  fill: var(--rs-color-accent);
+  font-family: var(--rs-font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.rs-radar__caption {
+  position: absolute;
+  left: var(--rs-space-2);
+  bottom: var(--rs-space-2);
+  padding: 0 var(--rs-space-2);
+  color: var(--rs-color-text-muted);
+  background: rgba(10, 10, 10, 0.75);
+  border-radius: var(--rs-radius-sm);
+  font-size: var(--rs-text-xs);
+}
