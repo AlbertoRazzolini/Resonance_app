@@ -87,13 +87,13 @@ export function EventFormFields({ kind, values, errors, onChange }: EventFormFie
       />
       <Form.Group className="mb-4">
         <Form.Label htmlFor="event-cover">Indirizzo della copertina</Form.Label>
-        <Form.Control type="url" inputMode="url" placeholder="https://…" {...text('coverImageUrl', 'event-cover')} />
+        <Form.Control type="url" inputMode="url" placeholder="Incolla il link dell'immagine di copertina" {...text('coverImageUrl', 'event-cover')} />
         <FieldError id="event-cover-error" message={errors.coverImageUrl} />
       </Form.Group>
       {kind === 'concert' ? (
         <Form.Group className="mb-4">
           <Form.Label htmlFor="event-ticket">Indirizzo per i biglietti</Form.Label>
-          <Form.Control type="url" inputMode="url" placeholder="https://…" {...text('externalTicketUrl', 'event-ticket')} />
+          <Form.Control type="url" inputMode="url" placeholder="Incolla qui il link per comprare i biglietti" {...text('externalTicketUrl', 'event-ticket')} />
           <FieldError id="event-ticket-error" message={errors.externalTicketUrl} />
         </Form.Group>
       ) : (

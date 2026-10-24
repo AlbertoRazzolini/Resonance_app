@@ -98,7 +98,7 @@ export function NewPostForm({ onPublished }: NewPostFormProps) {
       </Form.Group>
       <Form.Group className="mb-3">
         <Form.Label htmlFor="post-image">Indirizzo dell'immagine (facoltativo)</Form.Label>
-        <Form.Control type="url" inputMode="url" placeholder="https://…" {...control('imageUrl', 'post-image')} />
+        <Form.Control type="url" inputMode="url" placeholder="Incolla il link dell'immagine" {...control('imageUrl', 'post-image')} />
         <FieldError id="post-image-error" message={errorOf('imageUrl')} />
         <ImageLoadWarning url={values.imageUrl.trim()} />
       </Form.Group>

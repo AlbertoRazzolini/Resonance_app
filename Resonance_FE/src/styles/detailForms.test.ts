@@ -15,4 +15,13 @@ describe('moduli nei dettagli', () => {
     expect(match, `regola ${selector}`).not.toBeNull()
     expect(match![1]).toMatch(/align-self:\s*stretch/)
   })
+
+  // Il magnete del pulsante di candidatura (15°, 1,15) lo fa uscire di circa 28 px dal riquadro e spostare fino a
+  // circa 11 px: con i 12 px di distanza dei figli del dettaglio toccava «Torna su Collab»
+  it("sotto il modulo di candidatura c'è più spazio dell'uscita del magnete, ma non con la candidatura già inviata", () => {
+    const match = /(?:^|\n)\.rs-apply:not\(\.rs-apply--sent\)\s*\{([^}]*)\}/.exec(css)
+
+    expect(match, 'regola .rs-apply:not(.rs-apply--sent)').not.toBeNull()
+    expect(match![1]).toMatch(/margin-bottom:\s*var\(--rs-space-6\)/)
+  })
 })

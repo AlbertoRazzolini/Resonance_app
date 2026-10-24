@@ -3685,3 +3685,25 @@ Scelte dello studente, una per una, durante FE-22:
 - **Titoli con una parola gialla, o minuscoli ma più grandi:** meno sobri del bianco in maiuscolo, o troppo vicini all'aspetto di prima.
 - **Riquadri tenuti con bordo più leggero, o righe anche nel feed:** il primo quasi non cambiava, il secondo lasciava le foto senza cornice.
 - **Pagina divisa in tre sezioni verticali:** a 1200 px la colonna a sinistra è già una sezione; un solo pannello centrale dà lo stesso effetto con meno struttura.
+
+## Decisione 110: testi dei campi dei link, distanza sotto la candidatura e nome utente nell'header (dopo FE-22, decisioni 107 e 109)
+
+### Scelta
+
+Scelte dello studente il 24 ottobre, dopo FE-22:
+
+- **Testi dei campi indirizzo** al posto del segnaposto «https://…»: «Incolla il link dell'immagine» (post del feed e foto del profilo), «Incolla il link dell'immagine di copertina» (copertina dell'evento), «Incolla qui il link per comprare i biglietti» (biglietti). Si usa «link» e non «indirizzo»; le etichette dei campi restano com'erano.
+- **Distanza sotto il modulo di candidatura:** 2 rem in più (`--rs-space-6`) sotto `.rs-apply`, solo finché la candidatura non è inviata, perché con il mouse il pulsante «Invia candidatura» (magnete, decisione 107: 15°, ingrandimento 1,15) esce di circa 28 px dal suo riquadro e si sposta fino a circa 11 px, e con i 12 px di distanza dei figli del dettaglio toccava «Torna su Collab». Misurato nel browser con il mouse in quattro posizioni: almeno 34 px.
+- **Nome dell'utente nell'header** (visibile da 1200 px): più grande e in unità relative, come chiesto dallo studente («deve essere responsive»): corpo `clamp(--rs-text-base, 0.7rem + 0.5vw, --rs-text-lg)` (da circa 1,06 rem a 1,25 rem, 20 px a oltre 1760 px di larghezza) e larghezza massima `min(12rem, 20vw)`, al posto di `--rs-text-sm` e `10rem`. Nessun pixel fisso. Controllato a 1280 e 1920 px, anche con un nome lungo: nessuna sovrapposizione con campanella e titolo, nome tagliato con i puntini.
+
+### Motivazione
+
+- «Link» è la parola che chi usa il web riconosce subito; il segnaposto «https://…» non diceva cosa incollare.
+- La distanza è calcolata sull'uscita del magnete e non cambia i valori del magnete, che restano quelli della decisione 107.
+
+### Alternative scartate
+
+- **«Indirizzo» al posto di «link»:** coerente con le etichette, ma può far pensare a un indirizzo di casa.
+- **Ridurre il magnete del pulsante di candidatura:** toglieva l'effetto approvato nella decisione 107 solo su questo pulsante.
+- **Aumentare la distanza fra tutti i figli del dettaglio:** allontanava anche elementi che non hanno il magnete.
+- **Nome a corpo fisso (17 o 20 px):** non seguiva lo schermo né le preferenze del carattere; per questo `clamp()` con i token.

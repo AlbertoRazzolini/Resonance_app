@@ -92,7 +92,7 @@ export function ProfileForm({ user }: { user: MeResponse }) {
         <Form.Control
           type="url"
           inputMode="url"
-          placeholder="https://…"
+          placeholder="Incolla il link dell'immagine"
           {...control('avatarUrl', 'profile-avatar')}
         />
         <FieldError id="profile-avatar-error" message={errorOf('avatarUrl')} />

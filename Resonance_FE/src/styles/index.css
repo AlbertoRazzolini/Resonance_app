@@ -158,11 +158,12 @@ textarea {
 
 .rs-user__name {
   display: none;
-  max-width: 10rem;
+  /* Misure relative: il nome si vede da 1200 px e il corpo cresce con lo schermo; il limite lascia spazio a campanella e titolo */
+  max-width: min(12rem, 20vw);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: var(--rs-text-sm);
+  font-size: clamp(var(--rs-text-base), 0.7rem + 0.5vw, var(--rs-text-lg));
   font-weight: var(--rs-weight-heading);
   text-transform: uppercase;
 }
@@ -2232,6 +2233,15 @@ textarea {
 /* Modulo di candidatura sotto il dettaglio di un annuncio: come il contatto, prende tutta la larghezza del dettaglio */
 .rs-apply {
   align-self: stretch;
+}
+
+/*
+ * Il pulsante «Invia candidatura» ha il magnete (inclinazione 15°, ingrandimento 1,15, decisione 107): con il mouse
+ * sopra esce di circa 28 px dal suo riquadro e si sposta fino a circa 11 px, così con i 12 px di distanza dei figli del
+ * dettaglio toccava «Torna su Collab». 2 rem in più portano la distanza a 44 px, oltre i circa 39 px del caso peggiore.
+ */
+.rs-apply:not(.rs-apply--sent) {
+  margin-bottom: var(--rs-space-6);
 }
 
 /* Candidatura già inviata: pulsante spento e «Apri la chat» in riga, a capo sui telefoni stretti; la spiegazione sotto */

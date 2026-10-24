@@ -1110,6 +1110,21 @@ a chip, carosello degli eventi, filtri della bacheca, candidature con accettazio
 **Taglio:** se il tempo non basta, si riduce l'elenco delle pagine; la card si può chiudere anche con una sola pagina.
 **Commit proposto:** `style(fe-ui): estende lo stile della landing alle pagine desktop`
 
+### Card FE-23 · Nuovo logo e favicon — stima 1,5 h (provvisoria)
+
+**Riferimenti:** decisioni 78, 83, 107, 108; `PRODUCT.md`. Richiesta dello studente il 24 ottobre: ribrandizzare la scritta Resonance e creare una favicon. Proposte generate con Gemini (bitmap): wordmark «RES» + microfono dentro anelli al posto della O + «NANCE»; favicon con microfono dentro anelli su fondo nero con angoli arrotondati.
+**Ordine:** prima di FE-11 (un solo deploy: il logo deve esserci nel deploy finale). Solo frontend. Gli SVG si disegnano nel progetto, con il testo convertito in tracciati con Barlow Condensed Bold (già in npm, nessun CDN, decisione 76).
+
+**Punti aperti da porre allo studente a inizio card (nessuno è deciso):** colori del wordmark («NANCE» bianco come nell'immagine o giallo come oggi); dove compare (barra in alto sul telefono, colonna laterale, accesso, landing; footer e pagine legali?); misure piccole (anelli più spessi e asta più corta; favicon con 2 anelli, microfono con o senza griglia); file della favicon (SVG, PNG da 32, 180 e 512; `manifest`? colore del tema?); nome accessibile del logo e test del componente `Logo`.
+
+- [ ] **1. Punti aperti.** Si decidono con lo studente prima di scrivere test o codice.
+- [ ] **2. Favicon.** SVG disegnata nel progetto, PNG da 32, 180 e 512, collegamento in `index.html`; test sul collegamento.
+- [ ] **3. Logo.** SVG (testo in tracciati, O con microfono e anelli) nel componente `Logo`, con nome accessibile; test aggiornati.
+- [ ] **4. Controlli.** 375, 768 e 1280 px, lint, test e build; decisione e piano aggiornati.
+
+**Taglio:** se il tempo non basta, solo la favicon (il logo resta com'è).
+**Commit proposto:** `feat(fe-ui): aggiunge il nuovo logo e la favicon`
+
 ### Card FE-11 · Deploy integrato, CSP e prova della demo — stima 4 h
 
 **Riferimenti:** decisioni 1, 74, 76; §12.5–12.7, §14 (demo finale); README.
