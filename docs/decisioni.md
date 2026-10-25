@@ -3898,6 +3898,10 @@ Ogni punto è stato proposto allo studente con alternative e raccomandazione, e 
   voci da mostrare (host, musicisti, area admin sul telefono); per gli altri il cerchio è un collegamento al Profilo.
 - **Magnete dei pulsanti «Pubblica» in Eventi:** ingrandimento 1,06 invece di 1,15 (`EVENT_ACTION_MAGNET_LOOK`): sono larghi più
   del doppio delle schede e crescevano di circa 24 px contro i 10 delle schede; il resto dell'effetto è invariato.
+- **Ricaricamento dopo un deploy:** quando una scheda già aperta non trova più il file di una pagina (`vite:preloadError`, perché
+  i nomi dei file cambiano a ogni build) l'app si ricarica una volta da sola (`reloadOnStaleChunk.ts`); un secondo errore entro
+  10 secondi mostra l'errore invece di ricaricare ancora, e senza memoria della scheda non si ricarica. Dopo il ricaricamento si
+  torna alla pagina in cui si era, non a quella cliccata.
 - **Rimandato:** ingresso libero per i concerti ufficiali (serve una migrazione e un cambio del backend a poche ore dalla consegna).
 
 ### Motivazione
