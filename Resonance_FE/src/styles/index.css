@@ -1816,6 +1816,8 @@ textarea {
 
 .rs-conversations {
   display: grid;
+  /* Una colonna che non si allarga: senza, un'anteprima lunga spingeva le righe sotto il pannello accanto */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--rs-space-3);
   align-content: start;
 }
@@ -1835,6 +1837,7 @@ textarea {
 
 .rs-conversation-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--rs-space-2);
   margin: 0;
   padding: 0;
@@ -3319,6 +3322,13 @@ textarea {
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.09),
       0 24px 48px -16px rgba(0, 0, 0, 0.75);
+  }
+
+  /* La conversazione riempie la finestra: oltre alla barra toglie margine, spazio interno e bordo (2 px) del pannello */
+  .rs-conversation-view {
+    height: calc(
+      100dvh - var(--rs-topbar-height) - var(--rs-space-4) - var(--rs-space-5) - var(--rs-space-6) - 2px
+    );
   }
 }
 
