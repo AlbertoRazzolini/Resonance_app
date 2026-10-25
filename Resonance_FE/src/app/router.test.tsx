@@ -68,12 +68,12 @@ describe('router', () => {
     expect(router.state.location.pathname).toBe(collabPath('a1'))
   })
 
-  it("/feed è aperta all'anonimo e mostra il feed con l'invito ad accedere", async () => {
+  it("/feed è aperta all'anonimo e mostra il feed con il pulsante «Nuovo post» che porta all'accesso", async () => {
     server.use(feedFound([makePage([])]))
     const router = renderAt(ROUTES.feed)
     expect(await screen.findByRole('heading', { level: 1, name: 'Feed' })).toBeInTheDocument()
     expect(await screen.findByText('Ancora nessun post.')).toBeInTheDocument()
-    expect(screen.getByText('Accedi per scrivere un post.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Nuovo post' })).toHaveAttribute('href', ROUTES.login)
     expect(router.state.location.pathname).toBe(ROUTES.feed)
   })
 

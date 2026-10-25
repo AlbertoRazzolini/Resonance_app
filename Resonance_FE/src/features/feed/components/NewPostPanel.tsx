@@ -5,7 +5,6 @@ import { ROUTES } from '@/app/routes'
 import type { LoginRedirectState } from '@/components/guards/RequireAuth'
 import { selectCurrentUser } from '@/features/auth/authSlice'
 import { useAppSelector } from '@/hooks/redux'
-import { useMediaQuery } from '@/hooks/useMediaQuery'
 import DesktopMagnet from '@/components/motion/DesktopMagnet'
 import { NewPostForm } from './NewPostForm'
 
@@ -15,13 +14,12 @@ type NewPostPanelProps = {
 }
 
 /**
- * Dove si scrive un nuovo post (decisione dello studente, 21 ottobre): da 768 px in su il modulo sta in cima al feed, su
- * telefono sta dietro il pulsante «Nuovo post», in una finestra che si chiude a pubblicazione riuscita. Chi non ha la
- * sessione trova un invito ad accedere e, dopo l'accesso, torna al feed.
+ * Dove si scrive un nuovo post (decisione dello studente, 25 ottobre, dopo il parere degli amici sul modulo sempre aperto):
+ * a ogni larghezza un pulsante «Nuovo post» apre il modulo in una finestra, che si chiude a pubblicazione riuscita. Chi
+ * non ha la sessione vede lo stesso pulsante: il clic porta all'accesso e, dopo, torna al feed.
  */
 export function NewPostPanel({ onPublished }: NewPostPanelProps) {
   const user = useAppSelector(selectCurrentUser)
-  const wide = useMediaQuery('(min-width: 768px)')
   const [open, setOpen] = useState(false)
   const titleId = useId()
   const { pathname, search, hash } = useLocation()
@@ -29,25 +27,16 @@ export function NewPostPanel({ onPublished }: NewPostPanelProps) {
   if (!user) {
     const state: LoginRedirectState = { from: pathname + search + hash, loginRequired: true }
     return (
-      <div className="rs-new-post-panel rs-new-post-panel--anonymous">
-        <p>Accedi per scrivere un post.</p>
+      <DesktopMagnet>
         <Link className="btn btn-primary" to={ROUTES.login} state={state}>
-          Accedi
+          Nuovo post
         </Link>
-      </div>
-    )
-  }
-
-  if (wide) {
-    return (
-      <section className="rs-new-post-panel" aria-label="Nuovo post">
-        <NewPostForm onPublished={onPublished} />
-      </section>
+      </DesktopMagnet>
     )
   }
 
   return (
-    <div className="rs-new-post-panel">
+    <>
       <DesktopMagnet>
         <Button variant="primary" onClick={() => setOpen(true)}>
           Nuovo post
@@ -66,6 +55,6 @@ export function NewPostPanel({ onPublished }: NewPostPanelProps) {
           />
         </Modal.Body>
       </Modal>
-    </div>
+    </>
   )
 }

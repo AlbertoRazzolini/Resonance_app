@@ -415,3 +415,49 @@ describe('NearbyEventsPage · mappa', () => {
     expect(screen.getByRole('article')).toHaveAttribute('aria-current', 'true')
   })
 })
+
+// Pulsanti di pubblicazione nella riga del titolo (decisione dello studente, 25 ottobre): solo per chi ha il ruolo giusto,
+// host per i concerti ufficiali e musicista per gli indie event; portano alle pagine di creazione (nessuna finestra).
+describe('NearbyEventsPage · pubblicare', () => {
+  beforeEach(() => server.use(nearbyConcertsFound([makePage([])])))
+
+  const inTitleRow = () => (screen.getByRole('heading', { level: 1, name: 'Eventi vicini' }).parentElement as HTMLElement)
+
+  it('un anonimo non vede nessun pulsante di pubblicazione', async () => {
+    renderPage('/eventi')
+    await screen.findByText(/Nessun evento/)
+
+    expect(screen.queryByRole('link', { name: /^Pubblica/ })).not.toBeInTheDocument()
+  })
+
+  it('un fan senza ruoli speciali non li vede', async () => {
+    renderPage('/eventi', makeMe({ roles: ['FAN'] }))
+    await screen.findByText(/Nessun evento/)
+
+    expect(screen.queryByRole('link', { name: /^Pubblica/ })).not.toBeInTheDocument()
+  })
+
+  it('un host vede solo «Pubblica concerto», verso la pagina di creazione', async () => {
+    renderPage('/eventi', makeMe({ roles: ['FAN', 'HOST'] }))
+    await screen.findByText(/Nessun evento/)
+
+    expect(within(inTitleRow()).getByRole('link', { name: 'Pubblica concerto' })).toHaveAttribute('href', '/concerti/nuovo')
+    expect(screen.queryByRole('link', { name: 'Pubblica indie event' })).not.toBeInTheDocument()
+  })
+
+  it('un musicista vede solo «Pubblica indie event»', async () => {
+    renderPage('/eventi', makeMe({ roles: ['FAN', 'MUSICIAN'] }))
+    await screen.findByText(/Nessun evento/)
+
+    expect(within(inTitleRow()).getByRole('link', { name: 'Pubblica indie event' })).toHaveAttribute('href', '/indie/nuovo')
+    expect(screen.queryByRole('link', { name: 'Pubblica concerto' })).not.toBeInTheDocument()
+  })
+
+  it('con tutti e due i ruoli vede entrambi i pulsanti', async () => {
+    renderPage('/eventi', makeMe({ roles: ['FAN', 'HOST', 'MUSICIAN'] }))
+    await screen.findByText(/Nessun evento/)
+
+    expect(within(inTitleRow()).getByRole('link', { name: 'Pubblica concerto' })).toBeInTheDocument()
+    expect(within(inTitleRow()).getByRole('link', { name: 'Pubblica indie event' })).toBeInTheDocument()
+  })
+})

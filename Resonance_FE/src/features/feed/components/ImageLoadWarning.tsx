@@ -34,7 +34,7 @@ export function ImageLoadWarning({ url }: { url: string }) {
   if (!valid || failedUrl !== url) return null
   return (
     <p className="rs-field-hint text-warning" role="status">
-      Non riesco a caricare l'immagine: controlla l'indirizzo.
+      Serve il link diretto all'immagine: tienila premuta (o clic destro) e scegli «Copia indirizzo immagine».
     </p>
   )
 }

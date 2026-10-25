@@ -2,13 +2,16 @@ import { useState } from 'react'
 import { Alert, Button, Nav } from 'react-bootstrap'
 import { Link, useSearchParams } from 'react-router'
 import DesktopMagnet from '@/components/motion/DesktopMagnet'
-import { concertPath, indieEventPath } from '@/app/routes'
+import { EVENT_ACTION_MAGNET_LOOK } from '@/components/motion/magnetLook'
+import { concertPath, indieEventPath, ROUTES } from '@/app/routes'
 import { Map, MarkerLegend, type EventKind } from '@/components/map'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import { LoadMore } from '@/components/ui/LoadMore'
 import { RadiusSelector } from '@/components/ui/RadiusSelector'
 import { Skeleton, SkeletonLine } from '@/components/ui/Skeleton'
+import { selectHasRole } from '@/features/auth/authSlice'
+import { useAppSelector } from '@/hooks/redux'
 import {
   DEFAULT_RADIUS_KM,
   parseRadius,
@@ -70,6 +73,9 @@ export function Component() {
   const filter = parseFilter(searchParams.get('tipo'))
   const radius = parseRadius(searchParams.get('raggio'))
   const { center, source, positionStatus, requestPosition } = useSearchCenter()
+  // Solo per mostrare i pulsanti: la protezione vera è nel router e nel backend
+  const isHost = useAppSelector(selectHasRole('HOST'))
+  const isMusician = useAppSelector(selectHasRole('MUSICIAN'))
 
   /** Indirizzo con la scheda e il raggio dati; i valori iniziali non si scrivono. */
   function searchFor(nextFilter: EventFilter, nextRadius: number) {
@@ -81,7 +87,27 @@ export function Component() {
 
   return (
     <>
-      <h1>Eventi vicini</h1>
+      <div className="rs-events-head">
+        <h1>Eventi vicini</h1>
+        {(isHost || isMusician) && (
+          <div className="rs-events-head__actions">
+            {isHost && (
+              <DesktopMagnet look={EVENT_ACTION_MAGNET_LOOK}>
+                <Link className="btn btn-primary" to={ROUTES.newConcert}>
+                  Pubblica concerto
+                </Link>
+              </DesktopMagnet>
+            )}
+            {isMusician && (
+              <DesktopMagnet look={EVENT_ACTION_MAGNET_LOOK}>
+                <Link className="btn btn-primary" to={ROUTES.newIndieEvent}>
+                  Pubblica indie event
+                </Link>
+              </DesktopMagnet>
+            )}
+          </div>
+        )}
+      </div>
 
       {source === 'default' && (
         // `status`, non `alert`: è un'informazione fissa, non un errore da annunciare subito

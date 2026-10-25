@@ -2747,14 +2747,18 @@ Ogni punto è stato proposto allo studente con alternative, pro, contro e raccom
 - **Filtro «Vicino a me» nell'indirizzo** (`/feed?vicino=1&raggio=25`), come Eventi vicini; centro e livelli del raggio
   vengono da `useSearchCenter` e `RadiusSelector`, che passano da `features/events/` a `hooks/` e `components/ui/`
   (regola della struttura: ciò che serve a più aree sta fuori da `features/`).
-- **Nuovo post:** da 768 px il modulo sta in cima al feed; su telefono c'è il pulsante «Nuovo post» che apre una
-  finestra, chiusa a pubblicazione riuscita. Un anonimo legge l'invito ad accedere e, dopo l'accesso, torna al feed.
+- **Nuovo post:** a ogni larghezza il pulsante «Nuovo post», in alto a destra nella riga del titolo «Feed», apre il
+  modulo in una finestra, chiusa a pubblicazione riuscita. Un anonimo vede lo stesso pulsante: il clic porta
+  all'accesso e, dopo, torna al feed. (Cambiato il 25 ottobre per il parere degli amici: il modulo sempre aperto da
+  768 px era troppo invadente; prima era in pagina da 768 px e il pulsante c'era solo su telefono.)
 - **Posizione facoltativa del post:** casella «Aggiungi la mia posizione»; si prova il GPS del browser, poi le
   coordinate del profilo, poi niente, e in ogni caso un avviso dice che cosa è successo.
 - **Immagine del post:** solo l'indirizzo (l'upload resta in Post-V1, progettazione sezione 15). Nel post è un `<img>`
   senza `Referer`, con caricamento differito, che sparisce senza lasciare un buco se non si carica. Nel modulo, se il
   browser non riesce a caricare l'indirizzo (per esempio una pagina di ricerca invece del file), un avviso sotto il
-  campo lo dice: «Non riesco a caricare l'immagine: controlla l'indirizzo.» La prova parte 600 ms dopo l'ultimo tasto,
+  campo lo dice: «Serve il link diretto all'immagine: tienila premuta (o clic destro) e scegli «Copia indirizzo
+  immagine».» (testo cambiato il 25 ottobre: un amico aveva incollato il link di una ricerca di Google Immagini e
+  il vecchio avviso non spiegava come ottenere il link giusto). La prova parte 600 ms dopo l'ultimo tasto,
   senza `Referer`, e non blocca la pubblicazione (aggiunta il 21 ottobre dopo la prova in locale).
 - **Cancellare un proprio post:** conferma semplice, **senza motivo** (in FE-06 per gli eventi il motivo c'è): è un
   contenuto proprio e il motivo serve a chi legge quando a cancellare è un admin.
@@ -2769,7 +2773,7 @@ Ogni punto è stato proposto allo studente con alternative, pro, contro e raccom
 - Titoli e nomi stanno dentro un `Link`: un collegamento dentro un collegamento è HTML non valido.
 - Mostrare l'indirizzo com'è scritto fa vedere dove porta il link; la punteggiatura finale è quasi sempre del testo.
 - Il filtro nell'indirizzo fa ritrovare lo stato con «Indietro» e riusa la logica già provata in FE-05.
-- Il modulo in pagina da 768 px tiene il testo a portata di mano; la finestra su telefono evita un feed allungato.
+- La finestra a ogni larghezza lascia il feed libero per la lettura; il modulo in pagina da 768 px, provato dagli amici, era troppo invadente.
 - Il GPS dice dove si trova davvero l'utente; il profilo evita di perdere la posizione se il permesso è negato.
 - Una voce di cache per pagina evita i doppioni che un accodamento con `merge` produrrebbe dopo una rilettura.
 
@@ -3871,3 +3875,39 @@ Ogni punto è stato proposto allo studente con alternative, pro, contro e raccom
 - **Prima FE-11 e la demo, poi ottimizzare:** avrebbe lasciato poco tempo per l'analisi.
 - **Non fare la valutazione:** il frontend resterebbe senza una verifica esplicita delle parti alleggeribili.
 - **Realizzare O1 subito:** un tipo morto in meno, ma una modifica di codice senza beneficio per l'utente.
+
+## Decisione 117: rifiniture dell'interfaccia dopo il parere degli amici (card FE-11, decisioni 83, 89 e 108)
+
+Ogni punto è stato proposto allo studente con alternative e raccomandazione, e approvato il 25 ottobre dopo la prova con gli amici.
+
+### Scelta
+
+- **Nuovo post:** il modulo non sta più in cima al feed. A ogni larghezza il pulsante «Nuovo post», in alto a destra nella riga
+  del titolo «Feed», apre il modulo in una finestra; per un anonimo il clic porta all'accesso e poi torna al feed (aggiorna la
+  decisione 89).
+- **Avviso sull'immagine:** il testo è «Serve il link diretto all'immagine: tienila premuta (o clic destro) e scegli «Copia
+  indirizzo immagine».»; un amico aveva incollato il link di una ricerca di Google Immagini. L'anteprima da un link qualsiasi è
+  in Post-V1 (progettazione, sezione 15).
+- **Messaggi:** il pulsante «Scrivi a un amico», nella riga del titolo, porta all'elenco degli amici; è sempre visibile, anche
+  senza conversazioni.
+- **Eventi:** «Pubblica concerto» (host) e «Pubblica indie event» (musicista) stanno nella riga del titolo, come pagine e non come
+  finestre; le pagine di creazione dei concerti e degli indie event riempiono tutta la card (`rs-edit--full`) e fra «Annulla» e
+  «Pubblica» ci sono 16 px, perché l'effetto magnet non li sovrapponga.
+- **Esci:** un pulsante con l'icona animata (Animate UI, `log-out`) in fondo alla colonna a sinistra da 768 px e solo icona nella
+  barra in alto sul telefono; una finestra «Vuoi uscire?» chiede conferma. Esce dal menu dell'avatar, che resta solo per chi ha
+  voci da mostrare (host, musicisti, area admin sul telefono); per gli altri il cerchio è un collegamento al Profilo.
+- **Magnete dei pulsanti «Pubblica» in Eventi:** ingrandimento 1,06 invece di 1,15 (`EVENT_ACTION_MAGNET_LOOK`): sono larghi più
+  del doppio delle schede e crescevano di circa 24 px contro i 10 delle schede; il resto dell'effetto è invariato.
+- **Rimandato:** ingresso libero per i concerti ufficiali (serve una migrazione e un cambio del backend a poche ore dalla consegna).
+
+### Motivazione
+
+- Il modulo sempre aperto era troppo invadente per chi voleva solo leggere; la finestra c'era già e vale a ogni larghezza.
+- Chi non ha amici o conversazioni non sapeva come cominciare a scrivere; chi può pubblicare eventi trovava la funzione solo nel menu.
+- Con «Esci» fuori dal menu, un fan avrebbe avuto un menu vuoto: il collegamento al Profilo evita un clic inutile.
+
+### Alternative scartate
+
+- **Pubblicare gli eventi in una finestra:** i moduli sono lunghi e, con la tastiera aperta sul telefono, una finestra sarebbe scomoda.
+- **«Esci» solo nel Profilo, o nella barra a ogni larghezza:** lo studente ha preferito la colonna su tablet e desktop e la barra sul telefono.
+- **Ripetere «Scrivi a un amico» nello stato vuoto:** due pulsanti uguali nella stessa vista.

@@ -281,6 +281,43 @@ textarea {
   color: var(--rs-color-text);
 }
 
+/* «Esci» in fondo alla colonna, dopo tutte le voci: il margine automatico lo spinge in basso; il filo lo stacca dalle voci */
+.rs-sidenav__logout {
+  margin-top: auto;
+  padding-top: var(--rs-space-3);
+  border-top: 1px solid var(--rs-color-border);
+}
+
+.rs-side-logout {
+  width: 100%;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* «Esci» nella barra in alto, solo sul telefono (da 768 px c'è quello della colonna): icona da 2,75 rem, area di tocco comoda */
+.rs-logout--bar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--rs-radius-pill);
+  background: transparent;
+  color: var(--rs-color-text-muted);
+}
+
+.rs-logout--bar:hover {
+  color: var(--rs-color-text);
+}
+
+@media (min-width: 768px) {
+  .rs-logout--bar {
+    display: none;
+  }
+}
+
 /* Schedina «ADMIN» con «Utenti» e «Nascosti»: un riquadro dal bordo giallo tenue, per dire che è un'area a sé (FE-10) */
 .rs-side-admin {
   display: flex;
@@ -964,6 +1001,31 @@ textarea {
   max-width: 36rem;
 }
 
+/* Pubblica concerto e pubblica indie event: il modulo riempie tutta la card, non la colonna stretta della modifica del profilo */
+.rs-edit--full {
+  max-width: none;
+}
+
+/* Titolo di Eventi vicini e pulsanti «Pubblica» sulla stessa riga; su telefono i pulsanti vanno a capo */
+.rs-events-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rs-space-3);
+  margin-bottom: var(--rs-space-3);
+}
+
+.rs-events-head h1 {
+  margin-bottom: 0;
+}
+
+.rs-events-head__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rs-space-3);
+}
+
 /* Titolo della pagina di creazione o modifica: respiro prima del primo campo */
 .rs-edit > h1 {
   margin-bottom: var(--rs-space-4);
@@ -1058,7 +1120,8 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: var(--rs-space-3);
+  /* 16 px: con Magnet (scala 1,15 e spostamento) i due pulsanti non si sovrappongono */
+  gap: var(--rs-space-4);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1479,29 +1542,18 @@ textarea {
   gap: var(--rs-space-3);
 }
 
-/* Dove si scrive un nuovo post: riquadro in cima al feed da 768 px, su telefono solo il pulsante che apre la finestra */
-.rs-new-post-panel {
-  margin-bottom: var(--rs-space-4);
-}
-
-@media (min-width: 768px) {
-  .rs-new-post-panel {
-    padding: var(--rs-space-4);
-    border: 1px solid var(--rs-color-border);
-    border-radius: var(--rs-radius-lg);
-    background: var(--rs-color-surface);
-  }
-}
-
-.rs-new-post-panel--anonymous {
+/* Titolo del feed e pulsante «Nuovo post» sulla stessa riga; su telefono il pulsante va a capo senza toccare ciò che segue */
+.rs-feed-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: var(--rs-space-3);
+  margin-bottom: var(--rs-space-4);
 }
 
-.rs-new-post-panel--anonymous p {
-  margin: 0;
+.rs-feed-head h1 {
+  margin-bottom: 0;
 }
 
 /* Feed e scheda «Post» sulla colonna del corpo: il testo lungo e gli indirizzi vanno a capo, mai fuori dal riquadro */
@@ -1766,6 +1818,14 @@ textarea {
   display: grid;
   gap: var(--rs-space-3);
   align-content: start;
+}
+
+.rs-conversations__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rs-space-3);
 }
 
 .rs-conversations__title {

@@ -108,7 +108,7 @@ describe('NewPostForm · immagine che non si carica', () => {
 
     await user.type(bodyField(), 'Guarda')
     await user.type(imageField(), 'https://www.bing.com/images/search?q=x')
-    expect(await screen.findByText("Non riesco a caricare l'immagine: controlla l'indirizzo.")).toBeInTheDocument()
+    expect(await screen.findByText(/Serve il link diretto all'immagine/)).toBeInTheDocument()
 
     await user.click(submit())
 

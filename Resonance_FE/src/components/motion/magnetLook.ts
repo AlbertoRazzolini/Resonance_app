@@ -35,3 +35,13 @@ export const AUTH_MAGNET_LOOK = {
   magnetStrength: 24,
   scale: 1.08,
 } as const
+
+/**
+ * Magnete per «Pubblica concerto» e «Pubblica indie event» in Eventi vicini (scelta dello studente, 25 ottobre): sono larghi
+ * più del doppio delle schede, e con 1,15 crescevano di circa 24 px contro i 10 delle schede. Ingrandimento 1,06; distanza,
+ * assi, forza, inclinazione e molla restano quelli di `MAGNET_LOOK`.
+ */
+export const EVENT_ACTION_MAGNET_LOOK = {
+  ...MAGNET_LOOK,
+  scale: 1.06,
+} as const

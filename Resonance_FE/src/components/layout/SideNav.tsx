@@ -2,8 +2,9 @@ import { AnimateIcon } from '@animate-ui/react/icons'
 import { Link, NavLink } from 'react-router'
 import { ROUTES } from '@/app/routes'
 import { Logo } from '@/components/ui/Logo'
-import { selectHasRole } from '@/features/auth/authSlice'
+import { selectCurrentUser, selectHasRole } from '@/features/auth/authSlice'
 import { useAppSelector } from '@/hooks/redux'
+import { LogoutButton } from './LogoutButton'
 import { ADMIN_NAV_ITEMS, NAV_ITEMS, type NavItem } from './navItems'
 
 /**
@@ -26,10 +27,12 @@ function SideItem({ label, to, Icon, Badge }: NavItem) {
  * Colonna di navigazione a sinistra, da 768 px (decisione 83): stretta con la scritta sotto l'icona a tablet, larga
  * con icona e scritta affiancate da 1200 px, dove ospita anche il logo (`showLogo`). La forma la decide il CSS. Per ADMIN
  * e SUPERADMIN, dopo le sei voci, c'è una schedina «ADMIN» (riquadro dal bordo giallo tenue) con «Utenti» e «Nascosti»:
- * dice a colpo d'occhio che è un'area a sé (solo interfaccia: la protezione vera è nel backend).
+ * dice a colpo d'occhio che è un'area a sé (solo interfaccia: la protezione vera è nel backend). In fondo, con la sessione,
+ * il pulsante «Esci» (decisione dello studente, 25 ottobre).
  */
 export function SideNav({ showLogo }: { showLogo: boolean }) {
   const isAdmin = useAppSelector(selectHasRole('ADMIN'))
+  const user = useAppSelector(selectCurrentUser)
 
   return (
     <aside className="rs-sidenav">
@@ -53,6 +56,11 @@ export function SideNav({ showLogo }: { showLogo: boolean }) {
           </div>
         )}
       </nav>
+      {user && (
+        <div className="rs-sidenav__logout">
+          <LogoutButton variant="side" />
+        </div>
+      )}
     </aside>
   )
 }

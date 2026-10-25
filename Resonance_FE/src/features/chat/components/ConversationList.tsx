@@ -87,7 +87,15 @@ export function ConversationList({ activeId }: { activeId?: string }) {
 
   return (
     <section className="rs-conversations" aria-label="Conversazioni">
-      <h1 className="rs-conversations__title">Messaggi</h1>
+      <div className="rs-conversations__head">
+        <h1 className="rs-conversations__title">Messaggi</h1>
+        {/* Sempre visibile, anche senza conversazioni: si scrive solo agli amici, e la loro pagina ha il pulsante «Scrivi» */}
+        <DesktopMagnet>
+          <Link className="btn btn-outline-light btn-sm" to={ROUTES.friends}>
+            Scrivi a un amico
+          </Link>
+        </DesktopMagnet>
+      </div>
       <Form.Control
         type="search"
         className="rs-conversations__search"

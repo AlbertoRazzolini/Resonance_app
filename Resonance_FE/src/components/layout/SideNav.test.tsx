@@ -161,4 +161,19 @@ describe('SideNav', () => {
 
     await waitFor(() => expect(iconStyles()).not.toBe(before))
   })
+
+  // «Esci» sta in fondo alla colonna, dopo tutte le voci (decisione dello studente, 25 ottobre); l'anonimo non lo vede
+  it('con la sessione ha «Esci» in fondo alla colonna, dopo le voci', () => {
+    renderSideNav(ROUTES.events, false, ['FAN'])
+
+    const side = screen.getByRole('complementary')
+    const logout = within(side).getByRole('button', { name: 'Esci' })
+    expect(side.lastElementChild).toContainElement(logout)
+  })
+
+  it('senza sessione non ha «Esci»', () => {
+    renderSideNav(ROUTES.events, false)
+
+    expect(screen.queryByRole('button', { name: 'Esci' })).not.toBeInTheDocument()
+  })
 })

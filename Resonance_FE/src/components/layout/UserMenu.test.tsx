@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router'
@@ -7,14 +7,13 @@ import { makeStore } from '@/app/store'
 import { ROUTES } from '@/app/routes'
 import { sessionEnded, sessionStarted } from '@/features/auth/authSlice'
 import { makeLoginResponse, makeMe } from '@/test/fixtures/users'
-import { logoutSucceeds } from '@/test/handlers/auth'
-import { server } from '@/test/server'
 import { setViewportWidth } from '@/test/viewport'
 import type { MeResponse, Role } from '@/types/users'
 import { UserMenu } from './UserMenu'
 
 // Menu utente della barra: Accedi e Registrati per l'anonimo; per chi ha la sessione il cerchio con la foto o l'iniziale
-// e, nel menu, le voci «Pubblica» secondo i ruoli ed Esci (non «Amici»: sta nella navigazione).
+// e, nel menu, le voci «Pubblica» secondo i ruoli (e l'area admin sul telefono). «Esci» non è qui (ha il suo pulsante, vedi
+// LogoutButton) e «Amici» sta nella navigazione. Senza voci da mostrare il cerchio è un collegamento al Profilo.
 function renderMenu(displayName: string | null, overrides: Partial<MeResponse> = {}) {
   const store = makeStore()
   if (displayName) {
@@ -47,7 +46,7 @@ describe('UserMenu', () => {
   })
 
   it("per chi ha la sessione mostra l'iniziale del nome in maiuscolo, non Accedi e Registrati", () => {
-    renderMenu('mattia verdi')
+    renderMenu('mattia verdi', { roles: ['FAN', 'HOST'] })
 
     expect(
       screen.getByRole('button', { name: "Menu dell'account di mattia verdi" }),
@@ -63,26 +62,32 @@ describe('UserMenu', () => {
   })
 
   it("con un nome che inizia con un'emoji mostra l'emoji intera, non un carattere spezzato", () => {
-    renderMenu('🎸 Chitarrista')
+    renderMenu('🎸 Chitarrista', { roles: ['FAN', 'HOST'] })
 
     expect(screen.getByRole('button', { name: /Menu dell'account/ })).toHaveTextContent('🎸')
   })
 
   it("con una foto nel profilo mostra la foto al posto dell'iniziale", () => {
-    renderMenu('Mattia', { avatarUrl: 'https://x.it/a.png' })
+    renderMenu('Mattia', { roles: ['FAN', 'HOST'], avatarUrl: 'https://x.it/a.png' })
 
     const toggle = screen.getByRole('button', { name: /Menu dell'account/ })
     expect(toggle.querySelector('img')).toHaveAttribute('src', 'https://x.it/a.png')
   })
 
-  it('a un FAN non mostra nessuna voce «Pubblica»', async () => {
+  // Senza voci da mostrare un menu sarebbe vuoto: il cerchio porta direttamente al Profilo (25 ottobre)
+  it.each([[375], [768], [1280]])('a %s px un FAN non ha il menu: il cerchio è un collegamento al Profilo', (width) => {
+    setViewportWidth(width)
     renderMenu('Mattia', { roles: ['FAN'] })
 
-    await userEvent.click(screen.getByRole('button', { name: /Menu dell'account/ }))
+    expect(screen.getByRole('link', { name: 'Profilo di Mattia' })).toHaveAttribute('href', ROUTES.profile)
+    expect(screen.queryByRole('button', { name: /Menu dell'account/ })).not.toBeInTheDocument()
+  })
 
-    expect(await screen.findByText('Esci')).toBeInTheDocument()
-    expect(screen.queryByText('Pubblica concerto')).not.toBeInTheDocument()
-    expect(screen.queryByText('Pubblica indie event')).not.toBeInTheDocument()
+  it.each([[768], [1280]])('a %s px anche un admin senza altri ruoli ha il collegamento al Profilo: le voci admin sono nella colonna', (width) => {
+    setViewportWidth(width)
+    renderMenu('Mattia', { roles: ['FAN', 'ADMIN'] })
+
+    expect(screen.getByRole('link', { name: 'Profilo di Mattia' })).toHaveAttribute('href', ROUTES.profile)
   })
 
   it('a un HOST mostra «Pubblica concerto» e non «Pubblica indie event»', async () => {
@@ -109,33 +114,30 @@ describe('UserMenu', () => {
     expect(screen.queryByText('Pubblica concerto')).not.toBeInTheDocument()
   })
 
-  it('con entrambi i ruoli mostra tutte e due le voci, prima di Esci', async () => {
+  it('con entrambi i ruoli mostra tutte e due le voci e nessun «Esci»', async () => {
     renderMenu('Mattia', { roles: ['FAN', 'MUSICIAN', 'HOST'] })
 
     await userEvent.click(screen.getByRole('button', { name: /Menu dell'account/ }))
 
-    await screen.findByText('Esci')
+    await screen.findByText('Pubblica concerto')
     const items = [...document.querySelectorAll('.dropdown-item')].map((item) => item.textContent)
-    expect(items).toEqual(['Pubblica concerto', 'Pubblica indie event', 'Esci'])
+    expect(items).toEqual(['Pubblica concerto', 'Pubblica indie event'])
   })
 
-  it.each([[['FAN']], [['FAN', 'MUSICIAN', 'HOST']]] as [Role[]][])(
-    'a chi ha i ruoli %s non mostra le voci dell’area admin',
-    async (roles) => {
-      renderMenu('Mattia', { roles })
+  it('a chi è HOST e MUSICIAN senza ruolo admin non mostra le voci dell’area admin', async () => {
+    renderMenu('Mattia', { roles: ['FAN', 'MUSICIAN', 'HOST'] })
 
-      await userEvent.click(screen.getByRole('button', { name: /Menu dell'account/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Menu dell'account/ }))
 
-      await screen.findByText('Esci')
-      expect(screen.queryByText('Utenti')).not.toBeInTheDocument()
-      expect(screen.queryByText('Contenuti nascosti')).not.toBeInTheDocument()
-    },
-  )
+    await screen.findByText('Pubblica concerto')
+    expect(screen.queryByText('Utenti')).not.toBeInTheDocument()
+    expect(screen.queryByText('Contenuti nascosti')).not.toBeInTheDocument()
+  })
 
   // Sul telefono non c'è la colonna a sinistra: l'area admin sta qui. Da 768 px la colonna ha «Utenti» e «Nascosti» e nel menu
   // sarebbero ridondanti (scelta dello studente, FE-10).
   it.each([['ADMIN'], ['SUPERADMIN']] as [Role][])(
-    'sul telefono a un %s mostra «Utenti» e «Contenuti nascosti», con i loro collegamenti, prima di Esci',
+    'sul telefono a un %s mostra «Utenti» e «Contenuti nascosti», con i loro collegamenti',
     async (role) => {
       setViewportWidth(375)
       renderMenu('Mattia', { roles: ['FAN', role] })
@@ -145,49 +147,29 @@ describe('UserMenu', () => {
       expect(await screen.findByRole('link', { name: 'Utenti' })).toHaveAttribute('href', ROUTES.adminUsers)
       expect(screen.getByRole('link', { name: 'Contenuti nascosti' })).toHaveAttribute('href', ROUTES.adminContent)
       const items = [...document.querySelectorAll('.dropdown-item')].map((item) => item.textContent)
-      expect(items).toEqual(['Utenti', 'Contenuti nascosti', 'Esci'])
+      expect(items).toEqual(['Utenti', 'Contenuti nascosti'])
     },
   )
 
-  it.each([[768], [1024], [1280]])(
-    'a %s px a un admin non mostra «Utenti» e «Contenuti nascosti»: li ha già la colonna a sinistra',
-    async (width) => {
-      setViewportWidth(width)
-      renderMenu('Mattia', { roles: ['FAN', 'SUPERADMIN'] })
-
-      await userEvent.click(screen.getByRole('button', { name: /Menu dell'account/ }))
-
-      await screen.findByText('Esci')
-      expect(screen.queryByText('Utenti')).not.toBeInTheDocument()
-      expect(screen.queryByText('Contenuti nascosti')).not.toBeInTheDocument()
-      const items = [...document.querySelectorAll('.dropdown-item')].map((item) => item.textContent)
-      expect(items).toEqual(['Esci'])
-      // Nessun separatore dove le altre voci mancano
-      expect(document.querySelectorAll('.dropdown-divider')).toHaveLength(0)
-    },
-  )
-
-  // «Amici» ha la sua voce nelle tab del telefono e nella colonna (FE-17): il menu non la ripete a nessuna larghezza.
-  it.each([[375], [768], [1280]])('a %s px non ha la voce «Amici»: sta nella navigazione', async (width) => {
-    setViewportWidth(width)
-    renderMenu('Mattia', { roles: ['FAN'] })
+  it('sul telefono a un admin che è anche HOST separa «Pubblica» dall’area admin con un filo', async () => {
+    setViewportWidth(375)
+    renderMenu('Mattia', { roles: ['FAN', 'HOST', 'ADMIN'] })
 
     await userEvent.click(screen.getByRole('button', { name: /Menu dell'account/ }))
 
-    await screen.findByText('Esci')
-    expect(screen.queryByRole('link', { name: 'Amici' })).not.toBeInTheDocument()
+    await screen.findByText('Utenti')
+    const items = [...document.querySelectorAll('.dropdown-item')].map((item) => item.textContent)
+    expect(items).toEqual(['Pubblica concerto', 'Utenti', 'Contenuti nascosti'])
+    expect(document.querySelectorAll('.dropdown-divider')).toHaveLength(1)
   })
 
-  it('Esci chiude la sessione dopo il DELETE del refresh token', async () => {
-    const calls: Request[] = []
-    server.use(logoutSucceeds(calls))
-    const store = renderMenu('Mattia')
+  it('il menu non ha «Esci» né «Amici» a nessuna larghezza', async () => {
+    renderMenu('Mattia', { roles: ['FAN', 'HOST'] })
 
     await userEvent.click(screen.getByRole('button', { name: /Menu dell'account/ }))
-    await userEvent.click(await screen.findByText('Esci'))
 
-    await waitFor(() => expect(store.getState().auth.status).toBe('anonymous'))
-    expect(calls).toHaveLength(1)
-    expect(calls[0].headers.get('X-Requested-With')).toBe('XMLHttpRequest')
+    await screen.findByText('Pubblica concerto')
+    expect(screen.queryByText('Esci')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Amici' })).not.toBeInTheDocument()
   })
 })

@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest'
 // Stile della landing sulle pagine dell'app da 1200 px (FE-22): pannello in vetro opaco, titoli grandi in maiuscolo,
 // righe sottili al posto dei riquadri. jsdom non fa il layout: si controlla che le regole ci siano, solo da 1200 px
 // (telefono e tablet non cambiano); l'effetto vero lo prova il controllo a 375, 768 e 1280 px nel browser.
-const css = readFileSync(path.join(import.meta.dirname, 'index.css'), 'utf8')
+// I fine riga si normalizzano: con Git su Windows il file può arrivare con CRLF e i selettori su più righe non combacerebbero
+const css = readFileSync(path.join(import.meta.dirname, 'index.css'), 'utf8').replaceAll('\r\n', '\n')
 
 /** Il testo dei blocchi `@media (min-width: 1200px)` aggiunti da FE-22 (gli ultimi due del file). */
 const desktop = css

@@ -75,4 +75,17 @@ describe('NavBar', () => {
 
     expect(screen.queryByRole('button', { name: 'Apri il menu' })).not.toBeInTheDocument()
   })
+
+  // «Esci» nella barra serve sul telefono (da 768 px lo nasconde il CSS e c'è quello della colonna); solo con la sessione
+  it('con la sessione ha il pulsante «Esci» nella barra', () => {
+    renderNavBar(true)
+
+    expect(screen.getByRole('button', { name: 'Esci' })).toHaveClass('rs-logout--bar')
+  })
+
+  it('senza la sessione non ha «Esci»', () => {
+    renderNavBar(false)
+
+    expect(screen.queryByRole('button', { name: 'Esci' })).not.toBeInTheDocument()
+  })
 })

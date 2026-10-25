@@ -33,15 +33,16 @@ export function Component() {
 
   return (
     <>
-      <h1>Feed</h1>
+      <div className="rs-feed-head">
+        <h1>Feed</h1>
+        <NewPostPanel onPublished={setNotices} />
+      </div>
 
       {notices.map((notice) => (
         <Alert key={notice} variant="success" role="status">
           {notice}
         </Alert>
       ))}
-
-      <NewPostPanel onPublished={setNotices} />
 
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 my-3">
         <Button

@@ -4,7 +4,7 @@ import { ImageLoadWarning } from './ImageLoadWarning'
 
 // Prova di caricamento dell'immagine nel modulo del post: dopo una breve attesa prova a caricare l'indirizzo (senza
 // Referer) e, se il browser non riesce, avvisa senza bloccare; con un indirizzo non valido non contatta nessuno.
-const WARNING = "Non riesco a caricare l'immagine: controlla l'indirizzo."
+const WARNING = "Serve il link diretto all'immagine: tienila premuta (o clic destro) e scegli «Copia indirizzo immagine»."
 
 /** `Image` finta: carica o fallisce secondo `loads`, e ricorda come è stata usata. */
 class FakeImage {

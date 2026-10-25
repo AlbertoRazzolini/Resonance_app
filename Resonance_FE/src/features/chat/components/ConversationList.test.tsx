@@ -92,7 +92,29 @@ describe('ConversationList · righe', () => {
       }),
     ])
     expect(await screen.findByRole('button', { name: 'https://esempio.it/brano' })).toBeInTheDocument()
-    expect(screen.getAllByRole('link')).toHaveLength(1)
+    // Un solo collegamento di conversazione (il nome); l'altro è «Scrivi a un amico» nella riga del titolo
+    expect(screen.getAllByRole('link').filter((link) => link.getAttribute('href')?.startsWith('/chat/'))).toHaveLength(1)
+  })
+})
+
+describe('ConversationList · «Scrivi a un amico»', () => {
+  // Il pulsante sta nella riga del titolo, sempre (anche senza conversazioni), e porta all'elenco degli amici (25 ottobre)
+  it("nella riga del titolo c'è il collegamento «Scrivi a un amico» verso /amici", async () => {
+    renderList([giulia])
+    await screen.findByRole('link', { name: 'Giulia Rossi' })
+
+    const title = screen.getByRole('heading', { level: 1, name: 'Messaggi' })
+    expect(within(title.parentElement as HTMLElement).getByRole('link', { name: 'Scrivi a un amico' })).toHaveAttribute(
+      'href',
+      '/amici',
+    )
+  })
+
+  it("c'è anche quando non ci sono conversazioni, una sola volta", async () => {
+    renderList([])
+    await screen.findByText('Non hai ancora conversazioni.')
+
+    expect(screen.getAllByRole('link', { name: 'Scrivi a un amico' })).toHaveLength(1)
   })
 })
 

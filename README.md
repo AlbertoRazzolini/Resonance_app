@@ -65,7 +65,7 @@ Il Blueprint `render.yaml` crea database e servizio; ogni push su `main` che toc
 
 ## 🔮 Sviluppi futuri
 Previsti in `docs/progettazione.md`, sezione 15 (dove sta l'elenco completo):
-- **V1:** 🎟️ partecipazione agli eventi («parteciperò») e biglietti · ✏️ modifica dei propri contenuti · 🖼️ caricamento delle immagini · 🗑️ cancellazione dei messaggi di chat · ✅ candidature con accettazione o rifiuto · 🔎 ricerca dei luoghi e suggerimento degli indirizzi.
+- **V1:** 🎟️ partecipazione agli eventi («parteciperò») e biglietti · ✏️ modifica dei propri contenuti · 🖼️ caricamento delle immagini e anteprima da un link · 🗑️ cancellazione dei messaggi di chat · ✅ candidature con accettazione o rifiuto · 🔎 ricerca dei luoghi e suggerimento degli indirizzi.
 - **V2:** 🔔 notifiche push · 🎧 integrazione con Spotify · 💳 pagamento dei biglietti · 🔐 login social (Google).
 
 ## 📚 Documentazione

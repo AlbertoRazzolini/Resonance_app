@@ -16,7 +16,7 @@ import { setViewportWidth } from '@/test/viewport'
 import type { MeResponse } from '@/types/users'
 import { Component as FeedPage } from './FeedPage'
 
-// Feed: elenco con «Carica altri», filtro «vicino a me» nell'indirizzo, modulo del nuovo post (in finestra su telefono),
+// Feed: elenco con «Carica altri», filtro «vicino a me» nell'indirizzo, pulsante «Nuovo post» con il modulo in una finestra,
 // like ottimistico annullato su errore e cancellazione dei propri post.
 type Success = (position: { coords: { latitude: number; longitude: number } }) => void
 
@@ -234,30 +234,21 @@ describe('FeedPage · filtro «vicino a me»', () => {
 })
 
 describe('FeedPage · nuovo post', () => {
-  it('su desktop il modulo è in pagina per chi ha la sessione, senza il pulsante «Nuovo post»', async () => {
+  it('il modulo non è in pagina: c\'è il pulsante «Nuovo post» nella riga del titolo', async () => {
     server.use(feedFound([makePage([])]))
     renderFeed({ user: ME })
-
-    expect(screen.getByLabelText('Cosa vuoi condividere?')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Nuovo post' })).not.toBeInTheDocument()
     await screen.findByText('Ancora nessun post.')
+
+    const title = screen.getByRole('heading', { level: 1, name: 'Feed' })
+    expect(within(title.parentElement as HTMLElement).getByRole('button', { name: 'Nuovo post' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Cosa vuoi condividere?')).not.toBeInTheDocument()
   })
 
-  it('su tablet (768 px) il modulo è ancora in pagina', async () => {
-    setViewportWidth(768)
-    server.use(feedFound([makePage([])]))
-    renderFeed({ user: ME })
-
-    expect(screen.getByLabelText('Cosa vuoi condividere?')).toBeInTheDocument()
-    await screen.findByText('Ancora nessun post.')
-  })
-
-  it('su telefono (375 px) c\'è il pulsante «Nuovo post» e il modulo si apre in una finestra', async () => {
-    setViewportWidth(375)
+  it.each([1024, 768, 375])('a %i px il pulsante apre il modulo in una finestra', async (width) => {
+    setViewportWidth(width)
     server.use(feedFound([makePage([])]))
     const user = renderFeed({ user: ME })
     await screen.findByText('Ancora nessun post.')
-    expect(screen.queryByLabelText('Cosa vuoi condividere?')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Nuovo post' }))
 
@@ -266,8 +257,7 @@ describe('FeedPage · nuovo post', () => {
     expect(within(dialog).getByLabelText('Cosa vuoi condividere?')).toBeInTheDocument()
   })
 
-  it('su telefono la pubblicazione chiude la finestra, avvisa e rilegge il feed', async () => {
-    setViewportWidth(375)
+  it('la pubblicazione chiude la finestra, avvisa e rilegge il feed', async () => {
     const feedCalls: Request[] = []
     const createCalls: Request[] = []
     server.use(feedFound([makePage([])], feedCalls), postCreated(makeFeedPost(), createCalls))
@@ -284,31 +274,18 @@ describe('FeedPage · nuovo post', () => {
     await waitFor(() => expect(feedCalls.length).toBeGreaterThanOrEqual(2))
   })
 
-  it('su desktop pubblicare avvisa e il feed si rilegge', async () => {
-    const feedCalls: Request[] = []
-    server.use(feedFound([makePage([])], feedCalls), postCreated(makeFeedPost()))
-    const user = renderFeed({ user: ME })
-    await screen.findByText('Ancora nessun post.')
-
-    await user.type(screen.getByLabelText('Cosa vuoi condividere?'), 'Ciao')
-    await user.click(screen.getByRole('button', { name: 'Pubblica' }))
-
-    expect(await screen.findByText('Post pubblicato.')).toBeInTheDocument()
-    await waitFor(() => expect(feedCalls.length).toBeGreaterThanOrEqual(2))
-  })
-
-  it('un anonimo non ha il modulo: legge l\'invito e il link «Accedi» verso l\'accesso', async () => {
+  // Un anonimo vede lo stesso pulsante: il clic porta all'accesso e, dopo, torna al feed (decisione dello studente, 25 ottobre)
+  it('un anonimo trova «Nuovo post» e il clic lo porta all\'accesso, con il ritorno al feed', async () => {
     server.use(feedFound([makePage([])]))
     const user = renderFeed()
     await screen.findByText('Ancora nessun post.')
 
-    expect(screen.getByText('Accedi per scrivere un post.')).toBeInTheDocument()
+    expect(screen.queryByText('Accedi per scrivere un post.')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Cosa vuoi condividere?')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Nuovo post' })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('link', { name: 'Accedi' }))
+    await user.click(screen.getByRole('link', { name: 'Nuovo post' }))
 
-    expect(screen.getByTestId('location')).toHaveTextContent(/^\/accesso\|.*"from":"\/feed"/)
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/accesso\|.*"from":"\/feed".*"loginRequired":true/)
   })
 })
 

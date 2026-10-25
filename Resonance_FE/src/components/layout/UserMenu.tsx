@@ -5,7 +5,6 @@ import StarBorder from '@/components/motion/StarBorder'
 import { STAR_BORDER_LOOK } from '@/components/motion/starBorderLook'
 import { Avatar } from '@/components/ui/Avatar'
 import { selectCurrentUser, selectHasRole } from '@/features/auth/authSlice'
-import { useLogoutMutation } from '@/features/auth/api/authApi'
 import { useAppSelector } from '@/hooks/redux'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 
@@ -13,7 +12,8 @@ import { useMediaQuery } from '@/hooks/useMediaQuery'
  * Menu utente della barra (decisione 83): per l'anonimo i pulsanti Accedi e Registrati; per chi ha la sessione il
  * cerchio giallo con la foto o l'iniziale e un menu con le voci «Pubblica» secondo i ruoli, sul telefono le voci
  * dell'area di moderazione per ADMIN e SUPERADMIN (da 768 px le ha la colonna a sinistra; solo per mostrare o nascondere: la
- * protezione vera è nel backend) e "Esci".
+ * protezione vera è nel backend). Senza voci da mostrare il cerchio è un collegamento al Profilo, non un menu vuoto; «Esci»
+ * ha il suo pulsante (`LogoutButton`, decisione dello studente, 25 ottobre).
  */
 export function UserMenu() {
   const user = useAppSelector(selectCurrentUser)
@@ -23,7 +23,9 @@ export function UserMenu() {
   const isAdmin = useAppSelector(selectHasRole('ADMIN'))
   // Da 768 px la colonna a sinistra ha già «Utenti» e «Nascosti»: nel menu sarebbero ridondanti, restano solo sul telefono
   const hasSideNav = useMediaQuery('(min-width: 768px)')
-  const [logout] = useLogoutMutation()
+
+  const showsAdminItems = isAdmin && !hasSideNav
+  const hasMenuItems = isHost || isMusician || showsAdminItems
 
   if (!user) {
     return (
@@ -41,6 +43,19 @@ export function UserMenu() {
         </StarBorder>
         <Link to={ROUTES.register} className="btn btn-primary btn-sm">
           Registrati
+        </Link>
+      </div>
+    )
+  }
+
+  if (!hasMenuItems) {
+    return (
+      <div className="rs-user">
+        <span className="rs-user__name" aria-hidden="true">
+          {user.displayName}
+        </span>
+        <Link to={ROUTES.profile} className="rs-avatar-toggle" aria-label={`Profilo di ${user.displayName}`}>
+          <Avatar displayName={user.displayName} avatarUrl={user.avatarUrl} />
         </Link>
       </div>
     )
@@ -72,8 +87,8 @@ export function UserMenu() {
               Pubblica indie event
             </Dropdown.Item>
           )}
-          {(isHost || isMusician) && <Dropdown.Divider />}
-          {isAdmin && !hasSideNav && (
+          {(isHost || isMusician) && showsAdminItems && <Dropdown.Divider />}
+          {showsAdminItems && (
             <>
               <Dropdown.Item as={Link} to={ROUTES.adminUsers}>
                 Utenti
@@ -81,12 +96,8 @@ export function UserMenu() {
               <Dropdown.Item as={Link} to={ROUTES.adminContent}>
                 Contenuti nascosti
               </Dropdown.Item>
-              <Dropdown.Divider />
             </>
           )}
-          <Dropdown.Item as="button" type="button" onClick={() => void logout()}>
-            Esci
-          </Dropdown.Item>
         </Dropdown.Menu>
       </Dropdown>
     </div>

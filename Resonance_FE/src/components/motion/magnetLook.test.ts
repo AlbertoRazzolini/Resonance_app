@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AUTH_MAGNET_LOOK, LANDING_MAGNET_LOOK, MAGNET_LOOK } from './magnetLook'
+import { AUTH_MAGNET_LOOK, EVENT_ACTION_MAGNET_LOOK, LANDING_MAGNET_LOOK, MAGNET_LOOK } from './magnetLook'
 
 // Valori di Magnet scritti dallo studente: attrazione da 100 px, forza 9, inclinazione 15°, ingrandimento 1,15, molla 200/18.
 describe('magnetLook', () => {
@@ -57,5 +57,22 @@ describe('AUTH_MAGNET_LOOK', () => {
     expect(AUTH_MAGNET_LOOK.padding).toBe(MAGNET_LOOK.padding)
     expect(AUTH_MAGNET_LOOK.axis).toBe(MAGNET_LOOK.axis)
     expect(AUTH_MAGNET_LOOK.spring).toEqual(MAGNET_LOOK.spring)
+  })
+})
+
+// «Pubblica concerto» e «Pubblica indie event» in Eventi vicini sono larghi più del doppio delle schede: con 1,15 crescevano
+// di circa 24 px contro i 10 delle schede (scelta dello studente, 25 ottobre: ingrandimento 1,06, il resto invariato).
+describe('EVENT_ACTION_MAGNET_LOOK', () => {
+  it('ingrandisce meno di MAGNET_LOOK, a 1,06', () => {
+    expect(EVENT_ACTION_MAGNET_LOOK.scale).toBe(1.06)
+    expect(EVENT_ACTION_MAGNET_LOOK.scale).toBeLessThan(MAGNET_LOOK.scale)
+  })
+
+  it('tiene uguali distanza, assi, forza, inclinazione e molla', () => {
+    expect(EVENT_ACTION_MAGNET_LOOK.padding).toBe(MAGNET_LOOK.padding)
+    expect(EVENT_ACTION_MAGNET_LOOK.axis).toBe(MAGNET_LOOK.axis)
+    expect(EVENT_ACTION_MAGNET_LOOK.magnetStrength).toBe(MAGNET_LOOK.magnetStrength)
+    expect(EVENT_ACTION_MAGNET_LOOK.tilt).toBe(MAGNET_LOOK.tilt)
+    expect(EVENT_ACTION_MAGNET_LOOK.spring).toEqual(MAGNET_LOOK.spring)
   })
 })
