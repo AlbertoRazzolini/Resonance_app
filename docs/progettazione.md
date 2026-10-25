@@ -1725,7 +1725,7 @@ aggiunge `sslmode`. Stampa solo l'URL JDBC, mai la password.
   `postman`, `**/target`, `**/node_modules`, `**/dist`, `.idea`. Le regole di NoseY sono incluse.
 - **Fallback SPA** (`SpaResourceConfig`, package `web`): risorse statiche da `classpath:/static/`;
   un percorso senza file corrispondente e senza estensione, fuori da `api/` e `ws`, restituisce
-  `index.html` (routing di React Router). `index.html` con `Cache-Control: no-cache`, file in
+  `index.html` (routing di React Router). `index.html` con `Cache-Control: no-cache` e senza `Last-Modified` (decisione 118), file in
   `/assets/` (nomi con hash di Vite) con cache lunga. Senza `dist/` copiato in `static/` (per esempio nei test di
   Maven, fuori dall'immagine Docker) non c'è `index.html` e questi percorsi rispondono 404 JSON.
 - **`render.yaml`** nella radice, adattato da NoseY: database `resonance-db` (free, Frankfurt) e **un

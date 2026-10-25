@@ -3915,3 +3915,31 @@ Ogni punto è stato proposto allo studente con alternative e raccomandazione, e 
 - **Pubblicare gli eventi in una finestra:** i moduli sono lunghi e, con la tastiera aperta sul telefono, una finestra sarebbe scomoda.
 - **«Esci» solo nel Profilo, o nella barra a ogni larghezza:** lo studente ha preferito la colonna su tablet e desktop e la barra sul telefono.
 - **Ripetere «Scrivi a un amico» nello stato vuoto:** due pulsanti uguali nella stessa vista.
+
+## Decisione 118: index.html senza Last-Modified (card FE-11, progettazione, sezione 12.5)
+
+Proposta allo studente con due alternative e approvata il 25 ottobre (opzione A).
+
+### Scelta
+
+- **`SpaResourceConfig`:** l'handler `/**` (index.html e rotte del frontend) ha `setUseLastModified(false)`, oltre a
+  `Cache-Control: no-cache`. I file di `/assets/**` restano con la cache di un anno.
+- **Test:** `SpaFallbackTest` controlla che una richiesta con `If-Modified-Since` risponda 200 e senza `Last-Modified`, sia su
+  `/index.html` sia su una rotta del frontend.
+
+### Motivazione
+
+- Dentro il JAR tutti i file hanno la stessa data, 1 febbraio 1980. Un browser che aveva già una vecchia `index.html` chiedeva
+  «è cambiata dopo il 1980?» e il server rispondeva 304: la pagina vecchia restava per sempre, con i riferimenti ai file con hash
+  dei deploy precedenti, e comparivano gli errori `Failed to fetch dynamically imported module` (aperto da un link, nuova scheda
+  compresa). Chi apriva il sito per la prima volta non vedeva il problema.
+- Senza `Last-Modified` non c'è niente da confrontare: ogni apertura riceve la pagina nuova, anche chi oggi ha la copia vecchia
+  bloccata. Costo: pochi kB in più a ogni apertura, perché i file pesanti sono con hash e restano in cache.
+- Il ricaricamento automatico di `reloadOnStaleChunk.ts` (decisione 117) non poteva aiutare questi browser: il codice vecchio
+  non lo contiene. Resta utile per chi ha il sito aperto durante un deploy.
+
+### Alternative scartate
+
+- **`ETag` calcolato sul contenuto (`ShallowEtagHeaderFilter`):** il 304 resterebbe solo quando la pagina non cambia, ma aggiunge un
+  filtro su tutte le risposte e più superficie da provare, per risparmiare pochi kB.
+- **Non fare niente e chiedere di ricaricare con Ctrl+Shift+R:** non risolve per gli amici che non sanno cosa fare.

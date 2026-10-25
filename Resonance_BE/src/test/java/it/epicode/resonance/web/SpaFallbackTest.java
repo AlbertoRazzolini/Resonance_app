@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
@@ -45,6 +46,20 @@ class SpaFallbackTest extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("index di prova")))
                 .andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("no-cache")));
+    }
+
+    @Test
+    void indexHtmlAndFrontendRoutes_neverAnswer304EvenWithIfModifiedSince() throws Exception {
+        // Dentro il JAR i file hanno sempre la stessa data (1 febbraio 1980): con Last-Modified un browser che aveva
+        // gia' una vecchia index.html riceveva 304 per sempre e non vedeva mai i nuovi file con hash (25 ottobre).
+        // Senza Last-Modified non c'e' niente da confrontare: ogni richiesta riceve la pagina.
+        String farFuture = "Fri, 01 Jan 2100 00:00:00 GMT";
+        for (String path : new String[] {"/index.html", "/eventi/123"}) {
+            mockMvc.perform(get(path).header(HttpHeaders.IF_MODIFIED_SINCE, farFuture))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(containsString("index di prova")))
+                    .andExpect(header().string(HttpHeaders.LAST_MODIFIED, nullValue()));
+        }
     }
 
     @Test

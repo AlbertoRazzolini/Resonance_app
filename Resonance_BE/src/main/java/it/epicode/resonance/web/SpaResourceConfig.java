@@ -34,10 +34,14 @@ public class SpaResourceConfig implements WebMvcConfigurer {
                 .setCacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable());
 
         // Tutto il resto, index.html compreso: no-cache, cioe' il browser rivalida a ogni apertura e dopo un
-        // deploy carica subito i nuovi file con hash che index.html cita.
+        // deploy carica subito i nuovi file con hash che index.html cita. Niente Last-Modified: dentro il JAR i file
+        // hanno sempre la stessa data (1 febbraio 1980), quindi un browser con una vecchia index.html riceveva 304
+        // per sempre e non vedeva mai i nuovi file (errore "Failed to fetch dynamically imported module", 25 ottobre).
+        // Senza data non c'e' niente da confrontare: ogni richiesta riceve la pagina (pochi kB).
         registry.addResourceHandler("/**")
                 .addResourceLocations(STATIC_LOCATION)
                 .setCacheControl(CacheControl.noCache())
+                .setUseLastModified(false)
                 .resourceChain(true)
                 .addResolver(new SpaFallbackResolver());
     }
