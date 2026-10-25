@@ -1990,6 +1990,10 @@ modifiche distruttive.
 | Appeal delle sospensioni | i campi di sospensione esistono già |
 | Upload immagini | oggi solo URL |
 | Anteprima da un link qualsiasi | richiesta dello studente il 25 ottobre, dopo che un amico ha incollato il link di una ricerca di Google Immagini al posto del file: oggi serve il link diretto all'immagine. Il backend scaricherebbe la pagina indicata e ne leggerebbe l'immagine di anteprima (`og:image`); una pagina di risultati di Google non ha un'immagine sola e Google blocca questi accessi, quindi non funzionerebbe con quei link. Servono un endpoint nuovo e la protezione dalle richieste verso indirizzi interni (SSRF), con limiti di tempo e di dimensione, test e Postman. L'alternativa è il caricamento di un file (riga «Upload immagini») |
+| Validazione dei biglietti con il QR all'ingresso | idea della proposta iniziale (25 ottobre): l'host scansiona il QR del biglietto con lo smartphone e lo segna validato; dipende da `tickets` (riga sopra). Servirebbero un endpoint di validazione riservato all'host dell'evento e un test di accesso su chi può validare quali biglietti |
+| Dashboard degli eventi per musicisti e host | idea della proposta iniziale: per ogni evento, biglietti venduti e validati, incasso e vendite per giorno; dipende da `tickets`. Sola lettura, riservata a chi ha creato l'evento |
+| Agente AI per scoprire gli eventi | idea della proposta iniziale, anticipabile se avanza tempo: una frase come «concerti rock vicino a me venerdì» tradotta nei filtri che già esistono (raggio, tipo, genere, data), senza dare al modello l'accesso diretto al database. Servirebbero una chiave API tenuta nelle variabili d'ambiente e un limite di richieste |
+| Feedback a timestamp sulle tracce audio | idea della proposta iniziale: commenti legati a un istante della traccia; dipende da `track_uploads` (riga sopra) e da una tabella dei commenti con secondo e testo |
 | Centratura delle immagini scelta dall'utente | oggi le immagini dei post sono ritagliate al centro (`object-fit: cover`); servirebbe un punto di interesse scelto dall'utente per ogni immagine (salvato col post) e `object-position` nella card, anche per foto profilo e copertine |
 | Partecipazione agli eventi ("parteciperò") ed elenco degli eventi a cui si partecipa | tabella con chiave composta (utente, evento) per concerti e indie event, base per i `tickets`; gli elenchi dei contenuti creati sono già nell'MVP (decisione 77). Richiesta dello studente il 22 ottobre: il pulsante «parteciperò» nella card e nel dettaglio dell'evento, e l'elenco dei partecipanti, con la richiesta di amicizia da lì per poi scriversi |
 | Testo ricco nei contenuti (grassetto, menzioni, markdown) | `UserText` è l'unico punto di visualizzazione: DOMPurify rientra lì con una lista di tag ammessi (decisione 79) |
@@ -2008,7 +2012,7 @@ modifiche distruttive.
 | Cancellare le notifiche a mano | richiesta dello studente il 24 ottobre: oggi le notifiche si cancellano da sole dopo 30 giorni, lette o no (decisione 97, `NotificationService.deleteExpired`), quindi non si accumulano all'infinito; la facoltà di eliminarne una o tutte le lette dalla campanella resta Post-V1. Servirebbero un endpoint di cancellazione per notifica (solo le proprie, come la lettura) e uno per «cancella le lette», con la collection Postman e i test di accesso |
 ### Post-V2
 
-Notifiche push per browser e mobile; integrazione Spotify; acquisto dei biglietti dei concerti
+Notifiche push per browser e mobile (anche per gli eventi del genere preferito); integrazione Spotify; acquisto dei biglietti dei concerti
 ufficiali (Stripe); piano premium per HOST; personalizzazione dei biglietti con AI; 2FA (nuovo
 valore `TWO_FACTOR` di `email_code_purpose`); GDPR e anonimizzazione; login social (Google) con Firebase Auth
 limitato all'autenticazione (`password_hash` diventerebbe nullable, PostgreSQL resta il database

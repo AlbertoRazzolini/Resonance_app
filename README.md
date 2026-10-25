@@ -61,12 +61,13 @@ Il Blueprint `render.yaml` crea database e servizio; ogni push su `main` che toc
 - 🔗 I link scritti dagli utenti si aprono solo dopo una conferma che mostra il dominio.
 - 💬 I messaggi di chat e i contatti degli eventi sono solo live (non compaiono fra le notifiche salvate).
 - ✏️ I contenuti si creano e si cancellano, non si modificano · 🖼️ le immagini sono solo indirizzi (URL).
+- 🔗 Per le immagini serve il link diretto al file (di solito finisce con .jpg o .png), non quello di una pagina o di una ricerca: tieni premuta l'immagine e scegli «Copia indirizzo immagine».
 - 🎟️ Niente partecipazione agli eventi né biglietti.
 
 ## 🔮 Sviluppi futuri
 Previsti in `docs/progettazione.md`, sezione 15 (dove sta l'elenco completo):
-- **V1:** 🎟️ partecipazione agli eventi («parteciperò») e biglietti · ✏️ modifica dei propri contenuti · 🖼️ caricamento delle immagini e anteprima da un link · 🗑️ cancellazione dei messaggi di chat · ✅ candidature con accettazione o rifiuto · 🔎 ricerca dei luoghi e suggerimento degli indirizzi.
-- **V2:** 🔔 notifiche push · 🎧 integrazione con Spotify · 💳 pagamento dei biglietti · 🔐 login social (Google).
+- **V1:** 🎟️ partecipazione agli eventi («parteciperò») e biglietti · ✏️ modifica dei propri contenuti · 🖼️ caricamento delle immagini e anteprima da un link · 🗑️ cancellazione dei messaggi di chat · ✅ candidature con accettazione o rifiuto · 🔎 ricerca dei luoghi e suggerimento degli indirizzi · 🤖 matching dei collaboratori con Claude · 🧭 agente AI per scoprire gli eventi in linguaggio naturale · 📲 validazione dei biglietti con il QR e dashboard degli eventi · 🎵 tracce audio con feedback a timestamp · ⭐ recensioni dei concerti.
+- **V2:** 🔔 notifiche push (anche per gli eventi del tuo genere) · 🎧 integrazione con Spotify · 💳 pagamento dei biglietti · 💎 piano premium per gli host con analytics · 🎨 biglietti indie personalizzati con AI · 🛡️ 2FA e GDPR · 🔐 login social (Google).
 
 ## 📚 Documentazione
 📐 [`progettazione.md`](docs/progettazione.md) · 🧾 [`decisioni.md`](docs/decisioni.md) · 🗄️ [`schema-db.md`](docs/schema-db.md) · ♻️ [`riuso-nosey.md`](docs/riuso-nosey.md) · 📮 [`postman/`](postman/) (guida in [`verifica-e-demo.md`](docs/verifica-e-demo.md))
