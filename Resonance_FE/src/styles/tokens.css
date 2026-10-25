@@ -73,6 +73,8 @@
   --rs-topbar-height: 3.5rem;
   --rs-tabbar-height: 4rem;
   --rs-footer-height: 5.5rem;
+  /* Altezza della conversazione: la finestra meno la barra in alto e lo spazio della pagina; da 1200 px la ridefinisce index.css (c'è il pannello) */
+  --rs-chat-height: calc(100dvh - var(--rs-topbar-height) - 3rem);
   /* Footer statico della landing (FE-12): alto uguale a ogni larghezza, per far stare l'ultima schermata nello schermo */
   --rs-landing-footer: 4rem;
 

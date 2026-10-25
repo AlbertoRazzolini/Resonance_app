@@ -42,6 +42,22 @@ describe('ChatPage · desktop (1280 px)', () => {
     expect(screen.getByText('Scegli una conversazione')).toBeInTheDocument()
   })
 
+  // Il riquadro occupa tutto lo spazio accanto all'elenco, alto come la conversazione (25 ottobre)
+  it('il riquadro «Scegli una conversazione» sta in un pannello che riempie lo spazio, come la conversazione', async () => {
+    renderAt('/chat')
+    await screen.findByRole('link', { name: 'Giulia Rossi' })
+
+    const panel = screen.getByText('Scegli una conversazione').closest('.rs-chat__panel')
+    expect(panel).toHaveClass('rs-chat__panel--empty')
+  })
+
+  it('con una conversazione aperta il pannello non è quello del riquadro vuoto', async () => {
+    renderAt('/chat/conv-1')
+    const view = await screen.findByRole('region', { name: 'Conversazione con Giulia Rossi' })
+
+    expect(view.closest('.rs-chat__panel')).not.toHaveClass('rs-chat__panel--empty')
+  })
+
   it('con una conversazione aperta mostra elenco e conversazione affiancati', async () => {
     renderAt('/chat/conv-1')
     expect(await screen.findByRole('region', { name: 'Conversazione con Giulia Rossi' })).toBeInTheDocument()

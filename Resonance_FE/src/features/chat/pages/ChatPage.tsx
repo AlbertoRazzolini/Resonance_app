@@ -7,7 +7,7 @@ import { ConversationView } from '../components/ConversationView'
 /**
  * Messaggi (progettazione, sezione 6.9): da 1200 px l'elenco e la conversazione stanno affiancati; su telefono e tablet
  * un pannello alla volta (l'elenco su `/chat`, la conversazione su `/chat/:id`). Sul desktop senza conversazione scelta
- * il pannello lo dice.
+ * il pannello lo dice, in un riquadro alto come la conversazione (`rs-chat__panel--empty`).
  */
 export function Component() {
   const { id } = useParams()
@@ -17,7 +17,7 @@ export function Component() {
     <div className="rs-chat">
       {(isDesktop || !id) && <ConversationList activeId={id} />}
       {(isDesktop || id) && (
-        <div className="rs-chat__panel">
+        <div className={id ? 'rs-chat__panel' : 'rs-chat__panel rs-chat__panel--empty'}>
           {id ? <ConversationView key={id} conversationId={id} /> : <EmptyState title="Scegli una conversazione" />}
         </div>
       )}

@@ -3902,6 +3902,8 @@ Ogni punto è stato proposto allo studente con alternative e raccomandazione, e 
   i nomi dei file cambiano a ogni build) l'app si ricarica una volta da sola (`reloadOnStaleChunk.ts`); un secondo errore entro
   10 secondi mostra l'errore invece di ricaricare ancora, e senza memoria della scheda non si ricarica. Dopo il ricaricamento si
   torna alla pagina in cui si era, non a quella cliccata.
+- **Riquadro «Scegli una conversazione»:** da 1200 px occupa tutta l'altezza accanto all'elenco (come la conversazione, meno il footer),
+  con il testo al centro; l'altezza della chat sta in `--rs-chat-height` (`tokens.css`, ridefinita da `index.css` da 1200 px).
 - **Rimandato:** ingresso libero per i concerti ufficiali (serve una migrazione e un cambio del backend a poche ore dalla consegna).
 
 ### Motivazione
