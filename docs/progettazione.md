@@ -2009,7 +2009,7 @@ modifiche distruttive.
 
 Notifiche push per browser e mobile; integrazione Spotify; acquisto dei biglietti dei concerti
 ufficiali (Stripe); piano premium per HOST; personalizzazione dei biglietti con AI; 2FA (nuovo
-valore `TWO_FACTOR` di `email_code_purpose`); GDPR e anonimizzazione; login social con Firebase Auth
+valore `TWO_FACTOR` di `email_code_purpose`); GDPR e anonimizzazione; login social (Google) con Firebase Auth
 limitato all'autenticazione (`password_hash` diventerebbe nullable, PostgreSQL resta il database
 applicativo).
 
