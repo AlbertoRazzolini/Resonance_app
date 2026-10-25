@@ -8,8 +8,8 @@ import { makeStore } from '@/app/store'
 import { Component as NewConcertPage } from './NewConcertPage'
 import { Component as NewIndieEventPage } from './NewIndieEventPage'
 
-// Pagine «Pubblica concerto» e «Pubblica indie event»: occupano tutta la larghezza della card (25 ottobre), a differenza
-// di Modifica profilo e Pubblica annuncio, che restano nella colonna stretta. jsdom non fa il layout: si controllano la
+// Pagine «Pubblica concerto» e «Pubblica indie event»: occupano tutta la larghezza della card (25 ottobre), come Modifica
+// profilo (vedi `EditProfilePage.test.tsx`); Pubblica annuncio resta nella colonna stretta. jsdom non fa il layout: si controllano la
 // classe sulle pagine e la regola nel foglio di stile.
 const css = readFileSync(path.join(import.meta.dirname, '../../../styles/index.css'), 'utf8')
 

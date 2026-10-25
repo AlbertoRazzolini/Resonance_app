@@ -1001,7 +1001,7 @@ textarea {
   max-width: 36rem;
 }
 
-/* Pubblica concerto e pubblica indie event: il modulo riempie tutta la card, non la colonna stretta della modifica del profilo */
+/* Pubblica concerto, pubblica indie event e modifica del profilo: la pagina riempie tutta la card, non la colonna stretta di 36 rem */
 .rs-edit--full {
   max-width: none;
 }

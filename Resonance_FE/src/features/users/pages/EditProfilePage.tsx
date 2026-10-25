@@ -17,7 +17,7 @@ export function Component() {
   if (!user) return null
 
   return (
-    <div className="rs-edit">
+    <div className="rs-edit rs-edit--full">
       <Link to={ROUTES.profile} className="rs-edit__back">
         ← Torna al profilo
       </Link>

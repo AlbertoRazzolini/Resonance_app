@@ -3891,7 +3891,7 @@ Ogni punto è stato proposto allo studente con alternative e raccomandazione, e 
 - **Messaggi:** il pulsante «Scrivi a un amico», nella riga del titolo, porta all'elenco degli amici; è sempre visibile, anche
   senza conversazioni.
 - **Eventi:** «Pubblica concerto» (host) e «Pubblica indie event» (musicista) stanno nella riga del titolo, come pagine e non come
-  finestre; le pagine di creazione dei concerti e degli indie event riempiono tutta la card (`rs-edit--full`) e fra «Annulla» e
+  finestre; le pagine di creazione dei concerti e degli indie event e la modifica del profilo riempiono tutta la card (`rs-edit--full`) e fra «Annulla» e
   «Pubblica» ci sono 16 px, perché l'effetto magnet non li sovrapponga.
 - **Esci:** un pulsante con l'icona animata (Animate UI, `log-out`) in fondo alla colonna a sinistra da 768 px e solo icona nella
   barra in alto sul telefono; una finestra «Vuoi uscire?» chiede conferma. Esce dal menu dell'avatar, che resta solo per chi ha
